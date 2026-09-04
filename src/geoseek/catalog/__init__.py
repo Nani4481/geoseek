@@ -22,6 +22,7 @@ Hierarchy (every tile reaches its source scene by foreign key)::
 """
 
 from geoseek.catalog.entities import (
+    AnalystDecision,
     Collection,
     DerivedProduct,
     Observation,
@@ -39,4 +40,5 @@ __all__ = [
     "DerivedProduct",
     "TileProvenance",
     "TileRecord",
+    "AnalystDecision",
 ]

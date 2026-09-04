@@ -124,6 +124,48 @@ class TileProvenance:
 
 
 @dataclass(frozen=True)
+class AnalystDecision:
+    """One analyst confirm/reject on a change candidate (PS 2.2.5 audit trail).
+
+    Append-only: a decision row is never overwritten. Re-deciding a candidate
+    writes a NEW row with a fresh ``decision_id``; the full history is the
+    ordered list of rows for that ``candidate_id``. Every row snapshots the
+    exact model / weights / code state and the confidence AND evidence *at the
+    time the decision was made*, so the audit log stands on its own even after
+    the pipeline is re-run.
+    """
+
+    decision_id: str                      # uuid4, assigned on write
+    candidate_id: str                     # -> the change candidate this decides
+    decision: str                         # "confirm" | "reject"
+    analyst_note: str = ""
+    analyst: str = ""                     # who decided (free text / login)
+    created_at: str = ""                  # ISO-8601 UTC, assigned on write
+    model_version: str = ""               # e.g. "FCSiamDiff@0.80"
+    weights_sha256: str = ""              # model weights checksum at decision time
+    git_commit: str = ""                  # code revision at decision time
+    pipeline_version: str = ""            # geoseek package version at decision time
+    confidence_at_decision: float | None = None   # queue confidence when decided
+    evidence_snapshot: dict = field(default_factory=dict)   # frozen evidence/provenance blob
+
+    def as_dict(self) -> dict:
+        return {
+            "decision_id": self.decision_id,
+            "candidate_id": self.candidate_id,
+            "decision": self.decision,
+            "analyst_note": self.analyst_note,
+            "analyst": self.analyst,
+            "created_at": self.created_at,
+            "model_version": self.model_version,
+            "weights_sha256": self.weights_sha256,
+            "git_commit": self.git_commit,
+            "pipeline_version": self.pipeline_version,
+            "confidence_at_decision": self.confidence_at_decision,
+            "evidence_snapshot": self.evidence_snapshot,
+        }
+
+
+@dataclass(frozen=True)
 class TileRecord:
     """Flat tile + provenance projection returned by catalog queries.
 

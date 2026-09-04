@@ -16,13 +16,16 @@ from __future__ import annotations
 import json
 import sqlite3
 import threading
+import uuid
 from collections.abc import Iterator
+from datetime import datetime, timezone
 from pathlib import Path
 
 from shapely import wkt as shapely_wkt
 from shapely.geometry import Point, box
 
 from geoseek.catalog.entities import (
+    AnalystDecision,
     Collection,
     DerivedProduct,
     Observation,
@@ -430,6 +433,87 @@ class SQLiteMetadataRepository(MetadataRepository):
     def count_tiles(self) -> int:
         with self._lock:
             return int(self._conn.execute("SELECT COUNT(*) FROM tiles").fetchone()[0])
+
+    # -- analyst audit trail (PS 2.2.5) -------------------------------------
+    # INSERT only. The schema's BEFORE UPDATE / BEFORE DELETE triggers on
+    # analyst_decisions reject any rewrite at the storage layer, so this log is
+    # append-only by construction, not merely by convention.
+
+    _DECISION_COLS = (
+        "decision_id, candidate_id, decision, analyst_note, analyst, created_at, model_version, "
+        "weights_sha256, git_commit, pipeline_version, confidence_at_decision, evidence_snapshot_json"
+    )
+
+    @staticmethod
+    def _analyst_decision(r: tuple) -> AnalystDecision:
+        return AnalystDecision(
+            decision_id=r[0], candidate_id=r[1], decision=r[2], analyst_note=r[3], analyst=r[4],
+            created_at=r[5], model_version=r[6], weights_sha256=r[7], git_commit=r[8],
+            pipeline_version=r[9], confidence_at_decision=r[10], evidence_snapshot=_loads(r[11]),
+        )
+
+    def record_analyst_decision(self, d: AnalystDecision) -> AnalystDecision:
+        stored = AnalystDecision(
+            decision_id=d.decision_id or f"dec_{uuid.uuid4().hex}",
+            candidate_id=d.candidate_id,
+            decision=d.decision,
+            analyst_note=d.analyst_note,
+            analyst=d.analyst,
+            created_at=d.created_at or datetime.now(timezone.utc).isoformat(),
+            model_version=d.model_version,
+            weights_sha256=d.weights_sha256,
+            git_commit=d.git_commit,
+            pipeline_version=d.pipeline_version,
+            confidence_at_decision=d.confidence_at_decision,
+            evidence_snapshot=d.evidence_snapshot,
+        )
+        if stored.decision not in ("confirm", "reject"):
+            raise CatalogError(f"decision must be 'confirm' or 'reject', got {stored.decision!r}")
+        with self._lock:
+            self._conn.execute(
+                f"INSERT INTO analyst_decisions ({self._DECISION_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",
+                (stored.decision_id, stored.candidate_id, stored.decision, stored.analyst_note,
+                 stored.analyst, stored.created_at, stored.model_version, stored.weights_sha256,
+                 stored.git_commit, stored.pipeline_version, stored.confidence_at_decision,
+                 json.dumps(stored.evidence_snapshot)),
+            )
+            self._conn.commit()
+        return stored
+
+    def list_analyst_decisions(
+        self, *, candidate_id: str | None = None, limit: int | None = None
+    ) -> list[AnalystDecision]:
+        sql = f"SELECT {self._DECISION_COLS} FROM analyst_decisions"
+        params: list = []
+        if candidate_id is not None:
+            sql += " WHERE candidate_id = ?"
+            params.append(candidate_id)
+        sql += " ORDER BY created_at, decision_id"
+        if limit is not None:
+            sql += " LIMIT ?"
+            params.append(int(limit))
+        with self._lock:
+            rows = self._conn.execute(sql, params).fetchall()
+        return [self._analyst_decision(r) for r in rows]
+
+    def get_analyst_decision(self, decision_id: str) -> AnalystDecision | None:
+        with self._lock:
+            r = self._conn.execute(
+                f"SELECT {self._DECISION_COLS} FROM analyst_decisions WHERE decision_id = ?",
+                (decision_id,),
+            ).fetchone()
+        return self._analyst_decision(r) if r else None
+
+    def latest_decision_by_candidate(self) -> dict[str, AnalystDecision]:
+        with self._lock:
+            rows = self._conn.execute(
+                f"SELECT {self._DECISION_COLS} FROM analyst_decisions ORDER BY created_at, decision_id"
+            ).fetchall()
+        latest: dict[str, AnalystDecision] = {}
+        for r in rows:                      # rows are ascending; last write wins
+            d = self._analyst_decision(r)
+            latest[d.candidate_id] = d
+        return latest
 
     def table_counts(self) -> dict[str, int]:
         with self._lock:

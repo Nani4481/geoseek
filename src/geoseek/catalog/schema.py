@@ -73,6 +73,24 @@ CREATE TABLE IF NOT EXISTS derived (
     created_at      TEXT NOT NULL DEFAULT ''
 );
 
+-- PS 2.2.5 audit trail. APPEND-ONLY: the two triggers below reject every
+-- UPDATE and DELETE at the storage layer, so the decision history can never be
+-- silently rewritten. Re-deciding a candidate inserts a NEW row.
+CREATE TABLE IF NOT EXISTS analyst_decisions (
+    decision_id            TEXT PRIMARY KEY,
+    candidate_id           TEXT NOT NULL,
+    decision               TEXT NOT NULL CHECK (decision IN ('confirm', 'reject')),
+    analyst_note           TEXT NOT NULL DEFAULT '',
+    analyst                TEXT NOT NULL DEFAULT '',
+    created_at             TEXT NOT NULL,
+    model_version          TEXT NOT NULL DEFAULT '',
+    weights_sha256         TEXT NOT NULL DEFAULT '',
+    git_commit             TEXT NOT NULL DEFAULT '',
+    pipeline_version       TEXT NOT NULL DEFAULT '',
+    confidence_at_decision REAL,
+    evidence_snapshot_json TEXT NOT NULL DEFAULT '{}'
+);
+
 CREATE INDEX IF NOT EXISTS ix_scenes_collection      ON scenes(collection_id);
 CREATE INDEX IF NOT EXISTS ix_observations_scene     ON observations(scene_id);
 CREATE INDEX IF NOT EXISTS ix_observations_acquired  ON observations(acquired_at);
@@ -81,6 +99,25 @@ CREATE INDEX IF NOT EXISTS ix_tiles_faiss            ON tiles(faiss_id);
 CREATE INDEX IF NOT EXISTS ix_tiles_rowcol           ON tiles(row, col);
 CREATE INDEX IF NOT EXISTS ix_derived_observation    ON derived(observation_id);
 CREATE INDEX IF NOT EXISTS ix_derived_tile           ON derived(tile_id);
+CREATE INDEX IF NOT EXISTS ix_analyst_decisions_cand ON analyst_decisions(candidate_id);
+CREATE INDEX IF NOT EXISTS ix_analyst_decisions_time ON analyst_decisions(created_at);
+
+CREATE TRIGGER IF NOT EXISTS trg_analyst_decisions_no_update
+BEFORE UPDATE ON analyst_decisions
+BEGIN
+    SELECT RAISE(ABORT, 'analyst_decisions is append-only: UPDATE is not permitted');
+END;
+
+CREATE TRIGGER IF NOT EXISTS trg_analyst_decisions_no_delete
+BEFORE DELETE ON analyst_decisions
+BEGIN
+    SELECT RAISE(ABORT, 'analyst_decisions is append-only: DELETE is not permitted');
+END;
 """
 
 CATALOG_TABLES = ("collections", "scenes", "observations", "tiles", "derived")
+
+# The audit table is deliberately NOT in CATALOG_TABLES: it is not part of the
+# scene->tile lineage the Phase 3.5 migration verifies, it is an independent
+# append-only log written by the analyst UI.
+AUDIT_TABLES = ("analyst_decisions",)

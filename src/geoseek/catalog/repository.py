@@ -15,6 +15,7 @@ import abc
 from collections.abc import Iterator
 
 from geoseek.catalog.entities import (
+    AnalystDecision,
     Collection,
     DerivedProduct,
     Observation,
@@ -125,6 +126,28 @@ class MetadataRepository(abc.ABC):
 
     @abc.abstractmethod
     def count_tiles(self) -> int: ...
+
+    # -- analyst audit trail (PS 2.2.5) -----------------------------------
+    # Append-only. ``record_analyst_decision`` only ever INSERTs; there is no
+    # update or delete method on the interface by design.
+
+    @abc.abstractmethod
+    def record_analyst_decision(self, decision: AnalystDecision) -> AnalystDecision:
+        """Append one analyst confirm/reject. Returns the row as stored (with
+        ``decision_id`` / ``created_at`` filled in if they were blank)."""
+
+    @abc.abstractmethod
+    def list_analyst_decisions(
+        self, *, candidate_id: str | None = None, limit: int | None = None
+    ) -> list[AnalystDecision]:
+        """Decisions in write order (oldest first), optionally for one candidate."""
+
+    @abc.abstractmethod
+    def get_analyst_decision(self, decision_id: str) -> AnalystDecision | None: ...
+
+    @abc.abstractmethod
+    def latest_decision_by_candidate(self) -> dict[str, AnalystDecision]:
+        """``{candidate_id: most-recent AnalystDecision}`` - the current verdict per candidate."""
 
     @abc.abstractmethod
     def close(self) -> None: ...
