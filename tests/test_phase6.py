@@ -95,3 +95,171 @@ def test_global_audit_listing_is_time_ordered(repo):
     allrows = repo.list_analyst_decisions()
     assert [d.candidate_id for d in allrows] == ["a", "b", "c"]
     assert [d.candidate_id for d in repo.list_analyst_decisions(limit=2)] == ["a", "b"]
+
+
+# --------------------------------------------------------------------------
+# Step A / C / D - the FastAPI analyst endpoints (integration, gated on the
+# production catalog + change report existing)
+# --------------------------------------------------------------------------
+
+
+@pytest.fixture(scope="module")
+def client(tmp_path_factory):
+    import shutil
+
+    from geoseek.change.analyze import OUT_DIR
+    from geoseek.config import get_settings
+
+    idx = get_settings().index_dir
+    if not (idx / "tiles.faiss").is_file():
+        pytest.skip("no production index - run the ingest pipeline")
+    if not (OUT_DIR / "ayodhya_change_report.json").is_file():
+        pytest.skip("no change report - run `python -m geoseek.change.analyze`")
+
+    from fastapi.testclient import TestClient
+
+    from geoseek import search  # noqa: F401
+    from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository
+    from geoseek.search.api import app
+
+    with TestClient(app) as c:
+        if c.get("/health").json().get("vectors", 0) == 0:
+            pytest.skip("production index empty")
+        # isolate audit writes: point the live AnalystService at a throwaway COPY
+        # of the production catalog so decisions/audit don't touch data/index.
+        from geoseek.search import api as api_mod
+
+        tmp_db = tmp_path_factory.mktemp("phase6_audit") / "tiles.sqlite"
+        shutil.copy2(idx / "tiles.sqlite", tmp_db)
+        api_mod._analyst.repo = SQLiteMetadataRepository(tmp_db)
+        yield c
+
+
+def test_health_and_stats(client):
+    h = client.get("/health").json()
+    assert h["status"] == "ok"
+    assert h["candidates"] > 0 and h["probability_raster_present"] is True
+
+    s = client.get("/stats").json()
+    assert s["index"]["tiles"] > 0
+    assert s["model"]["weights_sha256"]
+    assert s["build"]["git_commit"]
+    assert s["change_pipeline"]["candidates_ranked"] >= 1000
+
+
+def test_candidates_queue_filters_and_sorts(client):
+    body = client.get("/candidates", params={"limit": 10}).json()
+    assert body["total"] > 1000 and body["count"] == 10
+    scores = [c["queue_score"] for c in body["candidates"]]
+    assert scores == sorted(scores, reverse=True)
+    for c in body["candidates"]:
+        assert c["geometry"]["type"] == "Polygon"
+        assert len(c["geometry"]["coordinates"][0]) == 5
+        assert c["decision"] in ("confirm", "reject", "undecided")
+
+    filt = client.get("/candidates", params={"change_type": "construction",
+                                             "min_confidence": 0.9, "limit": 5}).json()
+    assert all(c["change_type"] == "construction" and c["confidence"] >= 0.9
+               for c in filt["candidates"])
+
+    bbox_none = client.get("/candidates", params={"bbox": "0,0,1,1"}).json()
+    assert bbox_none["total"] == 0
+
+
+def test_candidate_detail_has_full_evidence_and_provenance(client):
+    top = client.get("/candidates", params={"limit": 1}).json()["candidates"][0]["candidate_id"]
+    d = client.get(f"/candidates/{top}").json()
+
+    # evidence
+    assert d["confidence_breakdown"] and any("model:" in x for x in d["confidence_breakdown"])
+    assert d["suppression"]["trace"] and {"quality", "registration", "radiometric",
+                                          "phenology", "morphology"} == {
+        t["rule"] for t in d["suppression"]["trace"]}
+    assert d["temporal_trajectory"]["intervals"]
+    assert d["temporal_trajectory"]["earliest_supported_change"]["caveat"]
+
+    # provenance chain
+    prov = d["provenance"]
+    assert [o["role"] for o in prov["observations"]] == ["before", "after"]
+    sc = prov["observations"][0]["scene"]
+    assert sc["source_url"].startswith("https://") and sc["license"]
+    assert prov["observations"][0]["collection"]["sensor"] == "MSI"
+    assert prov["model"]["weights_sha256"] and prov["code"]["git_commit"]
+    assert prov["observations"][0]["representative_tile"]["tile_id"]
+
+    assert client.get("/candidates/nope_9999").status_code == 404
+
+
+def test_candidate_imagery_before_after_overlay_are_png(client):
+    top = client.get("/candidates", params={"limit": 1}).json()["candidates"][0]["candidate_id"]
+    for date in ("2019", "2021", "2024"):
+        for view in ("rgb", "overlay"):
+            r = client.get(f"/candidates/{top}/imagery", params={"date": date, "view": view})
+            assert r.status_code == 200
+            assert r.headers["content-type"] == "image/png"
+            assert r.content[:8] == b"\x89PNG\r\n\x1a\n"
+    assert client.get(f"/candidates/{top}/imagery", params={"date": "1999"}).status_code == 400
+
+
+def test_decision_writes_audit_and_is_append_only(client):
+    top = client.get("/candidates", params={"limit": 1}).json()["candidates"][0]["candidate_id"]
+
+    r1 = client.post(f"/candidates/{top}/decision",
+                     json={"decision": "confirm", "note": "phase6 test confirm", "analyst": "pytest"})
+    assert r1.status_code == 200
+    dec1 = r1.json()
+    assert dec1["decision"] == "confirm" and dec1["weights_sha256"] and dec1["git_commit"]
+    assert dec1["confidence_at_decision"] is not None
+    assert dec1["evidence_snapshot"]["provenance"]["model"]["weights_sha256"]
+
+    r2 = client.post(f"/candidates/{top}/decision",
+                     json={"decision": "reject", "note": "phase6 test reject", "analyst": "pytest"})
+    assert r2.json()["decision_id"] != dec1["decision_id"]
+
+    hist = client.get("/audit", params={"candidate_id": top}).json()
+    assert hist["append_only"] is True
+    mine = [d for d in hist["decisions"] if d["analyst"] == "pytest"]
+    assert [d["decision"] for d in mine][-2:] == ["confirm", "reject"]
+
+    # current verdict reflects the most recent write
+    q = client.get("/candidates", params={"decision": "reject", "limit": 5000}).json()
+    assert top in [c["candidate_id"] for c in q["candidates"]]
+
+    assert client.post("/candidates/nope/decision",
+                       json={"decision": "confirm"}).status_code == 404
+    assert client.post(f"/candidates/{top}/decision",
+                       json={"decision": "maybe"}).status_code == 400
+
+
+def test_export_geojson_features_carry_full_provenance(client):
+    top = client.get("/candidates", params={"limit": 2}).json()["candidates"]
+    ids = [c["candidate_id"] for c in top]
+    r = client.post("/export", json={"candidate_ids": ids, "format": "both"})
+    assert r.status_code == 200
+    body = r.json()
+    fc = body["geojson"]
+    assert fc["type"] == "FeatureCollection" and len(fc["features"]) == 2
+    p = fc["features"][0]["properties"]
+    for key in ("candidate_id", "change_type", "confidence", "earliest_supported_change",
+                "source_scene_ids", "acquisition_dates", "evidence_summary", "processing"):
+        assert key in p
+    assert p["processing"]["weights_sha256"] and p["processing"]["git_commit"]
+    assert fc["features"][0]["geometry"]["type"] == "Polygon"
+    assert "csv" in body and body["csv"].splitlines()[0].startswith("candidate_id,")
+    assert body["geojson_path"].endswith(".geojson")
+
+
+def test_discovery_endpoints(client):
+    cl = client.get("/discovery/clusters").json()
+    assert cl["available"] is True and cl["n_clusters"] >= 1
+
+    top = client.get("/candidates", params={"limit": 1}).json()["candidates"][0]["candidate_id"]
+    sim = client.get(f"/candidates/{top}/similar", params={"k": 5}).json()
+    assert sim["seed_candidate_id"] == top
+    assert 1 <= len(sim["results"]) <= 5
+
+
+def test_ui_bundle_is_served_and_offline(client):
+    r = client.get("/app/")
+    assert r.status_code == 200
+    assert "<" in r.text

@@ -887,7 +887,17 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
     if fusion_block is not None:
         report["fusion"] = fusion_block
 
-    # full ranked queue -> CSV (JSON keeps only the head)
+    # full ranked queue -> CSV (JSON keeps only the head) + a full-detail sidecar
+    # (every survivor's evidence/suppression/trajectory/sar) for the analyst UI:
+    # the change report itself stays slim, the UI reads the sidecar for detail.
+    detail_path = OUT_DIR / "ayodhya_change_ranked_detail.json"
+    detail_path.write_text(json.dumps(
+        [_candidate_row(c, i, full=True) for i, c in enumerate(span_survivors, 1)], indent=1),
+        encoding="utf-8")
+    report["full_ranked_detail_json"] = str(detail_path)
+    record_analysis_section("ayodhya_change_pipeline", report)
+    print(f"  full-detail sidecar -> {detail_path.name} ({len(span_survivors)} candidates)")
+
     import csv as _csv
     with open(OUT_DIR / "ayodhya_change_ranked.csv", "w", newline="", encoding="utf-8") as fh:
         wr = _csv.writer(fh)
