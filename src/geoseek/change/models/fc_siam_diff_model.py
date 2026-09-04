@@ -32,6 +32,26 @@ _TILE_PX = 256
 
 
 @dataclass
+class ChangeProbabilityRaster:
+    """Full-AOI per-pixel change probability from :class:`FCSiamDiffChangeModel`.
+
+    ``prob`` is float32 in [0, 1] (0 where either date is nodata); ``valid`` is
+    the boolean per-pixel validity mask; ``transform`` / ``crs`` are the later
+    observation's georeferencing. ``threshold`` is the model's frozen
+    precision-favouring operating point (for a default binarisation).
+    """
+
+    prob: "object"                     # np.ndarray (H, W) float32
+    valid: "object"                    # np.ndarray (H, W) bool
+    transform: "object"
+    crs: "object"
+    earlier_observation_id: str
+    later_observation_id: str
+    threshold: float
+    path: str | None = None
+
+
+@dataclass
 class _Loaded:
     model: "object"
     bands: list[str]
@@ -223,6 +243,94 @@ class FCSiamDiffChangeModel(ChangeDetectionModel):
                 "trained on OSCD 11-region fit subset; OSCD test split never used in training or "
                 "threshold tuning",
             ],
+        )
+
+
+    # -- full-AOI probability raster (Phase 4 pipeline entry point) --------
+
+    def infer_probability_raster(self, pair, *, bands=None, out_path=None,
+                                 progress_every: int = 0) -> ChangeProbabilityRaster:
+        """Run the trained net over the whole later-observation grid and return the
+        per-pixel change probability (not thresholded).
+
+        Same tile-by-tile inference as :meth:`predict_change`; this keeps the
+        float probabilities so a downstream stage can build candidates / apply
+        its own operating point. Optionally writes a float32 GeoTIFF to
+        ``out_path``.
+        """
+        import rasterio
+        import torch
+
+        if not pair.comparable:
+            raise ValueError(f"pair not comparable: {'; '.join(pair.comparability.blocking_reasons)}")
+        self.load()
+        L = self._loaded
+        use_bands = list(bands) if bands else L.bands
+        if any(b not in L.bands for b in use_bands):
+            raise ValueError(f"model was trained on {L.bands}; cannot run on {use_bands}")
+        b_idx = [L.bands.index(b) for b in use_bands]
+        mean, std = L.mean[b_idx], L.std[b_idx]
+
+        settings = get_settings()
+        e_dir = settings.datasets_dir / (pair.earlier.dataset_dir or pair.earlier.observation_id)
+        l_dir = settings.datasets_dir / (pair.later.dataset_dir or pair.later.observation_id)
+        for d in (e_dir, l_dir):
+            missing = [b for b in use_bands if not (d / f"{b}.tif").is_file()]
+            if missing:
+                raise FileNotFoundError(f"{d} missing band(s) {missing}")
+
+        with rasterio.open(l_dir / f"{use_bands[0]}.tif") as ref:
+            H, W = ref.height, ref.width
+            transform, crs = ref.transform, ref.crs
+
+        prob_full = np.zeros((H, W), np.float32)
+        valid_full = np.zeros((H, W), bool)
+        n_rt, n_ct = -(-H // self.tile_px), -(-W // self.tile_px)
+        e_src = {b: rasterio.open(e_dir / f"{b}.tif") for b in use_bands}
+        l_src = {b: rasterio.open(l_dir / f"{b}.tif") for b in use_bands}
+        done = 0
+        try:
+            for r in range(n_rt):
+                for c in range(n_ct):
+                    y0, x0 = r * self.tile_px, c * self.tile_px
+                    y1, x1 = min(y0 + self.tile_px, H), min(x0 + self.tile_px, W)
+                    win = rasterio.windows.Window(x0, y0, x1 - x0, y1 - y0)
+                    a = np.stack([e_src[b].read(1, window=win).astype(np.float32) for b in use_bands])
+                    bb = np.stack([l_src[b].read(1, window=win).astype(np.float32) for b in use_bands])
+                    valid = np.all(bb > 0, axis=0) & np.all(a > 0, axis=0)
+                    valid_full[y0:y1, x0:x1] = valid
+                    if valid.sum() < 16:
+                        continue
+                    a = (a / REFLECTANCE_SCALE - mean[:, None, None]) / std[:, None, None]
+                    bb = (bb / REFLECTANCE_SCALE - mean[:, None, None]) / std[:, None, None]
+                    t1 = torch.from_numpy(a)[None].to(self.device)
+                    t2 = torch.from_numpy(bb)[None].to(self.device)
+                    with torch.no_grad(), torch.autocast(device_type="cuda",
+                                                         enabled=(self.device == "cuda")):
+                        p = torch.sigmoid(self._loaded.model(t1, t2)).float()[0, 0].cpu().numpy()
+                    p[~valid] = 0.0
+                    prob_full[y0:y1, x0:x1] = p
+                    done += 1
+                    if progress_every and done % progress_every == 0:
+                        print(f"    [infer] {done}/{n_rt * n_ct} tiles", flush=True)
+        finally:
+            for s in list(e_src.values()) + list(l_src.values()):
+                s.close()
+
+        path = None
+        if out_path is not None:
+            path = str(out_path)
+            prof = {"driver": "GTiff", "height": H, "width": W, "count": 1, "dtype": "float32",
+                    "crs": crs, "transform": transform, "nodata": 0.0, "compress": "deflate",
+                    "predictor": 3, "tiled": True, "blockxsize": 256, "blockysize": 256}
+            with rasterio.open(path, "w", **prof) as dst:
+                dst.write(prob_full, 1)
+
+        return ChangeProbabilityRaster(
+            prob=prob_full, valid=valid_full, transform=transform, crs=crs,
+            earlier_observation_id=pair.earlier.observation_id,
+            later_observation_id=pair.later.observation_id,
+            threshold=float(self.threshold), path=path,
         )
 
 

@@ -12,12 +12,14 @@
 
 from geoseek.change.models.fc_siam_diff import FCSiamDiff, count_parameters
 
-__all__ = ["FCSiamDiff", "count_parameters", "FCSiamDiffChangeModel"]
+__all__ = ["FCSiamDiff", "count_parameters", "FCSiamDiffChangeModel", "ChangeProbabilityRaster"]
+
+_LAZY = {"FCSiamDiffChangeModel", "ChangeProbabilityRaster"}
 
 
 def __getattr__(name: str):  # lazy: keep torch-only model import cheap, defer the raster/catalog deps
-    if name == "FCSiamDiffChangeModel":
-        from geoseek.change.models.fc_siam_diff_model import FCSiamDiffChangeModel
+    if name in _LAZY:
+        from geoseek.change.models import fc_siam_diff_model
 
-        return FCSiamDiffChangeModel
+        return getattr(fc_siam_diff_model, name)
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

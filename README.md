@@ -536,8 +536,94 @@ trained net tile by tile over the later observation's grid, and returns a
 label, a georeferenced full-AOI change-mask GeoTIFF, and a confidence. A
 non-comparable pair is refused (confidence 0, no mask, reason in `notes`). It
 imports only torch / numpy / rasterio + the catalog entities — the sqlite and
-faiss seams are untouched. Full-scene suppression on Ayodhya is Phase 4; Phase
-3b stops at a smoke test.
+faiss seams are untouched. Phase 3b stops at a smoke test; the full analyst
+pipeline is Phase 4.
+
+## Phase 4: the analyst-grade change pipeline on Ayodhya
+
+```powershell
+python -m geoseek.change.analyze          # pairs 2019->2021, 2021->2024, 2019->2024
+```
+
+Offline. Turns the trained FC-Siam-diff model into a reviewable candidate list
+with a suppression trace, a rule-based change type, a temporal trajectory, and
+one calibrated confidence per candidate. Per-pair probability rasters are
+cached under `data/change_model/prob_*.tif`.
+
+### Step A — false-alarm suppression (`geoseek.change.suppress`, PS 2.2.3)
+
+Five gates, applied **in order**, each recording what it checked; every
+suppressed candidate keeps the full trace.
+
+| # | gate | fires when | effect |
+|---|---|---|---|
+| 1 | quality | cloud/shadow/snow/saturated SCL > 5 % on **either** date, or < 80 % jointly-valid px | **suppress** |
+| 2 | registration | the pair's measured co-registration residual > 0.30 px (→ heavy at ≥ 0.50 px) | down-weight |
+| 3 | radiometric | index-band min inter-date correlation < 0.60, or a normalization surface that was entirely shrunk | down-weight |
+| 4 | phenology | NDVI **and** NDBI **and** NDWI deltas all stay within a band of their *scene-wide seasonal* deltas | **suppress** |
+| 5 | morphology | connected-component area < 10 px (1 000 m² at 10 m GSD) | **suppress** |
+
+Everything is **anomaly-framed**: the 2019 drought → 2024 green shift moves
+NDVI/NDBI/NDWI across the whole AOI (scene ΔNDVI ≈ +0.30, ΔNDBI ≈ −0.23,
+ΔNDWI ≈ −0.23 for 2019→2024), so a *structural* change is one that departs
+from that trend on ≥ 1 axis. Rules 2–3 attach a multiplicative down-weight the
+confidence engine consumes.
+
+### Step B — change typing (`geoseek.change.classify`, PS 2.2.2)
+
+Rule-based on the index **anomalies** (delta − scene seasonal delta) + shape —
+no unlabelled ML. `water_gain` / `water_loss` (NDWI anomaly ≥ 0.15 with real
+movement; loss also requires the change is *not* explained by vegetation
+growth), `construction` (NDBI anomaly ↑, NDVI not greening), `clearance`
+(NDVI anomaly well below the greening trend, NDBI flat), `road` (elongated
+component + NDBI ↑), `other` (explicitly allowed). Every classification carries
+the deltas and anomalies that produced it.
+
+### Step C — temporal persistence + earliest supported change (`geoseek.temporal.persistence`, PS 2.2.2)
+
+Uses all three observations via `TemporalObservationMatcher`. For a location it
+builds the change trajectory across the consecutive pairs and classifies it
+**persistent** (changed early, still present, stable since — high confidence),
+**progressive**, **recent**, **transient** (appeared then reverted — likely a
+false alarm, penalised), or **inconsistent**. Earliest supported change = the
+first consecutive interval that changed, reported *with* its two bounding
+observation ids and the explicit caveat that no change earlier than
+2019-03-30 (our earliest usable observation) can be claimed.
+
+### Step D — confidence engine (`geoseek.change.confidence`)
+
+One score in [0, 1] from six terms — model probability (rescaled, **never**
+exposed raw), temporal persistence, spectral agreement with the assigned type,
+image quality, co-registration residual, radiometric-normalization
+reliability — combined as a **weighted geometric mean** (weights
+2 / 2 / 1.5 / 1.5 / 1 / 1) so any single weak axis collapses the score, then
+multiplied by the Step-A down-weights and a transient-persistence penalty.
+Output includes a human-readable evidence breakdown per candidate.
+
+### Step E — run + honest report
+
+Over the whole 82 km AOI, per pair:
+
+| pair | raw components | suppressed (quality / phenology / morphology) | survived |
+|---|---|---|---|
+| 2019→2021 | 6 271 | 2 / 143 / 3 484 | 2 642 |
+| 2021→2024 | 12 037 | 4 / 2 008 / 6 938 | 3 087 |
+| 2019→2024 | 13 563 | 2 / 936 / 8 467 | 4 158 |
+
+**Honest observation (L1C→L2A domain gap — worse than the 56 % OSCD F1, as
+expected).** The dominant *real* surface change 2019→2024 is **water /
+moisture gain**: 2019 was a severe drought March, 2024 a normal one, so the
+Saryu, its tanks, and soil moisture recovered scene-wide. The span-pair
+survivors split ≈ construction 1 536 / water_gain 1 693 / road 386 /
+clearance 68 / other 469. The top-10 by confidence (0.90–0.92, held below
+saturation by the span pair's radiometric reliability of only 0.50) are
+mostly tanks/ponds refilling — e.g. the highest-confidence candidate is a dry
+tank at (82.253, 26.636) that refilled between 2019 and 2021 and stayed wet
+(persistent; earliest supported 2019-03-30 → 2021-03-04). This is reported as
+observed, not tuned to look like a construction-detection demo. Full report →
+`data/change_model/ayodhya_change_report.json` + manifest
+`ayodhya_change_pipeline`; `[2019 | 2021 | 2024 | overlay]` panels for the
+top-5 → `data/change_model/ayodhya_change_*.png`.
 
 ## Tests
 
@@ -567,7 +653,12 @@ order-invariance, shared Siamese encoder) and the `FCSiamDiffChangeModel` seam
 (consumes a matcher `ObservationPair` unchanged, returns a `ChangeResult` with
 a written mask, refuses a non-comparable pair, runs offline) — all hermetic
 (tiny synthetic checkpoint + rasters), plus a skip-if-absent check against the
-real trained weights.
+real trained weights. `test_change_pipeline.py` — Phase 4: the five
+suppression gates + ordering + down-weight combination, anomaly-framed change
+typing for every type, the persistence analyzer's trajectory verdicts +
+earliest-supported-change caveat (against a tiny in-memory catalog), and the
+confidence engine (geometric-mean collapse on a single weak term, raw model
+probability never surfaced, weights documented). 171 tests total.
 
 ## Layout
 
@@ -581,6 +672,7 @@ geoseek/
     capture_search_baseline.py  freeze the production search results into a regression fixture
     align_third_date.py      Phase 3.5 Step 4: co-registration + PIF offset provenance for the 3rd date
     train_change.py          Phase 3b: train FC-Siam-diff on OSCD + honest held-out evaluation
+    (Phase 4 runs as `python -m geoseek.change.analyze` - no script wrapper)
   src/geoseek/
     config.py              paths, device auto-select, startup banner
     staging/
@@ -604,6 +696,7 @@ geoseek/
     temporal/                Phase 3.5: temporal reasoning
       contract.py            ObservationSequence / ObservationPair / PairComparability (matcher <-> change-detection contract)
       matcher.py             CLI: TemporalObservationMatcher — comparable/not-comparable + reasons per pair
+      persistence.py         Phase 4 Step C: change trajectory + persistence verdict + earliest supported change
     ingest/
       reader.py              rasterio: read bands, preserve CRS/transform/nodata
       tiler.py                256x256 tiling + lon/lat footprint per tile; single-tile window reads
@@ -614,7 +707,7 @@ geoseek/
     search/
       engine.py               SearchEngine: text-to-image + image-to-image, filters, thumbnails (via the seams)
       api.py                  FastAPI service wrapping SearchEngine
-    change/                   Phase 3a: temporal pair prep + Phase 3b: the trained change model
+    change/                   Phase 3a: pair prep · 3b: trained model · 4: analyst pipeline
       coregister.py            FFT phase-correlation sub-pixel co-registration check + correction
       normalize.py             pseudo-invariant-feature per-band linear radiometric normalization
       indices.py               NDVI / NDWI / NDBI
@@ -623,10 +716,14 @@ geoseek/
       models/                  Phase 3b: the trained change-detection model
         fc_siam_diff.py         FCSiamDiff nn.Module (shared Siamese encoder, |f1-f2| skips, U-Net decoder)
         fc_siam_diff_model.py   FCSiamDiffChangeModel(ChangeDetectionModel) - ObservationPair -> ChangeResult
+      suppress.py              Phase 4 Step A: 5 ordered false-alarm gates + per-candidate trace
+      classify.py              Phase 4 Step B: rule-based change typing on index anomalies
+      confidence.py            Phase 4 Step D: 6-term weighted-geometric-mean confidence + evidence
+      analyze.py               Phase 4 Step E: CLI orchestrator - candidates -> report + panels
   data/
     models/ datasets/ tiles/ index/     gitignored, populated by staging + ingest
     datasets/oscd/                      gitignored, OSCD change-detection dataset (download_oscd.py)
-    change_model/                       gitignored, fc_siam_diff.pt + loss/PR curves + qualitative panels
+    change_model/                       gitignored, fc_siam_diff.pt + loss/PR curves + Phase 4 prob_*.tif, report, panels
     index/tiles.sqlite                  the catalog (collections/scenes/observations/tiles/derived)
     index/tiles.faiss                   the FaissFlatIPIndex vectors
     provenance_manifest.json            gitignored; staging + ingest + change.prep + Step 4 + Phase 3b (oscd*, oscd_change_model*)
@@ -635,7 +732,7 @@ geoseek/
     index/spectral_indices_per_tile.csv gitignored, per-tile NDVI/NDWI/NDBI per date (change.prep)
   tests/
     test_env.py  test_ingest.py  test_search.py  test_change.py  test_change_model.py
-    test_catalog.py  test_vectorindex.py  test_models.py  test_temporal.py
-    test_search_parity.py  test_change_align.py
+    test_change_pipeline.py  test_catalog.py  test_vectorindex.py  test_models.py
+    test_temporal.py  test_search_parity.py  test_change_align.py
     fixtures/search_baseline.json  fixtures/pre_migration_tiles.json
 ```
