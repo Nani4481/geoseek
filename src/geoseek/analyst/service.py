@@ -431,9 +431,16 @@ class AnalystService:
             return [self._by_id[i] for i in ids]
         return list(self.details)
 
+    @staticmethod
+    def _date_from_obs(obs_id: str) -> str | None:
+        parts = base_scene_id(obs_id).split("_")
+        if len(parts) >= 3 and len(parts[2]) == 8 and parts[2].isdigit():
+            return f"{parts[2][:4]}-{parts[2][4:6]}-{parts[2][6:8]}"
+        return None
+
     def _feature(self, c: dict, verdict_row: dict | None) -> dict:
         earlier_obs, later_obs = (c["pair"].split("->") + ["", ""])[:2]
-        e_date = c.get("earliest_supported") or [None, None]
+        acq_dates = [self._date_from_obs(earlier_obs), self._date_from_obs(later_obs)]
         cls = c.get("classification") or {}
         ev = cls.get("evidence", {})
         sar = c.get("sar") or {}
@@ -468,9 +475,13 @@ class AnalystService:
                                 "combined_downweight": supp.get("combined_downweight")},
                 "source_scene_ids": [base_scene_id(earlier_obs), base_scene_id(later_obs)],
                 "source_observation_ids": [earlier_obs, later_obs],
-                "acquisition_dates": [e_date[0], e_date[1]] if c.get("earliest_supported")
-                                     else [self.report["observations"][0][8:16], None],
+                "acquisition_dates": acq_dates,
                 "sensor": "MSI / Sentinel-2 (optical); Sentinel-1 C-SAR corroboration where available",
+                # flat, GIS-reader-friendly copies of the key provenance fields
+                "model_version": f"{self.model_info.get('name')}@{self.model_info.get('threshold')}",
+                "weights_sha256": self.model_info.get("weights_sha256"),
+                "git_commit": self.git_commit,
+                "pipeline_version": self.pipeline_version,
                 "processing": {
                     "model": self.model_info.get("name"),
                     "model_threshold": self.model_info.get("threshold"),

@@ -247,6 +247,34 @@ def test_export_geojson_features_carry_full_provenance(client):
     assert fc["features"][0]["geometry"]["type"] == "Polygon"
     assert "csv" in body and body["csv"].splitlines()[0].startswith("candidate_id,")
     assert body["geojson_path"].endswith(".geojson")
+    # flat GIS-reader-friendly provenance keys + real source acquisition dates
+    assert p["weights_sha256"] and len(p["weights_sha256"]) == 64
+    assert p["git_commit"] and p["acquisition_dates"] == ["2019-03-30", "2024-03-08"]
+
+
+def test_export_geojson_loads_in_a_standard_gis_reader(client, tmp_path):
+    ogr = pytest.importorskip("osgeo.ogr")
+
+    ids = [c["candidate_id"] for c in
+           client.get("/candidates", params={"limit": 6}).json()["candidates"]]
+    fc = client.post("/export", json={"candidate_ids": ids, "format": "geojson"}).json()["geojson"]
+    path = tmp_path / "export.geojson"
+    path.write_text(__import__("json").dumps(fc), encoding="utf-8")
+
+    ds = ogr.Open(str(path))
+    assert ds is not None and ds.GetDriver().GetName() == "GeoJSON"
+    lyr = ds.GetLayer(0)
+    assert lyr.GetFeatureCount() == len(ids)
+    srs = lyr.GetSpatialRef()
+    assert srs is not None and (srs.GetAuthorityCode(None) == "4326"
+                                or "WGS" in srs.GetAttrValue("GEOGCS").upper())
+    fields = {lyr.GetLayerDefn().GetFieldDefn(i).GetName()
+              for i in range(lyr.GetLayerDefn().GetFieldCount())}
+    assert {"candidate_id", "change_type", "confidence", "weights_sha256", "git_commit"} <= fields
+    f0 = lyr.GetNextFeature()
+    g = f0.GetGeometryRef()
+    assert g.GetGeometryName() == "POLYGON" and g.IsValid()
+    ds = None
 
 
 def test_discovery_endpoints(client):
