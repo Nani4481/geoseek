@@ -18,3 +18,5 @@ __pycache__/
 .venv/
 build/
 dist/
+data/discovery/
+data/index/tile_clusters.json
