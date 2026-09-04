@@ -215,11 +215,16 @@ class TemporalObservationMatcher:
         bbox: tuple[float, float, float, float] | None = None,
         aoi_wkt: str | None = None,
         all_pairs: bool = False,
+        collection: str | None = None,
     ) -> ObservationSequence:
+        """``collection`` restricts the sequence to one source collection - change
+        detection never mixes collections (that would fail ``collection_compatibility``
+        anyway), so a caller working on Sentinel-2 passes ``collection='sentinel-2-l2a'``
+        to keep a co-located Sentinel-1 (or other) stack out of the sequence."""
         if location is None and bbox is None and aoi_wkt is None:
             raise ValueError("match() needs one of location, bbox or aoi_wkt")
 
-        obs = self.repo.list_observations(location=location, bbox=bbox)
+        obs = self.repo.list_observations(location=location, bbox=bbox, collection=collection)
         if aoi_wkt is not None:
             poly = shapely_wkt.loads(aoi_wkt)
             obs = [o for o in obs if shapely_wkt.loads(o.footprint_wkt_4326).intersects(poly)]

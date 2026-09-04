@@ -107,6 +107,8 @@ def compute_confidence(
     spectral_agreement: float,         # [0,1] - how strongly the index deltas back the assigned type
     change_type: str,
     suppression_downweight: float = 1.0,   # product of Step A 'downweight' rules
+    sar_corroboration: float = 1.0,        # Phase 5 Step C - Sentinel-1 dB-change factor
+    sar_detail: str | None = None,
     weights: dict[str, float] | None = None,
 ) -> ConfidenceReport:
     w = dict(WEIGHTS if weights is None else weights)
@@ -144,11 +146,18 @@ def compute_confidence(
     pen = PERSISTENCE_PENALTY.get(persistence, 1.0)
     conf *= pen
 
+    sar = float(max(0.5, min(1.15, sar_corroboration)))   # cross-sensor factor: +15% .. -50%
+    conf *= sar
+
     breakdown = [t.raw for t in terms]
     if suppression_downweight < 0.999:
         breakdown.append(f"suppression down-weight applied: x{suppression_downweight:.2f}")
     if pen < 1.0:
         breakdown.append(f"temporal-support penalty ({persistence}): x{pen:.2f}")
+    if abs(sar - 1.0) > 1e-3:
+        breakdown.append(f"SAR corroboration ({sar_detail or 'S1 dB change'}): x{sar:.2f}")
+    elif sar_detail:
+        breakdown.append(f"SAR corroboration: {sar_detail} (neutral)")
     breakdown.append(f"=> confidence {conf:.2f}")
 
     return ConfidenceReport(confidence=float(max(0.0, min(1.0, conf))), terms=terms, breakdown=breakdown)

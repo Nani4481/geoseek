@@ -492,7 +492,10 @@ def verify_migration(db_path: Path | str, *, faiss_path: Path | None = None) -> 
 
 
 def _verify_faiss(conn, faiss_path: Path, legacy: list[dict] | None) -> tuple[bool, str]:
-    pairs = conn.execute("SELECT faiss_id, tile_id FROM tiles ORDER BY faiss_id").fetchall()
+    # only embedded tiles carry a faiss_id; a non-embedded collection (e.g. Sentinel-1
+    # SAR, added as corroborating evidence) legitimately has faiss_id = NULL.
+    pairs = conn.execute(
+        "SELECT faiss_id, tile_id FROM tiles WHERE faiss_id IS NOT NULL ORDER BY faiss_id").fetchall()
     ids = [p[0] for p in pairs]
     contiguous = ids == list(range(len(ids)))
     if legacy is not None:

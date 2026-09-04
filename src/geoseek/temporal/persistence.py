@@ -105,14 +105,16 @@ class ChangeTrajectory:
 
 class TemporalPersistenceAnalyzer:
     def __init__(self, matcher: TemporalObservationMatcher,
-                 *, change_threshold: float = DEFAULT_CHANGE_THRESHOLD):
+                 *, change_threshold: float = DEFAULT_CHANGE_THRESHOLD,
+                 collection: str | None = None):
         self.matcher = matcher
         self.change_threshold = change_threshold
+        self.collection = collection
 
     # -- public ----------------------------------------------------------
 
     def sequence_for(self, lon: float, lat: float) -> ObservationSequence:
-        return self.matcher.match(location=(lon, lat), all_pairs=True)
+        return self.matcher.match(location=(lon, lat), all_pairs=True, collection=self.collection)
 
     def trajectory_for_location(self, lon: float, lat: float, lookup: ChangeLookup) -> ChangeTrajectory:
         seq = self.sequence_for(lon, lat)

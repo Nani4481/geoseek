@@ -69,6 +69,8 @@ def _seed_repo(db_path):
 def test_base_scene_id_strips_aoi_suffix():
     assert base_scene_id("S2B_44RPQ_20190330_1_L2A_scaled") == "S2B_44RPQ_20190330_1_L2A"
     assert base_scene_id("S2B_44RPQ_20190330_1_L2A") == "S2B_44RPQ_20190330_1_L2A"
+    assert base_scene_id("S1A_IW_GRDH_1SDV_20190329T123812_20190329T123837_026553_02F9E3_grd") == \
+        "S1A_IW_GRDH_1SDV_20190329T123812_20190329T123837_026553_02F9E3"
 
 
 def test_scene_source_url_reconstructs_cog_folder():
@@ -304,7 +306,8 @@ def test_production_catalog_verifies():
     assert rep.ok, {k: v for k, v in rep.checks.items() if not v["ok"]}
     assert rep.table_counts["tiles"] >= 2178
     assert rep.table_counts["observations"] >= 2
-    assert rep.table_counts["collections"] == 1
+    # >= 1: Phase 5 may add sentinel-1-grd as a second, non-embedded collection
+    assert rep.table_counts["collections"] >= 1
 
 
 def test_production_catalog_provenance_chain_for_every_observation():
@@ -326,12 +329,14 @@ def test_production_catalog_provenance_chain_for_every_observation():
 def test_production_catalog_has_the_third_date_with_alignment_provenance():
     db = _production_db()
     repo = SQLiteMetadataRepository(db)
-    obs_by_date = {o.acquired_at: o for o in repo.list_observations()}
+    s2_obs = repo.list_observations(collection="sentinel-2-l2a")
+    obs_by_date = {o.acquired_at: o for o in s2_obs}
     if "2021-03-04" not in obs_by_date:
         pytest.skip("third date not staged/ingested yet")
-    # 3 observations, time-ordered, ~1089 tiles each
+    # 3 Sentinel-2 observations, time-ordered, ~1089 tiles each
     assert sorted(obs_by_date) == ["2019-03-30", "2021-03-04", "2024-03-08"]
-    assert repo.count_tiles() == 3267
+    s2_tiles = sum(len(repo.list_tiles(observation_id=o.observation_id)) for o in s2_obs)
+    assert s2_tiles == 3267
     third = obs_by_date["2021-03-04"]
     # normalized against the SAME reference date as the original pair
     assert third.coregistration.get("reference_scene") == "S2A_44RPQ_20240308_0_L2A_scaled"

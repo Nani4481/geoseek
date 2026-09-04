@@ -13,11 +13,12 @@ COLLECTION_ID = "sentinel-2-l2a"
 AOI_NAME = "ayodhya_44RPQ_scaled_82km"
 
 # AOI-clip suffixes an observation_id carries on top of its source scene_id.
-OBS_SUFFIXES = ("_scaled",)
+# '_scaled' = the Sentinel-2 82 km AOI clip; '_grd' = the Sentinel-1 AOI clip.
+OBS_SUFFIXES = ("_scaled", "_grd")
 
 
 def base_scene_id(observation_id: str) -> str:
-    """Strip the AOI-clip suffix: 'S2B_..._L2A_scaled' -> 'S2B_..._L2A'."""
+    """Strip the AOI-clip suffix: 'S2B_..._L2A_scaled' -> 'S2B_..._L2A' (or '..._grd')."""
     for suf in OBS_SUFFIXES:
         if observation_id.endswith(suf):
             return observation_id[: -len(suf)]

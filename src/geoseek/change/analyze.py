@@ -66,6 +66,7 @@ DATE_TO_OBS = {
     "2021": "S2A_44RPQ_20210304_1_L2A_scaled",
     "2024": "S2A_44RPQ_20240308_0_L2A_scaled",
 }
+S2_COLLECTION = "sentinel-2-l2a"   # the change pipeline works one collection at a time
 MAX_COMPONENTS = 20000            # process the largest N; the rest fold into the morphology count
 _HUGE_BBOX_PX = 4_000_000         # subsample bbox reads / geometry above this area (memory guard)
 BAD_SCL_ARR = np.array(sorted(BAD_SCL_CLASSES))
@@ -188,6 +189,7 @@ class Candidate:
     confidence_breakdown: list = field(default_factory=list)
     significance: float = 0.0
     queue_score: float = 0.0
+    sar: dict = field(default_factory=dict)
 
 
 def _elongation_fill(mask_local: np.ndarray) -> tuple[float, float]:
@@ -569,11 +571,114 @@ def _build_repo():
     return SQLiteMetadataRepository(get_settings().index_dir / "tiles.sqlite")
 
 
+def _component_mask(span_prob_path: str, bbox, centroid_rc, span_pair) -> np.ndarray:
+    """Reconstruct a candidate's connected-component mask within its bbox from the
+    on-disk span probability raster (memory-frugal - no full-scene labels held)."""
+    r0, c0, r1, c1 = bbox
+    with rasterio.open(span_prob_path) as ds:
+        pw = ds.read(1, window=rasterio.windows.Window(c0, r0, c1 - c0, r1 - r0))
+        thr = 0.80
+    lab, _ = ndi.label(pw >= thr, structure=np.ones((3, 3), bool))
+    lr, lc = int(round(centroid_rc[0] - r0)), int(round(centroid_rc[1] - c0))
+    lr = min(max(lr, 0), lab.shape[0] - 1)
+    lc = min(max(lc, 0), lab.shape[1] - 1)
+    tl = lab[lr, lc]
+    return (lab == tl) if tl else (pw >= thr)
+
+
+# --------------------------------------------------------------------------
+# Step C report: SAR cross-sensor validation on water candidates + cloud penetration
+# --------------------------------------------------------------------------
+
+
+def _sar_corroboration_report(span_survivors: list[Candidate], per_pair: dict, sar_pair) -> dict:
+    if sar_pair is None:
+        return {"available": False,
+                "note": "no Sentinel-1 staged - SAR corroboration term was neutral for every candidate"}
+    wg = [c for c in span_survivors if c.classification.get("change_type") == "water_gain" and c.sar]
+    wg_cov = [c for c in wg if c.sar.get("available")]
+    # expected: open-water gain -> VV backscatter DROP (specular). Agreement = VV anomaly <= -1 dB.
+    agree = [c for c in wg_cov
+             if (c.sar["vv_median_db"] - c.sar["scene_dvv_db"]) <= -1.0]
+    rate = (len(agree) / len(wg_cov)) if wg_cov else None
+    print(f"\n[Step C] SAR cross-sensor validation on water_gain candidates:")
+    print(f"    {len(wg)} water_gain survivors; {len(wg_cov)} with usable co-located SAR "
+          f"({len(wg) - len(wg_cov)} outside the S1 swath -> neutral)")
+    if rate is not None:
+        print(f"    show the expected VV backscatter DROP (<= -1 dB vs the scene trend): "
+              f"{len(agree)}/{len(wg_cov)} = {rate*100:.0f}%")
+        med = float(np.median([c.sar['vv_median_db'] - c.sar['scene_dvv_db'] for c in wg_cov]))
+        print(f"    median VV anomaly over water_gain candidates: {med:+.1f} dB "
+              f"(scene VV trend {sar_pair.scene_dvv_db:+.1f} dB)")
+    # cloud-penetration value: optical candidates quality-suppressed for cloud but with usable SAR
+    cloud_supp = sum(v["suppression"]["suppressed_by_rule"].get("quality", 0) for v in per_pair.values())
+    print(f"\n[Step C] cloud-penetration value:")
+    print(f"    optical components quality-suppressed (cloud/shadow/etc) across all pairs: {cloud_supp}")
+    print(f"    the three Ayodhya S2 dates are ~cloud-free (bad-SCL << 1%), so the cloud-penetration "
+          f"benefit of SAR is real but not demonstrable on this AOI - stated as a limitation.")
+    return {
+        "available": True, "s1_pair": [sar_pair.s1_earlier_obs, sar_pair.s1_later_obs],
+        "aoi_coverage_fraction": round(sar_pair.coverage_fraction, 3),
+        "speckle_filter": "adaptive Lee 7x7 (ENL 4.4), intensity domain, before the dB ratio",
+        "scene_db_trend": {"vv": round(sar_pair.scene_dvv_db, 2), "vh": round(sar_pair.scene_dvh_db, 2)},
+        "water_gain_validation": {
+            "n_water_gain_survivors": len(wg), "n_with_usable_sar": len(wg_cov),
+            "expected_signature": "VV backscatter DROP (specular reflection off open water)",
+            "agreement_threshold_db": -1.0, "n_agree": len(agree),
+            "agreement_rate": None if rate is None else round(rate, 3),
+            "median_vv_anomaly_db": None if not wg_cov else
+                round(float(np.median([c.sar['vv_median_db'] - c.sar['scene_dvv_db'] for c in wg_cov])), 2),
+        },
+        "cloud_penetration": {
+            "optical_components_quality_suppressed_all_pairs": int(cloud_supp),
+            "finding": ("the 2019 / 2021 / 2024 Sentinel-2 dates are near cloud-free (bad-SCL << 1%), "
+                        "so SAR's all-weather value is real but cannot be demonstrated on this AOI"),
+        },
+    }
+
+
+def _fuse_with_query(span_survivors: list[Candidate], span_pair, query: str, top: int) -> dict:
+    from geoseek.fusion.ranker import FusionRanker
+    from geoseek.search.engine import SearchEngine
+
+    print(f"\n--- Step D: fusion re-ranking with text query: {query!r} ---")
+    eng = SearchEngine()
+    try:
+        ranker = FusionRanker(eng)
+        cand_dicts = [{
+            "candidate_id": c.candidate_id, "confidence": c.confidence, "significance": c.significance,
+            "change_type": c.classification.get("change_type"),
+            "centroid_lonlat": c.centroid_lonlat, "area_m2": c.area_px * PIXEL_AREA_M2,
+            "later_obs": span_pair.later.observation_id, "pair": c.pair_id,
+            "persistence": c.trajectory.get("persistence"),
+            "earliest_supported": c.trajectory.get("earliest_supported_change", {}).get("window"),
+        } for c in span_survivors]
+        ranked, meta = ranker.rank(cand_dicts, query=query)
+    finally:
+        eng.close()
+    print(f"  formula: {meta['formula']}")
+    print(f"  weights: {meta['weights']}   ({meta['n']} candidates, {meta['elapsed_s']}s)")
+    print(f"  {'#':>3} {'candidate':>18} {'type':>12} {'conf':>5} {'sig':>5} {'sem':>5} {'fusion':>6}")
+    for i, r in enumerate(ranked[:top], 1):
+        print(f"  {i:>3} {r.candidate_id:>18} {r.change_type:>12} {r.confidence:5.2f} "
+              f"{r.significance:5.2f} {('%.2f' % r.semantic) if r.semantic is not None else '  - ':>5} "
+              f"{r.fusion_score:6.3f}")
+    w = ranked[0]
+    print(f"\n  worked example (top by fusion for {query!r}): {w.candidate_id}  [{w.change_type}]")
+    for line in w.breakdown:
+        print(f"       {line}")
+    print(f"       {w.area_m2:.0f} m^2 @ ({w.centroid_lonlat[0]:.5f}, {w.centroid_lonlat[1]:.5f})  "
+          f"tile {w.tile_id}")
+    return {"query": query, **meta,
+            "ranked_top": [r.as_dict() for r in ranked[:top]],
+            "worked_example": ranked[0].as_dict()}
+
+
 PAIR_KEYS = {"2019-2021": ("2019", "2021"), "2021-2024": ("2021", "2024"), "2019-2024": ("2019", "2024")}
 
 
 def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: bool = False,
-        make_panels: bool = True) -> dict:
+        make_panels: bool = True, query: str | None = None) -> dict:
     from geoseek.change.models import FCSiamDiffChangeModel
 
     settings = get_settings()
@@ -584,7 +689,7 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
 
     repo = _build_repo()
     matcher = TemporalObservationMatcher(repo)
-    seq = matcher.match(location=AOI_POINT, all_pairs=True)
+    seq = matcher.match(location=AOI_POINT, all_pairs=True, collection=S2_COLLECTION)
     obs_by_id = {o.observation_id: o for o in seq.observations}
     print(f"  observations: {[o.acquired_at for o in seq.observations]}")
 
@@ -689,10 +794,23 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
     span_survivors = [c for c in all_candidates[span_name]
                       if not c.suppression.get("suppressed", True)]
 
-    analyzer = TemporalPersistenceAnalyzer(matcher, change_threshold=model.threshold)
+    analyzer = TemporalPersistenceAnalyzer(matcher, change_threshold=model.threshold,
+                                           collection=S2_COLLECTION)
     lookup = ProbLookup(prob_paths, model.threshold, raster_crs)
     span_ctx = pair_context(span_pair, seq, idx_paths[span_pair.earlier.observation_id],
                             idx_paths[span_pair.later.observation_id])
+    span_prob_path = prob_paths[(span_pair.earlier.observation_id, span_pair.later.observation_id)]
+
+    # Step C (cont.): Sentinel-1 SAR corroboration (weight only; unavailable = neutral)
+    from geoseek.sar.evidence import SarCorroborator, sar_factor
+    sar_corr = SarCorroborator()
+    sar_pair = (sar_corr.for_pair(span_pair.earlier.observation_id, span_pair.later.observation_id)
+                if sar_corr.available else None)
+    if sar_pair:
+        print(f"  SAR: {sar_pair.notes[0]}  coverage {sar_pair.coverage_fraction*100:.0f}%  "
+              f"{sar_pair.notes[1]}")
+    else:
+        print("  SAR: no Sentinel-1 staged for this pair - corroboration term neutral for all candidates")
 
     print(f"\n--- Step C/D on {span_name}: {len(span_survivors)} survivors ---")
     for c in span_survivors:
@@ -704,6 +822,19 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
         nv_an, nb_an, nw_an = (ev.get("ndvi_anomaly", 0.0), ev.get("ndbi_anomaly", 0.0),
                                ev.get("ndwi_anomaly", 0.0))
         sa = spectral_agreement_for(cl.get("change_type", "other"), nv_an, nb_an, nw_an)
+
+        sar_f, sar_d = 1.0, None
+        if sar_pair is not None:
+            cmask = _component_mask(span_prob_path, c.bbox, c.centroid_rc, span_pair)
+            look = sar_pair.lookup(c.bbox, cmask)
+            sar_f, sar_d = sar_factor(cl.get("change_type", "other"),
+                                      look["vv_median_db"], look["vh_median_db"],
+                                      scene_dvv_db=sar_pair.scene_dvv_db,
+                                      scene_dvh_db=sar_pair.scene_dvh_db, available=look["available"])
+            c.sar = {**look, "factor": round(sar_f, 3), "verdict": sar_d,
+                     "scene_dvv_db": round(sar_pair.scene_dvv_db, 2),
+                     "scene_dvh_db": round(sar_pair.scene_dvh_db, 2)}
+
         rep = compute_confidence(
             candidate_id=c.candidate_id, model_prob=c.mean_prob,
             bad_scl_fraction=max(c.bad_scl_earlier, c.bad_scl_later), valid_fraction=c.valid_fraction,
@@ -711,7 +842,8 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
             radiometric_reliability=radiometric_reliability(span_ctx.radiometric_index_band_min_corr),
             persistence=traj.persistence, persistence_confidence=traj.persistence_confidence,
             spectral_agreement=sa, change_type=cl.get("change_type", "other"),
-            suppression_downweight=c.suppression.get("combined_downweight", 1.0))
+            suppression_downweight=c.suppression.get("combined_downweight", 1.0),
+            sar_corroboration=sar_f, sar_detail=sar_d)
         c.confidence = rep.confidence
         c.confidence_breakdown = rep.breakdown
         c.significance = round(significance(c), 4)
@@ -720,7 +852,13 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
     # full ranked queue (confidence AND significance), then a diversified headline top-N
     span_survivors.sort(key=lambda c: c.queue_score, reverse=True)
     diverse_top = diversify(span_survivors, n=top)
-    span_prob_path = prob_paths[(span_pair.earlier.observation_id, span_pair.later.observation_id)]
+
+    sar_summary = _sar_corroboration_report(span_survivors, per_pair, sar_pair)
+
+    # -------- Step D: optional fusion re-ranking with a text query --------
+    fusion_block = None
+    if query:
+        fusion_block = _fuse_with_query(span_survivors, span_pair, query, top)
 
     # -------- report --------
     _print_report(pair_names, per_pair, span_name, span_survivors, diverse_top, top)
@@ -745,6 +883,9 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
     report = _assemble_report(pair_names, per_pair, span_name, span_survivors, diverse_top, top,
                               panels, model)
     report["example_trajectory"] = example_traj.as_dict() if example_traj else None
+    report["sar_corroboration"] = sar_summary
+    if fusion_block is not None:
+        report["fusion"] = fusion_block
 
     # full ranked queue -> CSV (JSON keeps only the head)
     import csv as _csv
@@ -823,7 +964,8 @@ def _candidate_row(c, i=None, full=False):
                     "mean_model_prob": round(c.mean_prob, 4),
                     "classification": c.classification,
                     "confidence_breakdown": c.confidence_breakdown,
-                    "suppression": c.suppression, "trajectory": c.trajectory})
+                    "suppression": c.suppression, "trajectory": c.trajectory,
+                    "sar": c.sar})
     return row
 
 
@@ -871,12 +1013,16 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--panels", type=int, default=5)
     p.add_argument("--refresh", action="store_true", help="recompute probability rasters")
     p.add_argument("--no-panels", action="store_true")
+    p.add_argument("--query", default=None,
+                   help="Step D: re-rank candidates by a fused change + RemoteCLIP semantic score, "
+                        "e.g. --query 'new construction near a river'")
     args = p.parse_args(argv)
     names = [x.strip() for x in args.pairs.split(",") if x.strip()]
     bad = [n for n in names if n not in PAIR_KEYS]
     if bad:
         p.error(f"unknown pair(s) {bad}; choose from {list(PAIR_KEYS)}")
-    run(names, top=args.top, n_panels=args.panels, refresh=args.refresh, make_panels=not args.no_panels)
+    run(names, top=args.top, n_panels=args.panels, refresh=args.refresh,
+        make_panels=not args.no_panels, query=args.query)
 
 
 if __name__ == "__main__":

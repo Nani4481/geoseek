@@ -232,8 +232,11 @@ def test_matcher_on_production_catalog_ayodhya_point():
         pytest.skip("production catalog not migrated")
 
     repo = SQLiteMetadataRepository(db)
-    seq = TemporalObservationMatcher(repo).match(location=(82.1998, 26.7922))
+    # scope to Sentinel-2: Phase 5 may add a co-located, non-comparable Sentinel-1 stack
+    seq = TemporalObservationMatcher(repo).match(location=(82.1998, 26.7922),
+                                                collection="sentinel-2-l2a")
     assert len(seq.observations) >= 2
+    assert all(o.observation_id.endswith("_scaled") for o in seq.observations)
     assert len(seq.pairs) >= 1
     first = seq.pairs[0]
     assert first.earlier.acquired_at < first.later.acquired_at
