@@ -44,7 +44,7 @@ _CFG = SuppressionConfig()
 
 
 def _feat(**kw):
-    d = dict(candidate_id="c", area_px=50, bad_scl_fraction_earlier=0.0, bad_scl_fraction_later=0.0,
+    d = dict(candidate_id="c", area_px=200, bad_scl_fraction_earlier=0.0, bad_scl_fraction_later=0.0,
              valid_fraction=1.0, d_ndvi=0.0, d_ndbi=0.0, d_ndwi=0.0)
     d.update(kw)
     return CandidateFeatures(**d)
@@ -97,9 +97,12 @@ def test_phenology_gate_suppresses_seasonal_but_keeps_structural():
 
 
 def test_morphology_gate_drops_specks():
+    assert _CFG.morph_min_area_px == 50            # Phase 5 Step A: 0.5 ha minimum reported change
     assert gate_morphology(_feat(area_px=3), _CFG).verdict == "suppress"
-    assert gate_morphology(_feat(area_px=10), _CFG).verdict == "pass"
+    assert gate_morphology(_feat(area_px=26), _CFG).verdict == "suppress"   # the Phase 4 speck
+    assert gate_morphology(_feat(area_px=60), _CFG).verdict == "pass"
     assert gate_morphology(_feat(area_px=_CFG.morph_min_area_px), _CFG).verdict == "pass"
+    assert gate_morphology(_feat(area_px=393), _CFG).verdict == "pass"      # the small real tank
 
 
 def test_suppress_candidate_reports_first_rule_in_order():
@@ -350,3 +353,70 @@ def test_spectral_agreement_scales_with_evidence():
 def test_weights_documented_for_every_term():
     r = _conf()
     assert {t.name for t in r.terms} == set(WEIGHTS)
+
+
+# --------------------------------------------------------------------------
+# Phase 5 Step A - ranking by confidence AND significance, + diversity
+# --------------------------------------------------------------------------
+
+from geoseek.change.analyze import Candidate, diversify, rank_score, significance
+
+
+def _cand(cid, *, area_px, conf, ctype="water_gain", lon=82.2, lat=26.8, anom=0.5):
+    c = Candidate(candidate_id=cid, pair_id="p", earlier_obs="e", later_obs="l", label=1,
+                  area_px=area_px, bbox=(0, 0, 1, 1), centroid_rc=(0.0, 0.0),
+                  centroid_lonlat=(lon, lat), mean_prob=conf, max_prob=conf,
+                  elongation=1.0, fill_ratio=1.0)
+    c.confidence = conf
+    c.classification = {"change_type": ctype,
+                        "evidence": {"ndvi_anomaly": 0.0, "ndbi_anomaly": 0.0, "ndwi_anomaly": anom}}
+    return c
+
+
+def test_significance_rises_with_area_and_anomaly():
+    small = _cand("s", area_px=60, conf=0.9, anom=0.1)
+    big = _cand("b", area_px=3000, conf=0.9, anom=0.1)
+    strong = _cand("x", area_px=60, conf=0.9, anom=0.6)
+    assert significance(big) > significance(small)
+    assert significance(strong) > significance(small)
+    assert 0.0 < significance(small) <= 1.0
+
+
+def test_rank_score_confidence_still_leads():
+    big_weak = _cand("bw", area_px=5000, conf=0.55, anom=0.6)      # huge, low confidence
+    small_strong = _cand("ss", area_px=200, conf=0.92, anom=0.5)   # 0.2 ha, high confidence
+    assert rank_score(small_strong) > rank_score(big_weak)
+
+
+def test_rank_score_significance_breaks_ties():
+    tank = _cand("tank", area_px=1476, conf=0.90, anom=1.05)       # the real 14.8 ha tank
+    speck = _cand("speck", area_px=23, conf=0.90, anom=0.30)       # the Phase 4 speck (would be gone anyway)
+    assert rank_score(tank) > rank_score(speck)
+
+
+def test_diversify_caps_per_type_and_spreads_locations():
+    ranked = [
+        _cand("w1", area_px=2000, conf=0.95, ctype="water_gain", lon=82.10, lat=26.60),
+        _cand("w2", area_px=1900, conf=0.94, ctype="water_gain", lon=82.1005, lat=26.6003),  # ~40 m from w1
+        _cand("w3", area_px=1800, conf=0.93, ctype="water_gain", lon=82.30, lat=26.80),
+        _cand("w4", area_px=1700, conf=0.92, ctype="water_gain", lon=82.50, lat=26.50),
+        _cand("w5", area_px=1600, conf=0.91, ctype="water_gain", lon=82.70, lat=27.00),
+        _cand("c1", area_px=1500, conf=0.90, ctype="construction", lon=82.20, lat=26.75),
+        _cand("r1", area_px=1400, conf=0.89, ctype="road", lon=82.25, lat=26.70),
+    ]
+    out = diversify(ranked, n=5, per_type_cap=3, min_sep_m=1500.0)
+    ids = [c.candidate_id for c in out]
+    assert "w2" not in ids                       # near-duplicate of w1 (same type, < 1.5 km)
+    types = [c.classification["change_type"] for c in out]
+    assert types.count("water_gain") == 3        # per-type cap
+    assert "construction" in types and "road" in types   # other types surface
+    # a request the caps cannot fill back-fills the near-duplicate rather than returning short
+    filled = diversify(ranked, n=6, per_type_cap=3, min_sep_m=1500.0)
+    assert len(filled) == 6 and "w2" in [c.candidate_id for c in filled]
+
+
+def test_diversify_keeps_full_list_orthogonal():
+    ranked = [_cand(f"w{i}", area_px=1000, conf=0.9 - i * 0.01, lon=82.0 + i, lat=26.5)
+              for i in range(8)]
+    out = diversify(ranked, n=3, per_type_cap=3, min_sep_m=1500.0)
+    assert len(out) == 3 and len(ranked) == 8     # diversify does not mutate / shrink the source

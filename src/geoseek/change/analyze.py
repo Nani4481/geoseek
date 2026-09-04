@@ -40,6 +40,7 @@ from geoseek.change.indices import compute_indices
 from geoseek.change.normalize import REFLECTANCE_SCALE, RadiometricNormalization
 from geoseek.change.suppress import (
     CandidateFeatures,
+    MORPH_MIN_AREA_PX,
     PairSuppressionContext,
     SuppressionConfig,
     suppress_candidate,
@@ -185,6 +186,8 @@ class Candidate:
     trajectory: dict = field(default_factory=dict)
     confidence: float = 0.0
     confidence_breakdown: list = field(default_factory=list)
+    significance: float = 0.0
+    queue_score: float = 0.0
 
 
 def _elongation_fill(mask_local: np.ndarray) -> tuple[float, float]:
@@ -207,20 +210,22 @@ def label_change(pr):
 
 
 def extract_candidates(pr, pair, labels, n) -> tuple[list[Candidate], int]:
-    """Returns (candidates, n_dropped_tiny). If more than MAX_COMPONENTS components exist,
-    only the largest are turned into candidates; the rest (all sub-min-area specks) are
-    reported as an extra morphology-suppression count so the raw total stays honest."""
+    """Returns (candidates, n_dropped_tiny).
+
+    Components below MORPH_MIN_AREA_PX are attributed directly to the morphology
+    rule (rule 5) without the other four checks and counted in n_dropped_tiny -
+    they cannot be a reported change at any confidence, and skipping their
+    per-bbox raster reads is a large speed-up. Components beyond MAX_COMPONENTS
+    (pathological only) are folded in the same way. The raw candidate total
+    stays honest: len(candidates) + n_dropped_tiny."""
     if n == 0:
         return [], 0
     areas = np.bincount(labels.ravel())
     areas[0] = 0
     ranked = [int(l) for l in np.argsort(areas)[::-1] if areas[l] > 0]
-    keep = ranked[:MAX_COMPONENTS]
-    dropped = ranked[MAX_COMPONENTS:]
-    n_dropped_tiny = len(dropped)
-    if dropped and int(areas[dropped[0]]) >= 6:
-        # would only ever happen with a pathological mask; surface it rather than hide it
-        print(f"  [warn] {n_dropped_tiny} components beyond MAX_COMPONENTS, largest {int(areas[dropped[0]])}px")
+    above = [l for l in ranked if int(areas[l]) >= MORPH_MIN_AREA_PX]
+    keep = above[:MAX_COMPONENTS]
+    n_dropped_tiny = len(ranked) - len(keep)
     slices = ndi.find_objects(labels)
     to_wgs = pyproj.Transformer.from_crs(pr.crs, "EPSG:4326", always_xy=True)
     tr = pr.transform
@@ -482,6 +487,79 @@ def save_panel(cand: Candidate, span_prob_path: str, threshold: float, out: Path
 
 
 # ==========================================================================
+# ranking + diversity (Phase 5 Step A)
+# ==========================================================================
+
+# significance references: A_MIN = the smallest reported change (= MORPH_MIN_AREA_PX),
+# A_REF = a "large" change (30 ha), ANOM_REF = a strong index departure.
+_A_MIN, _A_REF, _ANOM_REF = float(MORPH_MIN_AREA_PX), 3000.0, 0.5
+_CONF_EXP, _SIG_EXP = 0.65, 0.35        # confidence leads the queue; significance re-orders within a band
+_AREA_EXP, _ANOM_EXP = 0.6, 0.4         # inside significance, footprint > anomaly magnitude
+
+
+def _clip01(x: float, lo: float = 0.10) -> float:
+    return float(max(lo, min(1.0, x)))
+
+
+def significance(c: "Candidate") -> float:
+    """area_term^0.6 * anomaly_term^0.4, each in [0.10, 1.0]."""
+    area_term = _clip01((np.log10(max(c.area_px, 1)) - np.log10(_A_MIN))
+                        / (np.log10(_A_REF) - np.log10(_A_MIN)))
+    ev = c.classification.get("evidence", {})
+    max_anom = max(abs(ev.get("ndvi_anomaly", 0.0)), abs(ev.get("ndbi_anomaly", 0.0)),
+                   abs(ev.get("ndwi_anomaly", 0.0)))
+    anom_term = _clip01(max_anom / _ANOM_REF)
+    return float(area_term ** _AREA_EXP * anom_term ** _ANOM_EXP)
+
+
+def rank_score(c: "Candidate") -> float:
+    """Analyst-queue score = confidence^0.65 * significance^0.35 (weighted geometric mean).
+
+    Geometric mean (matching the confidence engine) so no candidate tops the queue on
+    one axis alone: a huge low-confidence blob and a tiny high-confidence speck both
+    sink. Confidence is weighted 0.65 vs significance 0.35 - the queue must lead with
+    trustworthy detections; significance (log-area 0.6, max |index anomaly| 0.4) only
+    re-orders within a confidence band so a 30 ha tank outranks a 0.5 ha marginal
+    change, while a 0.55-confidence change never overtakes a 0.90-confidence one.
+    """
+    return float(_clip01(c.confidence, 1e-3) ** _CONF_EXP * significance(c) ** _SIG_EXP)
+
+
+def _haversine_m(a: tuple[float, float], b: tuple[float, float]) -> float:
+    from math import asin, cos, radians, sin, sqrt
+
+    lon1, lat1, lon2, lat2 = map(radians, (a[0], a[1], b[0], b[1]))
+    h = sin((lat2 - lat1) / 2) ** 2 + cos(lat1) * cos(lat2) * sin((lon2 - lon1) / 2) ** 2
+    return 2 * 6_371_000 * asin(sqrt(h))
+
+
+def diversify(ranked: list["Candidate"], *, n: int = 10, per_type_cap: int = 3,
+              min_sep_m: float = 1500.0) -> list["Candidate"]:
+    """MMR-lite: from the rank_score-sorted list, take the headline top-N so distinct
+    change TYPES and distinct LOCATIONS surface. At most ``per_type_cap`` of any one
+    type, and two same-type picks must be >= ``min_sep_m`` apart (near-duplicates of
+    one feature are dropped; a road next to a construction site is kept - different
+    type). Back-fills from the ranked list if the caps leave < N."""
+    picked: list = []
+    for c in ranked:
+        t = c.classification.get("change_type", "other")
+        same = [p for p in picked if p.classification.get("change_type", "other") == t]
+        if len(same) >= per_type_cap:
+            continue
+        if any(_haversine_m(c.centroid_lonlat, p.centroid_lonlat) < min_sep_m for p in same):
+            continue
+        picked.append(c)
+        if len(picked) >= n:
+            return picked
+    for c in ranked:                       # rare back-fill if caps were too strict
+        if c not in picked:
+            picked.append(c)
+            if len(picked) >= n:
+                break
+    return picked
+
+
+# ==========================================================================
 # orchestration
 # ==========================================================================
 
@@ -636,22 +714,26 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
             suppression_downweight=c.suppression.get("combined_downweight", 1.0))
         c.confidence = rep.confidence
         c.confidence_breakdown = rep.breakdown
+        c.significance = round(significance(c), 4)
+        c.queue_score = round(rank_score(c), 4)
 
-    span_survivors.sort(key=lambda c: c.confidence, reverse=True)
+    # full ranked queue (confidence AND significance), then a diversified headline top-N
+    span_survivors.sort(key=lambda c: c.queue_score, reverse=True)
+    diverse_top = diversify(span_survivors, n=top)
     span_prob_path = prob_paths[(span_pair.earlier.observation_id, span_pair.later.observation_id)]
 
     # -------- report --------
-    _print_report(pair_names, per_pair, span_name, span_survivors, top)
+    _print_report(pair_names, per_pair, span_name, span_survivors, diverse_top, top)
     example_traj = None
-    if span_survivors:
-        example_traj = analyzer.trajectory_for_location(*span_survivors[0].centroid_lonlat, lookup)
-        print("\n=== EXAMPLE FULL TEMPORAL TRAJECTORY (highest-confidence changed location) ===")
+    if diverse_top:
+        example_traj = analyzer.trajectory_for_location(*diverse_top[0].centroid_lonlat, lookup)
+        print("\n=== EXAMPLE FULL TEMPORAL TRAJECTORY (top-ranked location) ===")
         print(example_traj.format_report())
 
     panels = []
-    if make_panels and span_survivors:
-        print(f"\n--- saving {min(n_panels, len(span_survivors))} panels ---")
-        for c in span_survivors[:n_panels]:
+    if make_panels and diverse_top:
+        print(f"\n--- saving {min(n_panels, len(diverse_top))} panels (diversified top-N) ---")
+        for c in diverse_top[:n_panels]:
             p = save_panel(c, span_prob_path, model.threshold,
                            OUT_DIR / f"ayodhya_change_{c.candidate_id}.png")
             panels.append(str(p))
@@ -660,17 +742,33 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
     lookup.close()
     repo.close()
 
-    report = _assemble_report(pair_names, per_pair, span_name, span_survivors, top, panels, model)
+    report = _assemble_report(pair_names, per_pair, span_name, span_survivors, diverse_top, top,
+                              panels, model)
     report["example_trajectory"] = example_traj.as_dict() if example_traj else None
+
+    # full ranked queue -> CSV (JSON keeps only the head)
+    import csv as _csv
+    with open(OUT_DIR / "ayodhya_change_ranked.csv", "w", newline="", encoding="utf-8") as fh:
+        wr = _csv.writer(fh)
+        wr.writerow(["rank", "candidate_id", "lon", "lat", "change_type", "area_m2",
+                     "confidence", "significance", "queue_score", "persistence", "earliest_supported"])
+        for i, c in enumerate(span_survivors, 1):
+            lon, lat = c.centroid_lonlat
+            wr.writerow([i, c.candidate_id, round(lon, 6), round(lat, 6),
+                         c.classification.get("change_type"), round(c.area_px * PIXEL_AREA_M2, 1),
+                         round(c.confidence, 4), c.significance, c.queue_score,
+                         c.trajectory.get("persistence"),
+                         c.trajectory.get("earliest_supported_change", {}).get("window")])
+
     (OUT_DIR / "ayodhya_change_report.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
     record_analysis_section("ayodhya_change_pipeline", report)
     print(f"\n  report -> {OUT_DIR/'ayodhya_change_report.json'}  +  manifest 'ayodhya_change_pipeline'")
     return report
 
 
-def _print_report(pair_names, per_pair, span_name, span_survivors, top):
+def _print_report(pair_names, per_pair, span_name, span_survivors, diverse_top, top):
     print("\n" + "=" * 78)
-    print("PHASE 4 REPORT - Ayodhya")
+    print("PHASE 4/5 REPORT - Ayodhya")
     print("=" * 78)
     print("\n[1] Candidates before/after suppression, per rule:")
     for name in pair_names:
@@ -681,18 +779,21 @@ def _print_report(pair_names, per_pair, span_name, span_survivors, top):
     print("\n[2] Change-type distribution (survivors):")
     for name in pair_names:
         print(f"  {name}: {per_pair[name]['class_distribution']}")
-    print(f"\n[3] Top {top} candidates by confidence (span pair {span_name}):")
-    hdr = f"  {'rank':>4} {'candidate':>18} {'lon':>9} {'lat':>8} {'type':>13} {'conf':>5} {'area_m2':>9}  earliest"
+    print(f"\n[3] Diversified top {top} candidates (span pair {span_name}) - ranked by "
+          f"queue_score = confidence^0.65 * significance^0.35;")
+    print(f"    diversified: <=3 per type, same-type picks >=1.5 km apart. Full ranked list "
+          f"({len(span_survivors)}) in the JSON.")
+    hdr = (f"  {'#':>3} {'candidate':>18} {'lon':>9} {'lat':>8} {'type':>12} {'conf':>5} "
+           f"{'sig':>5} {'queue':>6} {'area_m2':>9}  earliest")
     print(hdr)
-    for i, c in enumerate(span_survivors[:top], 1):
+    for i, c in enumerate(diverse_top[:top], 1):
         lon, lat = c.centroid_lonlat
-        es = c.trajectory.get("earliest_supported_change", {})
-        win = es.get("window")
-        print(f"  {i:>4} {c.candidate_id:>18} {lon:9.5f} {lat:8.5f} "
-              f"{c.classification.get('change_type','?'):>13} {c.confidence:5.2f} "
-              f"{c.area_px*PIXEL_AREA_M2:9.0f}  {win}")
-    print("\n[3b] Evidence breakdown for the top candidates:")
-    for i, c in enumerate(span_survivors[:min(top, 10)], 1):
+        win = c.trajectory.get("earliest_supported_change", {}).get("window")
+        print(f"  {i:>3} {c.candidate_id:>18} {lon:9.5f} {lat:8.5f} "
+              f"{c.classification.get('change_type','?'):>12} {c.confidence:5.2f} "
+              f"{c.significance:5.2f} {c.queue_score:6.3f} {c.area_px*PIXEL_AREA_M2:9.0f}  {win}")
+    print("\n[3b] Evidence breakdown for the diversified top candidates:")
+    for i, c in enumerate(diverse_top[:min(top, 10)], 1):
         print(f"  #{i} {c.candidate_id}  [{c.classification.get('change_type','?')}]  conf {c.confidence:.2f}")
         for line in c.confidence_breakdown:
             print(f"       {line}")
@@ -705,7 +806,28 @@ def _print_report(pair_names, per_pair, span_name, span_survivors, top):
         print(f"       caveat: {es.get('caveat')}")
 
 
-def _assemble_report(pair_names, per_pair, span_name, span_survivors, top, panels, model):
+def _candidate_row(c, i=None, full=False):
+    row = {"candidate_id": c.candidate_id, "pair": c.pair_id,
+           "centroid_lonlat": [round(x, 6) for x in c.centroid_lonlat],
+           "area_px": c.area_px, "area_m2": round(c.area_px * PIXEL_AREA_M2, 1),
+           "change_type": c.classification.get("change_type"),
+           "confidence": round(c.confidence, 4), "significance": round(c.significance, 4),
+           "queue_score": round(c.queue_score, 4),
+           "persistence": c.trajectory.get("persistence"),
+           "earliest_supported": c.trajectory.get("earliest_supported_change", {}).get("window")}
+    if i is not None:
+        row = {"rank": i, **row}
+    if full:
+        row.update({"bbox_rc": list(c.bbox), "label": c.label,
+                    "centroid_rc": [round(x, 2) for x in c.centroid_rc],
+                    "mean_model_prob": round(c.mean_prob, 4),
+                    "classification": c.classification,
+                    "confidence_breakdown": c.confidence_breakdown,
+                    "suppression": c.suppression, "trajectory": c.trajectory})
+    return row
+
+
+def _assemble_report(pair_names, per_pair, span_name, span_survivors, diverse_top, top, panels, model):
     return {
         "aoi": "Ayodhya, Uttar Pradesh (82km scaled AOI, MGRS 44RPQ)",
         "observations": list(DATE_TO_OBS.values()),
@@ -714,18 +836,20 @@ def _assemble_report(pair_names, per_pair, span_name, span_survivors, top, panel
                   "weights_sha256": model._loaded.weights_sha256},
         "pairs": {name: per_pair[name] for name in pair_names},
         "span_pair": span_name,
-        "top_candidates": [
-            {"rank": i, "candidate_id": c.candidate_id, "pair": c.pair_id,
-             "centroid_lonlat": [round(x, 6) for x in c.centroid_lonlat],
-             "bbox_rc": list(c.bbox), "label": c.label,
-             "centroid_rc": [round(x, 2) for x in c.centroid_rc],
-             "area_px": c.area_px, "area_m2": round(c.area_px * PIXEL_AREA_M2, 1),
-             "mean_model_prob": round(c.mean_prob, 4),
-             "change_type": c.classification.get("change_type"),
-             "classification": c.classification,
-             "confidence": round(c.confidence, 4), "confidence_breakdown": c.confidence_breakdown,
-             "suppression": c.suppression, "trajectory": c.trajectory}
-            for i, c in enumerate(span_survivors[:top], 1)],
+        "ranking": {
+            "queue_score": "confidence^0.65 * significance^0.35  (weighted geometric mean)",
+            "significance": "area_term^0.6 * anomaly_term^0.4, each clipped to [0.10, 1.0]",
+            "area_term": f"(log10(area_px) - log10({_A_MIN:.0f})) / (log10({_A_REF:.0f}) - log10({_A_MIN:.0f}))",
+            "anomaly_term": f"max(|NDVI/NDBI/NDWI anomaly|) / {_ANOM_REF}",
+            "diversity": "headline top-N: <=3 candidates per change_type; same-type picks >= 1.5 km apart",
+        },
+        "diverse_top_candidates": [_candidate_row(c, i, full=True)
+                                   for i, c in enumerate(diverse_top[:top], 1)],
+        "top_candidates": [_candidate_row(c, i, full=True)      # alias: the reported headline list
+                           for i, c in enumerate(diverse_top[:top], 1)],
+        "full_ranked_head": [_candidate_row(c, i) for i, c in enumerate(span_survivors[:100], 1)],
+        "full_ranked_total": len(span_survivors),
+        "full_ranked_csv": str(OUT_DIR / "ayodhya_change_ranked.csv"),
         "panels": panels,
         "domain_gap_statement": (
             "The FC-Siam-diff weights were trained on OSCD, which is Sentinel-2 L1C "

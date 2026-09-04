@@ -68,14 +68,19 @@ PHENO_NDVI_ANOMALY = 0.10
 PHENO_NDBI_ANOMALY = 0.06
 PHENO_NDWI_ANOMALY = 0.08
 
-# Rule 5 - morphology. 1 px = 100 m^2 at Sentinel-2's 10 m GSD. A 2x2-pixel
-# blob (400 m^2) is one S2 resolution element - below the scale at which a
-# change can be told apart from co-registration jitter (0.15-0.29 px here) +
-# mixed-pixel noise over a multi-year interval. 10 px (1,000 m^2, 0.1 ha) is
-# the smallest footprint at which a discrete built structure, a cleared plot
-# or a road segment is confidently attributable; erring toward precision per
-# PS 2.2.3 and keeping the surviving list analyst-reviewable.
-MORPH_MIN_AREA_PX = 10
+# Rule 5 - morphology. 1 px = 100 m^2 at Sentinel-2's 10 m GSD. The Phase 4
+# review found that 20-30 px candidates (e.g. a 23 px and a 26 px blob) clear
+# every other gate on model probability alone and are visually
+# indistinguishable from noise in the [before|after] panels. Raised from 10 px
+# to **50 px (5,000 m^2, 0.5 ha)**: a ~7x7-pixel footprint is the smallest at
+# which a discrete land parcel / small tank / building cluster can be
+# delineated and attributed once ~0.15-0.29 px co-registration jitter and
+# mixed-pixel edge effects are accounted for, and it aligns with the 0.5-1 ha
+# minimum mapping unit common in operational 10-30 m land-cover-change
+# products. Trades recall of genuinely sub-0.5-ha changes for a much cleaner
+# analyst queue (PS 2.2.3 favours precision). Verified: the real refilled
+# tanks (1,476 px and 393 px) survive; the 23/26 px specks do not.
+MORPH_MIN_AREA_PX = 50
 PIXEL_AREA_M2 = 100.0
 
 RULES = ("quality", "registration", "radiometric", "phenology", "morphology")
