@@ -1,4 +1,206 @@
 <!doctype html>
+<html lang="en">
+<head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>geoseek analyst</title>
-<p>placeholder - replaced by the Phase 6 Step C frontend.</p>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">geoseek <span>/ analyst</span></div>
+  <nav>
+    <button data-route="search">Search</button>
+    <button data-route="queue">Review Queue</button>
+    <button data-route="detail">Candidate Detail</button>
+    <button data-route="discovery">Discovery</button>
+  </nav>
+  <div class="spacer"></div>
+  <span class="chip" id="latencyChip">&nbsp;</span>
+  <span class="chip ok" id="offlineChip">offline &middot; no external calls</span>
+</header>
+
+<main>
+  <!-- ============ SEARCH ============ -->
+  <section class="view" id="view-search">
+    <div class="filters">
+      <label class="grow">natural-language query
+        <input id="q" placeholder="e.g. a river with wide sandbars near cropland" value="an open water reservoir or pond">
+      </label>
+      <label>AOI bbox (w,s,e,n)
+        <input id="s_bbox" placeholder="optional">
+      </label>
+      <label>from<input id="s_from" type="date"></label>
+      <label>to<input id="s_to" type="date"></label>
+      <label>sensor
+        <select id="s_sensor"><option value="">any</option><option>Sentinel-2A</option><option>Sentinel-2B</option></select>
+      </label>
+      <label>max cloud %
+        <input id="s_cloud" type="number" min="0" max="100" step="1" style="min-width:80px">
+      </label>
+      <button class="primary" id="s_go">Search</button>
+      <button class="ghost" id="s_upload">Image similarity&hellip;</button>
+      <input type="file" id="s_file" accept="image/*" class="hidden">
+    </div>
+    <div class="split">
+      <div class="panel"><h3>Results <span id="s_count" class="muted small"></span></h3>
+        <div class="body"><div class="cards" id="s_cards"></div></div>
+      </div>
+      <div>
+        <div class="mapwrap"><canvas class="map" id="s_map"></canvas></div>
+        <div class="maplegend" id="s_legend"></div>
+        <div class="mapnote">Coordinate canvas in EPSG:4326 &mdash; no web map tiles are loaded. Click a point to open its tile.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ REVIEW QUEUE ============ -->
+  <section class="view" id="view-queue">
+    <div class="filters">
+      <label>change type
+        <select id="f_type"><option value="">all</option>
+          <option>water_gain</option><option>water_loss</option><option>construction</option>
+          <option>clearance</option><option>road</option><option>other</option></select>
+      </label>
+      <label>min confidence
+        <input id="f_conf" type="number" min="0" max="1" step="0.05" style="min-width:90px">
+      </label>
+      <label>persistence
+        <select id="f_pers"><option value="">any</option>
+          <option>persistent</option><option>progressive</option><option>recent</option>
+          <option>transient</option><option>inconsistent</option><option>single_pair</option></select>
+      </label>
+      <label>sensor
+        <select id="f_sensor"><option value="">any</option>
+          <option value="sentinel-2">Sentinel-2 (optical)</option>
+          <option value="sentinel-1">Sentinel-1 (has SAR)</option></select>
+      </label>
+      <label>decision
+        <select id="f_dec"><option value="">any</option>
+          <option>undecided</option><option>confirm</option><option>reject</option></select>
+      </label>
+      <label>AOI bbox
+        <input id="f_bbox" placeholder="w,s,e,n (optional)">
+      </label>
+      <button class="primary" id="f_go">Apply</button>
+      <button class="ghost" id="f_export">Export filtered &darr;</button>
+    </div>
+    <div class="split">
+      <div>
+        <div class="kvline pad" id="q_summary"></div>
+        <div class="tablewrap"><table id="q_table">
+          <thead><tr>
+            <th data-k="rank">#</th><th data-k="candidate_id">candidate</th>
+            <th data-k="change_type">type</th><th data-k="confidence">conf</th>
+            <th data-k="significance">sig</th><th data-k="queue_score">queue</th>
+            <th data-k="area_m2">area m²</th><th data-k="persistence">persistence</th>
+            <th data-k="earliest">earliest change</th><th data-k="decision">verdict</th>
+          </tr></thead>
+          <tbody></tbody>
+        </table></div>
+      </div>
+      <div>
+        <div class="mapwrap"><canvas class="map" id="q_map"></canvas></div>
+        <div class="maplegend" id="q_legend"></div>
+        <div class="mapnote">Candidate footprints reprojected to EPSG:4326 on a plain canvas. Click a footprint to open the candidate.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CANDIDATE DETAIL ============ -->
+  <section class="view" id="view-detail">
+    <div id="d_empty" class="panel pad muted">Open a candidate from the Review Queue or Search map.</div>
+    <div id="d_body" class="stack hidden">
+      <div class="panel"><div class="body detail-head" id="d_head"></div></div>
+
+      <div class="panel">
+        <h3>Before &middot; After &middot; Change overlay
+          <span style="float:right; text-transform:none; letter-spacing:0">
+            <span class="dateseg" id="d_dates"></span>
+          </span>
+        </h3>
+        <div class="body">
+          <div class="imgrow" id="d_imgs"></div>
+          <p class="mapnote" id="d_imgnote"></p>
+        </div>
+      </div>
+
+      <div class="panel"><h3>Temporal trajectory</h3>
+        <div class="body">
+          <div class="traj" id="d_traj"></div>
+          <p class="small muted" id="d_trajnote" style="margin-bottom:0"></p>
+        </div>
+      </div>
+
+      <div class="panel"><h3>Evidence</h3>
+        <div class="body stack">
+          <div class="evgrid" id="d_ev"></div>
+          <div>
+            <div class="small muted" style="margin-bottom:6px">Suppression trace &mdash; every gate that was checked before this candidate entered the queue</div>
+            <div class="tablewrap" style="max-height:none">
+              <table class="trace"><thead><tr><th>gate</th><th>verdict</th><th>weight</th><th>detail</th></tr></thead>
+              <tbody id="d_trace"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel"><h3>Provenance</h3>
+        <div class="body stack">
+          <div class="prov" id="d_prov"></div>
+          <div class="kvline" id="d_provcode"></div>
+        </div>
+      </div>
+
+      <div class="panel"><h3>Analyst decision</h3>
+        <div class="body stack">
+          <div class="actions">
+            <button class="confirm" id="d_confirm">Confirm</button>
+            <button class="reject" id="d_reject">Reject</button>
+            <textarea id="d_note" placeholder="optional note (stored verbatim in the append-only audit trail)"></textarea>
+          </div>
+          <div class="small muted" id="d_decstate"></div>
+          <div class="tablewrap" style="max-height:220px">
+            <table><thead><tr><th>when</th><th>verdict</th><th>analyst</th><th>note</th><th>conf@decision</th><th>weights</th></tr></thead>
+            <tbody id="d_hist"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel"><h3>Discovery &mdash; more like this</h3>
+        <div class="body">
+          <div class="cards" id="d_similar"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DISCOVERY ============ -->
+  <section class="view" id="view-discovery">
+    <div class="filters">
+      <label>seed tile id or candidate id
+        <input id="disc_seed" placeholder="e.g. 2019_2024_011912  or  S2A_..._r012_c034" style="min-width:320px">
+      </label>
+      <label>or lon<input id="disc_lon" type="number" step="0.0001" style="min-width:110px"></label>
+      <label>lat<input id="disc_lat" type="number" step="0.0001" style="min-width:110px"></label>
+      <label>k<input id="disc_k" type="number" min="1" max="30" value="12" style="min-width:70px"></label>
+      <button class="primary" id="disc_go">Find similar</button>
+    </div>
+    <div class="split">
+      <div class="panel"><h3>Nearest neighbours <span id="disc_meta" class="muted small"></span></h3>
+        <div class="body"><div class="cards" id="disc_results"></div></div>
+      </div>
+      <div class="panel"><h3>HDBSCAN cluster map</h3>
+        <div class="body stack">
+          <div id="disc_clusters" class="small"></div>
+          <img id="disc_map" alt="cluster map" style="width:100%;border:1px solid var(--line);border-radius:8px">
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="toast"></div>
+<script src="app.js"></script>
+</body>
+</html>
