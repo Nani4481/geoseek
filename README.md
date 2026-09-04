@@ -728,6 +728,62 @@ existing search seams — no new model, no SAR. Result → `report → fusion`.
   `data/discovery/cluster_map.png`, assignments → `data/index/tile_clusters.json`,
   manifest `tile_clustering`.
 
+## Phase 6: the analyst interface
+
+Everything the pipeline computes, made **visible** and **auditable**, running
+with the network off. Full acceptance evidence in [`PHASE6.md`](PHASE6.md).
+
+* **Backend** — routes on the existing `geoseek.search.api` app, all through the
+  repository / search seams: `/candidates` (ranked change queue, filterable by
+  bbox / date / type / min-confidence / sensor / persistence / analyst verdict),
+  `/candidates/{id}` (full evidence breakdown + suppression trace + temporal
+  trajectory + provenance chain tile→observation→scene→collection with COG URL,
+  licence, checksums, weights SHA-256, git commit + SAR corroboration),
+  `/candidates/{id}/imagery` (before / after / change-overlay PNG, per date),
+  `/candidates/{id}/decision`, `/audit`, `/export`, `/stats`, plus discovery
+  pass-throughs. `geoseek.change.analyze` now also writes
+  `ayodhya_change_ranked_detail.json` so every one of the 1104 candidates has
+  full detail offline with no recompute.
+
+* **Audit trail (PS 2.2.5)** — a new `analyst_decisions` table reached **only**
+  through `MetadataRepository`. **Append-only enforced at the storage layer**:
+  `BEFORE UPDATE` / `BEFORE DELETE` triggers `RAISE(ABORT)`. Every row snapshots
+  the decision, note, analyst, timestamp, model version, weights SHA-256, git
+  commit, pipeline version, the confidence **and** the full evidence blob *at
+  the time of the decision*. Re-deciding appends a new row.
+
+* **Frontend** — one static vanilla-JS/CSS bundle served by FastAPI at `/app/`.
+  No build, no CDN, no web-font fetch. Four views: **Search** (NL + image
+  similarity), **Review Queue** (the ranked table + footprints), **Candidate
+  Detail** (BEFORE│AFTER│OVERLAY with a 2019/2021/2024 selector, the trajectory,
+  the evidence + suppression panel, the provenance panel, confirm/reject +
+  history), **Discovery** (KNN + the HDBSCAN cluster map). The **map is a plain
+  `<canvas>` in EPSG:4326** — footprints reprojected server-side, drawn and
+  hit-tested locally; **no web map tiles are ever loaded**.
+
+* **Export (PS 2.2.5)** — `POST /export` → GeoJSON (+CSV) where every feature
+  carries geometry (EPSG:4326), change type, confidence, evidence summary,
+  earliest supported change + caveat, source scene ids, acquisition dates,
+  sensor, model/pipeline versions, weights SHA-256, git commit and the analyst
+  decision if one exists. `scripts/validate_export.py` builds it and **loads it
+  in GDAL/OGR** (GeoJSON driver, SRS = WGS 84, valid Polygons, 1104 features).
+
+* **Offline + latency** — `scripts/verify_offline_perf.py` hard-disables the
+  network in process (any non-loopback `connect` / `getaddrinfo` raises) before
+  building the app; all nine views/functions work and **no call leaves the
+  host**. Per-view p95 with the network down: search 16 ms, queue 48 ms, detail
+  155 ms, imagery 117 ms cold / 2 ms warm, decision 169 ms, audit 18 ms,
+  discovery 4–148 ms — every interactive path well under 1 s.
+
+```bash
+python -m geoseek.change.analyze                 # report + full-detail sidecar
+uvicorn geoseek.search.api:app --port 8000       # -> http://127.0.0.1:8000/app/
+python scripts/demo_audit_trail.py               # audit schema + append-only demo
+python scripts/validate_export.py                # GeoJSON + GDAL/OGR validation
+python scripts/verify_offline_perf.py            # network-off + per-view latency
+node   scripts/shoot_analyst_ui.mjs              # screenshots of the four views
+```
+
 ## Tests
 
 ```bash
@@ -768,7 +824,11 @@ identical, +6 dB for 2× amplitude, NaN at nodata), the SAR corroboration factor
 (scene-detrended, direction-aware, neutral when unavailable), the confidence
 engine folding it in and clamping, the fusion score (geometric, query-optional,
 confidence-led) and `FusionRanker`, and offline HDBSCAN clustering on synthetic
-blobs. 186 tests total (0 skipped).
+blobs. `test_phase6.py` — Phase 6: the append-only `analyst_decisions` seam
+(round-trip, ordered history, the `BEFORE UPDATE`/`BEFORE DELETE` triggers
+firing), every analyst endpoint (queue filters/sort, full evidence + suppression
+trace + provenance, imagery PNGs, decision → audit, export), the export loading
+in GDAL/OGR, and the light-vs-full audit views. 201 tests total (0 skipped).
 
 ## Layout
 
@@ -818,7 +878,12 @@ geoseek/
       pipeline.py              CLI: read -> tile -> quality -> embed (batched) -> store
     search/
       engine.py               SearchEngine: text-to-image + image-to-image, filters, thumbnails (via the seams)
-      api.py                  FastAPI service wrapping SearchEngine
+      api.py                  FastAPI: search + Phase 6 analyst routes; mounts the /app/ frontend
+    analyst/                 Phase 6: the analyst interface (PS 2.2.5)
+      service.py               AnalystService: queue, full evidence + provenance, decisions, export (via the seams)
+      imagery.py               before / after / change-overlay PNG crops from the cached prob raster (LRU, offline)
+      geo.py                   candidate pixel-bbox -> EPSG:4326 polygon for the map + export
+      web/                     the offline SPA: index.html + style.css + app.js (no build, no CDN, canvas map)
     change/                   Phase 3a: pair prep · 3b: trained model · 4: analyst pipeline
       coregister.py            FFT phase-correlation sub-pixel co-registration check + correction
       normalize.py             pseudo-invariant-feature per-band linear radiometric normalization
@@ -843,7 +908,7 @@ geoseek/
     models/ datasets/ tiles/ index/     gitignored, populated by staging + ingest
     datasets/oscd/                      gitignored, OSCD change-detection dataset (download_oscd.py)
     datasets/S1A_*_grd/                 gitignored, geocoded Sentinel-1 VV/VH (download_sentinel1.py)
-    change_model/                       gitignored, fc_siam_diff.pt + loss/PR curves + prob_*.tif, reports, panels
+    change_model/                       gitignored, fc_siam_diff.pt + prob_*.tif + reports + ranked_detail sidecar + exports/ + ui_screens/
     discovery/cluster_map.png           gitignored, HDBSCAN spatial cluster map
     index/tile_clusters.json            gitignored, per-tile HDBSCAN assignments + concept labels
     index/tiles.sqlite                  the catalog (collections/scenes/observations/tiles/derived)
@@ -854,7 +919,13 @@ geoseek/
     index/spectral_indices_per_tile.csv gitignored, per-tile NDVI/NDWI/NDBI per date (change.prep)
   tests/
     test_env.py  test_ingest.py  test_search.py  test_change.py  test_change_model.py
-    test_change_pipeline.py  test_phase5.py  test_catalog.py  test_vectorindex.py
-    test_models.py  test_temporal.py  test_search_parity.py  test_change_align.py
+    test_change_pipeline.py  test_phase5.py  test_phase6.py  test_catalog.py
+    test_vectorindex.py  test_models.py  test_temporal.py  test_search_parity.py
+    test_change_align.py
     fixtures/search_baseline.json  fixtures/pre_migration_tiles.json
+  scripts/
+    demo_audit_trail.py       Phase 6 Step B: analyst_decisions schema + append-only demo
+    validate_export.py        Phase 6 Step D: build the GeoJSON export + validate it in GDAL/OGR
+    verify_offline_perf.py    Phase 6 Step E: network-disabled run + per-view latency
+    shoot_analyst_ui.mjs      Phase 6: Playwright screenshots of the four views (off-origin aborted)
 ```
