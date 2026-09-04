@@ -625,6 +625,109 @@ observed, not tuned to look like a construction-detection demo. Full report →
 `ayodhya_change_pipeline`; `[2019 | 2021 | 2024 | overlay]` panels for the
 top-5 → `data/change_model/ayodhya_change_*.png`.
 
+## Phase 5: candidate-queue polish, Sentinel-1 corroboration, fusion, discovery
+
+### Step A — candidate quality
+
+* **Minimum reported change 10 px → 50 px** (0.5 ha). The Phase-4 review found
+  20–30 px blobs cleared every gate on model probability alone; they are now
+  attributed straight to the morphology rule. The real refilling tanks
+  (1 476 / 393 px) survive; the two 23 / 26 px specks do not.
+* **Ranking by `queue_score = confidence^0.65 · significance^0.35`** (weighted
+  geometric mean; `significance = area_term^0.6 · anomaly_term^0.4`, log-area
+  vs 50 px → 3 000 px, max |index anomaly| vs 0.5). A big low-confidence blob
+  and a tiny high-confidence speck both sink; a 30 ha tank outranks a 0.5 ha
+  marginal change of equal confidence, but a 0.55-confidence change never
+  overtakes a 0.90 one.
+* **Diversified headline top-N** — ≤ 3 per `change_type`, same-type picks
+  ≥ 1.5 km apart, so roads and construction surface instead of ten
+  near-identical tanks. Full ranked list → `data/change_model/ayodhya_change_ranked.csv`.
+
+  2019→2024 after the fixes: 13 563 raw → 1 104 survived; diversified top-10 =
+  3 water_gain / 3 road / 3 construction / 1 other, smallest 95 000 m².
+
+### Step B — Sentinel-1 SAR as a second collection
+
+```powershell
+python -m geoseek.staging.download_sentinel1     # network, staging only
+```
+
+Stages **Sentinel-1 IW GRDH 1SDV** (dual-pol VV+VH, S1A, relative orbit 56
+ascending) near each S2 date — 2019-03-29 / 2021-03-06 / 2024-03-02 — from
+Earth Search's `sentinel-1-grd` (same no-login STAC + AWS Open Data bucket as
+the S2 scenes). Geocoded to the **exact S2 10 m UTM grid** via the product's
+~210 GCPs (`gdal.Warp`; rasterio's `WarpedVRT` mishandles `src_gcps` and
+flattens the image — a real gotcha). One 56-track slice covers ~93 % of the
+82 km AOI; the eastern strip is treated as "SAR unavailable" (neutral)
+downstream. Registered as its own collection **`sentinel-1-grd`** (sensor
+`C-SAR`): 3 scenes / 3 observations / 3 079 tiles, `faiss_id = NULL` — SAR is
+**not embedded** (RemoteCLIP is optical; embedding SAR would produce
+meaningless vectors). Source, licence (Copernicus free & open), and per-band
+SHA256 → manifest `sentinel1` + `sentinel1_catalog`. The served GRD is ESA
+Level-1 (detected, multi-looked, ground-range) — **not** calibrated, geocoded,
+terrain-flattened or speckle-filtered; geoseek adds the geocoding at staging
+and the speckle filter + dB change downstream.
+
+`TemporalObservationMatcher.match(collection=…)` was added so the change
+pipeline scopes to `sentinel-2-l2a` and the co-located S1 stack never pollutes
+the S2 temporal sequence.
+
+### Step C — SAR as corroborating evidence (`geoseek.sar`, weight only)
+
+No labelled optical+SAR change set exists, so there is **no fusion model** —
+that would be inventing weights. Instead:
+
+* `backscatter.py`: **adaptive Lee** speckle filter (7×7, ENL 4.4) in the
+  intensity domain, then `dB = 10·log10(I_later / I_earlier)` per polarization
+  — the un-applied absolute calibration cancels because both dates share the
+  beam / relative orbit.
+* `evidence.py`: each optical candidate's footprint is looked up in the
+  co-located dB-change raster and turned into a **confidence factor**
+  (agreement +10 %, clear opposite −20 %, unavailable = exactly ×1.0),
+  scene-detrended just like the optical anomaly. Never an override.
+* **Water is the clean validation case**: open water → strong VV backscatter
+  drop (specular). Over the span pair (scene VV trend +0.7 dB), the `water_gain`
+  survivors show a **median VV anomaly of −1.1 dB** — the expected direction;
+  the per-candidate agreement rate is reported in
+  `ayodhya_change_report.json → sar_corroboration`.
+* **Cloud-penetration**: reported honestly — the three Ayodhya S2 dates are
+  ~cloud-free (bad-SCL ≪ 1 %), so almost nothing is quality-suppressed for
+  cloud and SAR's all-weather value, though real, is not demonstrable on this
+  AOI.
+
+### Step D — one fused analyst queue (`geoseek.fusion.ranker`)
+
+```powershell
+python -m geoseek.change.analyze --query "new construction near a river"
+```
+
+`fusion_score = ( C^3.0 · S^1.5 · Q^2.0 )^(1/6.5)` (weighted geometric mean) —
+change **confidence** C (which already rolls up the detector, persistence,
+quality, spectral agreement and SAR), **significance** S (Step A), and, when a
+text query is active, **RemoteCLIP semantic relevance** Q (cosine of the
+candidate's later-date tile embedding to the query text, rescaled from
+[0.15, 0.32]). Confidence leads (w 3.0); significance only re-orders within a
+band (w 1.5); an active query is nearly as important as confidence (w 2.0) but
+a perfect-match tile with weak change evidence still scores low. Uses the
+existing search seams — no new model, no SAR. Result → `report → fusion`.
+
+### Step E — discovery (PS 2.2.4)
+
+* **KNN "find more like this"** (`geoseek.discovery.knn`): nearest tiles from
+  the FAISS index. `tile_id`-seeded latency **< 1 ms** (3 267-vector IP scan +
+  join); point-seeded ~190 ms, dominated by the linear spatial `query_tiles`
+  scan (a spatial index would remove that).
+* **Offline HDBSCAN** (`scripts/cluster_tiles.py`, batch — not per query) over
+  all 3 267 tile embeddings: **3 clusters, 9 % noise** —
+  c1 (1 958) "rural village / bare dry ground", c2 (982) "trees & dense
+  vegetation", c0 (31) "river with wide sandbars / braided riverbed"
+  (concept similarity 0.36, well above the others' ~0.29). The clustering
+  separates the drought-year land cover (2019/2021, mostly c1) from the
+  green-year cover (2024, mostly c2) and isolates the Saryu channel. Each
+  cluster is labelled by its nearest RemoteCLIP text concepts; spatial map →
+  `data/discovery/cluster_map.png`, assignments → `data/index/tile_clusters.json`,
+  manifest `tile_clustering`.
+
 ## Tests
 
 ```bash
@@ -653,12 +756,19 @@ order-invariance, shared Siamese encoder) and the `FCSiamDiffChangeModel` seam
 (consumes a matcher `ObservationPair` unchanged, returns a `ChangeResult` with
 a written mask, refuses a non-comparable pair, runs offline) — all hermetic
 (tiny synthetic checkpoint + rasters), plus a skip-if-absent check against the
-real trained weights. `test_change_pipeline.py` — Phase 4: the five
+real trained weights. `test_change_pipeline.py` — Phase 4/5: the five
 suppression gates + ordering + down-weight combination, anomaly-framed change
 typing for every type, the persistence analyzer's trajectory verdicts +
-earliest-supported-change caveat (against a tiny in-memory catalog), and the
+earliest-supported-change caveat (against a tiny in-memory catalog), the
 confidence engine (geometric-mean collapse on a single weak term, raw model
-probability never surfaced, weights documented). 171 tests total.
+probability never surfaced, weights documented), and Phase 5 Step A
+(`queue_score`, `significance`, `diversify`). `test_phase5.py` — Sentinel-1
+backscatter (Lee filter smooths speckle / preserves an edge; dB change is 0 for
+identical, +6 dB for 2× amplitude, NaN at nodata), the SAR corroboration factor
+(scene-detrended, direction-aware, neutral when unavailable), the confidence
+engine folding it in and clamping, the fusion score (geometric, query-optional,
+confidence-led) and `FusionRanker`, and offline HDBSCAN clustering on synthetic
+blobs. 186 tests total (0 skipped).
 
 ## Layout
 
@@ -672,13 +782,15 @@ geoseek/
     capture_search_baseline.py  freeze the production search results into a regression fixture
     align_third_date.py      Phase 3.5 Step 4: co-registration + PIF offset provenance for the 3rd date
     train_change.py          Phase 3b: train FC-Siam-diff on OSCD + honest held-out evaluation
-    (Phase 4 runs as `python -m geoseek.change.analyze` - no script wrapper)
+    cluster_tiles.py         Phase 5 Step E: batch HDBSCAN over tile embeddings + KNN demo
+    (Phase 4/5 change pipeline runs as `python -m geoseek.change.analyze [--query ...]`)
   src/geoseek/
     config.py              paths, device auto-select, startup banner
     staging/
       download_models.py    network entrypoint: stage RemoteCLIP weights + (--vanilla) control CLIP
       download_datasets.py  network entrypoint: demo AOI + scaled AOI (--large) + B08/B11 (--extra-bands) + 3rd date (--third-date)
       download_oscd.py      network entrypoint: stage the OSCD change-detection dataset (Phase 3b training data)
+      download_sentinel1.py network entrypoint: stage Sentinel-1 GRD SAR (Phase 5) as its own collection
       manifest.py            provenance manifest (sha256, license, timestamp, ingest runs, analysis sections) writer
     catalog/                 Phase 3.5: the scene -> observation -> tile metadata catalog
       entities.py             storage-agnostic dataclasses (Collection/Scene/Observation/Tile/DerivedProduct/…)
@@ -718,12 +830,22 @@ geoseek/
         fc_siam_diff_model.py   FCSiamDiffChangeModel(ChangeDetectionModel) - ObservationPair -> ChangeResult
       suppress.py              Phase 4 Step A: 5 ordered false-alarm gates + per-candidate trace
       classify.py              Phase 4 Step B: rule-based change typing on index anomalies
-      confidence.py            Phase 4 Step D: 6-term weighted-geometric-mean confidence + evidence
-      analyze.py               Phase 4 Step E: CLI orchestrator - candidates -> report + panels
+      confidence.py            Phase 4 Step D + Phase 5 Step C: weighted-geometric-mean confidence + SAR factor
+      analyze.py               Phase 4/5 CLI orchestrator: candidates -> queue -> report + panels (--query)
+  sar/                       Phase 5 Step C: Sentinel-1 as corroborating evidence
+    backscatter.py             adaptive Lee speckle filter + dB backscatter change
+    evidence.py                per-candidate co-located dB lookup -> confidence factor (weight, not override)
+  fusion/ranker.py           Phase 5 Step D: fused analyst queue (change evidence + RemoteCLIP relevance)
+  discovery/                 Phase 5 Step E: PS 2.2.4
+    knn.py                     "find more like this" over FAISS (latency-reported)
+    cluster.py                 offline HDBSCAN over all tile embeddings + concept labels + cluster map
   data/
     models/ datasets/ tiles/ index/     gitignored, populated by staging + ingest
     datasets/oscd/                      gitignored, OSCD change-detection dataset (download_oscd.py)
-    change_model/                       gitignored, fc_siam_diff.pt + loss/PR curves + Phase 4 prob_*.tif, report, panels
+    datasets/S1A_*_grd/                 gitignored, geocoded Sentinel-1 VV/VH (download_sentinel1.py)
+    change_model/                       gitignored, fc_siam_diff.pt + loss/PR curves + prob_*.tif, reports, panels
+    discovery/cluster_map.png           gitignored, HDBSCAN spatial cluster map
+    index/tile_clusters.json            gitignored, per-tile HDBSCAN assignments + concept labels
     index/tiles.sqlite                  the catalog (collections/scenes/observations/tiles/derived)
     index/tiles.faiss                   the FaissFlatIPIndex vectors
     provenance_manifest.json            gitignored; staging + ingest + change.prep + Step 4 + Phase 3b (oscd*, oscd_change_model*)
@@ -732,7 +854,7 @@ geoseek/
     index/spectral_indices_per_tile.csv gitignored, per-tile NDVI/NDWI/NDBI per date (change.prep)
   tests/
     test_env.py  test_ingest.py  test_search.py  test_change.py  test_change_model.py
-    test_change_pipeline.py  test_catalog.py  test_vectorindex.py  test_models.py
-    test_temporal.py  test_search_parity.py  test_change_align.py
+    test_change_pipeline.py  test_phase5.py  test_catalog.py  test_vectorindex.py
+    test_models.py  test_temporal.py  test_search_parity.py  test_change_align.py
     fixtures/search_baseline.json  fixtures/pre_migration_tiles.json
 ```

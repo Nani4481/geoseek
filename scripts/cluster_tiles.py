@@ -74,7 +74,13 @@ def main(argv: list[str] | None = None) -> None:
         for r in knn["results"]:
             print(f"      {r['tile_id']:42s} score {r['score']:.3f}  {r['acq_date']}  "
                   f"({r['centroid_lonlat'][0]:.4f}, {r['centroid_lonlat'][1]:.4f})")
-        print(f"    latency: {knn['latency_ms']:.1f} ms  (point lookup {knn['point_lookup_ms']:.1f} ms)")
+        print(f"    latency (point-seeded): {knn['latency_ms']:.1f} ms  "
+              f"(spatial point->tile lookup {knn['point_lookup_ms']:.1f} ms + FAISS + join)")
+        # a second run seeded directly by tile_id - no spatial scan - is the true interactive cost
+        import time as _t
+        t = [find_more_like_this(eng, tile_id=knn["seed_tile_id"], k=8)["latency_ms"] for _ in range(5)]
+        print(f"    latency (tile_id-seeded, best of 5): {min(t):.1f} ms  (FAISS IP scan + metadata join)")
+        knn["latency_ms_tile_seeded"] = round(min(t), 2)
 
         from geoseek.staging.manifest import record_analysis_section
         record_analysis_section("tile_clustering", {**res.as_dict(),
