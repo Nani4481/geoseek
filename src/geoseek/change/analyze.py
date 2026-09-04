@@ -441,7 +441,7 @@ def save_panel(cand: Candidate, span_prob_path: str, threshold: float, out: Path
     tiles = []
     win = None
     for date in ("2019", "2021", "2024"):
-        rgb, win = _crop_true_color(DATE_TO_OBS[date], cand.bbox, margin_frac=0.8, min_px=128)
+        rgb, win = _crop_true_color(DATE_TO_OBS[date], cand.bbox, margin_frac=1.5, min_px=280)
         tiles.append((date, rgb))
     R0, C0, R1, C1 = win
     with rasterio.open(span_prob_path) as ds:
@@ -717,6 +717,8 @@ def _assemble_report(pair_names, per_pair, span_name, span_survivors, top, panel
         "top_candidates": [
             {"rank": i, "candidate_id": c.candidate_id, "pair": c.pair_id,
              "centroid_lonlat": [round(x, 6) for x in c.centroid_lonlat],
+             "bbox_rc": list(c.bbox), "label": c.label,
+             "centroid_rc": [round(x, 2) for x in c.centroid_rc],
              "area_px": c.area_px, "area_m2": round(c.area_px * PIXEL_AREA_M2, 1),
              "mean_model_prob": round(c.mean_prob, 4),
              "change_type": c.classification.get("change_type"),
