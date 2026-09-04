@@ -118,9 +118,12 @@ canvas.map { width: 100%; height: 520px; display: block; border-radius: 12px; ba
 .imgrow figure { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .imgrow figcaption { padding: 6px 10px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); display: flex; justify-content: space-between; }
 .imgrow img { width: 100%; display: block; aspect-ratio: 1/1; object-fit: cover; background: var(--chip); }
-.dateseg { display: inline-flex; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
+.dateseg { display: inline-flex; align-items: center; border: 1px solid var(--line-strong); border-radius: 8px; overflow: hidden; }
 .dateseg button { border: 0; background: var(--panel); color: var(--muted); padding: 5px 12px; }
 .dateseg button.active { background: var(--accent); color: var(--accent-ink); }
+.dateseg .datelbl { font-size: 11px; color: var(--muted); padding: 0 8px; letter-spacing: .3px; }
+.dateseg .datelbl:first-child { border-right: 1px solid var(--line); }
+.dateseg .datelbl:last-child { border-left: 1px solid var(--line); background: var(--chip); align-self: stretch; display: flex; align-items: center; }
 
 .traj { display: flex; gap: 6px; flex-wrap: wrap; }
 .traj .seg { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; min-width: 150px; background: var(--panel); }

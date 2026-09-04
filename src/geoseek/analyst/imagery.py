@@ -18,9 +18,14 @@ import io
 
 import numpy as np
 
+from geoseek.catalog.naming import base_scene_id
 from geoseek.change.analyze import DATE_TO_OBS
 from geoseek.config import get_settings
-from geoseek.ingest.embed import make_true_color_uint8
+from geoseek.ingest.embed import (
+    make_true_color_uint8,
+    true_color_bounds_for_scene,
+    true_color_offsets_for_scene,
+)
 
 RGB_BANDS = ("B04", "B03", "B02")
 CHANGE_THRESHOLD = 0.80
@@ -47,7 +52,14 @@ def _crop_true_color(obs_id: str, bbox, margin_frac: float, min_px: int):
     for b in RGB_BANDS:
         with rasterio.open(d / f"{b}.tif") as ds:
             bands[b] = ds.read(1, window=win)
-    rgb = make_true_color_uint8(bands, nodata=0)
+    # per-observation display stretch so BEFORE (2019/2021) and AFTER (2024) each
+    # read naturally - see geoseek.ingest.embed.true_color_bounds_for_scene
+    sid = base_scene_id(obs_id)
+    rgb = make_true_color_uint8(
+        bands, nodata=0,
+        per_band_offset_dn=true_color_offsets_for_scene(sid),
+        per_band_bounds_dn=true_color_bounds_for_scene(sid),
+    )
     return rgb, (R0, C0, R1, C1)
 
 

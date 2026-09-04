@@ -26,6 +26,17 @@ The correct pipeline, applied per tile:
     3. Feed the resulting natural-looking RGB image through OpenCLIP's own
        preprocessing transform (resize to 224 + CLIP mean/std normalization).
 
+The fixed global bounds are for the EMBEDDINGS. For DISPLAY (the analyst UI
+thumbnails + detail imagery) the three staged L2A products do not correspond
+linearly - B02 (blue) inter-date correlation is only 0.24
+(provenance_manifest.radiometric_normalization), 2019 (drought March) land is
+~1.7x brighter than 2021/2024, and ~19% of the 2024 AOI has R/B > 2.5 (vs ~6%
+in 2021) from brighter dry-season VIS-red/green plus a suppressed blue band. One
+global stretch therefore renders 2019 washed-out and 2024 saturated-yellow, so
+``make_true_color_uint8(..., per_band_bounds_dn=true_color_bounds_for_scene(id))``
+stretches EACH observation on its own robust 2/98 percentile per band (the
+standard multi-date EO display). This does not touch the embeddings.
+
 Sentinel-2 baseline / BOA_ADD_OFFSET note
 -----------------------------------------
 Processing baseline 04.00+ introduced BOA_ADD_OFFSET = -1000: raw DN then
@@ -116,13 +127,73 @@ def boa_offset_dn_for_scene(scene_id: str) -> float:
     return float(RADIOMETRY_CONFIG["boa_add_offset_dn_subtracted"].get(scene_id, DEFAULT_BOA_OFFSET_DN))
 
 
+# --- Phase 6: per-observation true-color DISPLAY stretch ------------------
+# The FIXED global bounds above are right for the EMBEDDINGS (equal DN -> equal
+# input, cross-date comparable). They are wrong for DISPLAY: the three staged
+# L2A products do not correspond linearly (provenance_manifest:
+# radiometric_normalization B02 inter_date_corr only 0.24), 2019 (drought March)
+# land is ~1.7x brighter than 2021/2024, and over bright ground 2024 carries a
+# non-linear Sen2Cor bias (higher VIS-red/green, lower blue) that no single
+# global gain or offset removes - it just renders 2024 saturated-yellow.
+# So the analyst UI stretches EACH observation on its own robust 2nd/98th
+# percentile per band, over an SCL land+water mask (the standard way any GIS /
+# EO browser shows a multi-date stack): every date reads as natural terrain.
+# Cross-date *analysis* stays on the normalized-reflectance frame the change
+# pipeline uses; this is display only and does not touch the FAISS embeddings.
+# Bounds from a one-time full-AOI decimated sample (~1.7-2.0 M px/date).
+PER_OBS_TRUE_COLOR_DN_BOUNDS = {
+    "S2B_44RPQ_20190330_1_L2A": {"B04": (724.0, 1830.0), "B03": (787.0, 1594.0), "B02": (656.0, 1312.0)},
+    "S2A_44RPQ_20210304_1_L2A": {"B04": (227.0, 1908.0), "B03": (355.0, 1608.0), "B02": (73.0, 1194.0)},
+    "S2A_44RPQ_20240308_0_L2A": {"B04": (257.0, 2122.0), "B03": (435.0, 1838.0), "B02": (227.0, 1346.0)},
+}
+# Kept OUT of RADIOMETRY_CONFIG on purpose: RADIOMETRY_CONFIG is the analysis
+# radiometry entry (embeddings + change model + spectral indices), recorded to
+# the manifest under "radiometry". This display stretch is recorded separately
+# under the manifest's "true_color_display_stretch" key - see
+# record_true_color_display_stretch() / geoseek.ingest.pipeline.
+TRUE_COLOR_DISPLAY_STRETCH_CONFIG = {
+    "method": "per-band robust 2nd/98th percentile over an SCL land+water mask, per observation",
+    "sample": "one-time full-AOI decimated read (~1.7-2.0 M px per date)",
+    "bounds_dn": {k: {b: list(v) for b, v in bands.items()}
+                  for k, bands in PER_OBS_TRUE_COLOR_DN_BOUNDS.items()},
+    "applies_to": "true-color rendering only (thumbnails + detail imagery); NOT the FAISS embeddings",
+    "why": "the 3 L2A products don't correspond linearly (B02 inter_date_corr 0.24); one "
+           "global stretch renders 2019 washed-out bright and 2024 saturated-yellow",
+}
+
+
+def true_color_bounds_for_scene(scene_id: str) -> dict[str, tuple[float, float]] | None:
+    """Per-band (lo_dn, hi_dn) display stretch for one observation, or ``None``
+    for an unknown scene (caller then falls back to the fixed global bounds)."""
+    return PER_OBS_TRUE_COLOR_DN_BOUNDS.get(scene_id)
+
+
+def true_color_offsets_for_scene(scene_id: str) -> dict[str, float]:
+    """Per-band DN to SUBTRACT before the stretch: just the BOA baseline offset
+    (0 for every staged date). Cross-date display harmonisation is done by
+    per-observation bounds (:func:`true_color_bounds_for_scene`)."""
+    boa = boa_offset_dn_for_scene(scene_id)
+    return {b: boa for b in ("B04", "B03", "B02")}
+
+
 def _fixed_true_color_stretch_to_uint8(
-    band: np.ndarray, nodata: float | None, boa_offset_dn: float = DEFAULT_BOA_OFFSET_DN
+    band: np.ndarray, nodata: float | None, boa_offset_dn: float = DEFAULT_BOA_OFFSET_DN,
+    dn_bounds: tuple[float, float] | None = None,
 ) -> np.ndarray:
-    """One band of raw S2 L2A DN -> 8-bit via FIXED reflectance bounds (no per-tile adaptation)."""
-    refl = (band.astype(np.float32) - float(boa_offset_dn)) / S2_REFLECTANCE_SCALE
-    lo, hi = TRUE_COLOR_MIN_REFLECTANCE, TRUE_COLOR_MAX_REFLECTANCE
-    norm = np.clip((refl - lo) / (hi - lo), 0.0, 1.0)
+    """One band of raw S2 L2A DN -> 8-bit.
+
+    Default: the FIXED global reflectance bounds (equal DN -> equal value for
+    every tile and date; used for the embeddings). ``dn_bounds`` = (lo, hi) in DN
+    overrides them with a per-observation display stretch (analyst UI only).
+    """
+    b = band.astype(np.float32) - float(boa_offset_dn)
+    if dn_bounds is not None:
+        lo, hi = float(dn_bounds[0]), float(dn_bounds[1])
+        norm = np.clip((b - lo) / max(hi - lo, 1e-6), 0.0, 1.0)
+    else:
+        refl = b / S2_REFLECTANCE_SCALE
+        lo, hi = TRUE_COLOR_MIN_REFLECTANCE, TRUE_COLOR_MAX_REFLECTANCE
+        norm = np.clip((refl - lo) / (hi - lo), 0.0, 1.0)
     if TRUE_COLOR_GAMMA != 1.0:
         norm = np.power(norm, 1.0 / TRUE_COLOR_GAMMA)
     out = (norm * 255.0).round().astype(np.uint8)
@@ -135,16 +206,31 @@ def make_true_color_uint8(
     bands: dict[str, np.ndarray],
     nodata: float | None = None,
     boa_offset_dn: float = DEFAULT_BOA_OFFSET_DN,
+    per_band_offset_dn: dict[str, float] | None = None,
+    per_band_bounds_dn: dict[str, tuple[float, float]] | None = None,
 ) -> np.ndarray:
-    """B04,B03,B02 surface-reflectance DN -> HxWx3 8-bit true-color RGB with FIXED bounds.
+    """B04,B03,B02 raw S2 L2A DN -> HxWx3 8-bit true-color RGB.
 
-    The stretch is identical for every tile and every acquisition date (see
-    ``RADIOMETRY_CONFIG``), so equal ground reflectance maps to equal 8-bit
-    value - required for cross-date retrieval and change detection.
+    Default: the FIXED global reflectance bounds - identical for every tile and
+    date, used for the embeddings. ``per_band_bounds_dn`` (from
+    ``true_color_bounds_for_scene``) overrides them with a per-observation
+    display stretch so a multi-date stack reads naturally in the analyst UI (the
+    three products don't correspond linearly - one global stretch renders 2019
+    washed-out and 2024 saturated-yellow). ``per_band_offset_dn`` carries the BOA
+    baseline offset (0 for every staged date); scalar ``boa_offset_dn`` is the
+    per-band fallback.
     """
-    r = _fixed_true_color_stretch_to_uint8(bands["B04"], nodata, boa_offset_dn)
-    g = _fixed_true_color_stretch_to_uint8(bands["B03"], nodata, boa_offset_dn)
-    b = _fixed_true_color_stretch_to_uint8(bands["B02"], nodata, boa_offset_dn)
+    def off(b: str) -> float:
+        if per_band_offset_dn is not None:
+            return float(per_band_offset_dn.get(b, boa_offset_dn))
+        return float(boa_offset_dn)
+
+    def bnd(b: str) -> tuple[float, float] | None:
+        return None if per_band_bounds_dn is None else per_band_bounds_dn.get(b)
+
+    r = _fixed_true_color_stretch_to_uint8(bands["B04"], nodata, off("B04"), bnd("B04"))
+    g = _fixed_true_color_stretch_to_uint8(bands["B03"], nodata, off("B03"), bnd("B03"))
+    b = _fixed_true_color_stretch_to_uint8(bands["B02"], nodata, off("B02"), bnd("B02"))
     return np.stack([r, g, b], axis=-1)
 
 

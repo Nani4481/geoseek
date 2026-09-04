@@ -19,6 +19,7 @@ import numpy as np
 from geoseek.config import EMBEDDING_DIM, get_settings
 from geoseek.ingest.embed import (
     RADIOMETRY_CONFIG,
+    TRUE_COLOR_DISPLAY_STRETCH_CONFIG,
     boa_offset_dn_for_scene,
     make_true_color_uint8,
     save_sample_png,
@@ -28,7 +29,11 @@ from geoseek.ingest.reader import read_scene
 from geoseek.ingest.store import TileStore
 from geoseek.ingest.tiler import tile_scene
 from geoseek.models import EmbeddingModel, RemoteCLIPEmbeddingModel
-from geoseek.staging.manifest import append_ingest_run, record_radiometry_config
+from geoseek.staging.manifest import (
+    append_ingest_run,
+    record_analysis_section,
+    record_radiometry_config,
+)
 
 DEFAULT_EMBED_BATCH_SIZE = 64
 
@@ -172,6 +177,9 @@ def ingest_scene(
     }
     if record_manifest:
         record_radiometry_config(RADIOMETRY_CONFIG)
+        # separate manifest entry: the display-only per-observation true-color
+        # stretch (analyst UI thumbnails/detail), NOT part of analysis radiometry
+        record_analysis_section("true_color_display_stretch", TRUE_COLOR_DISPLAY_STRETCH_CONFIG)
         append_ingest_run(report)
 
     print("\n[pipeline] Run report:")

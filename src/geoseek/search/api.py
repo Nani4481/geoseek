@@ -148,12 +148,15 @@ def search_image(req: ImageSearchRequest):
 
 @app.get("/tile/{tile_id}/thumbnail")
 def tile_thumbnail(tile_id: str):
+    from geoseek.search.engine import THUMBNAIL_MEDIA_TYPE
+
     engine = _get_engine()
     try:
-        png_bytes = engine.get_tile_thumbnail_png(tile_id)
+        img_bytes = engine.get_tile_thumbnail_png(tile_id)
     except KeyError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    return Response(content=png_bytes, media_type="image/png")
+    return Response(content=img_bytes, media_type=THUMBNAIL_MEDIA_TYPE,
+                    headers={"Cache-Control": "public, max-age=86400"})
 
 
 @app.get("/health")

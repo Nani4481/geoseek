@@ -201,6 +201,38 @@ def test_candidate_imagery_before_after_overlay_are_png(client):
     assert client.get(f"/candidates/{top}/imagery", params={"date": "1999"}).status_code == 400
 
 
+def test_date_selector_offers_only_valid_before_dates(client):
+    # a 2019->2024 span candidate: BEFORE dates are 2019 & 2021, AFTER is 2024
+    top = client.get("/candidates", params={"limit": 1}).json()["candidates"][0]["candidate_id"]
+    im = client.get(f"/candidates/{top}").json()["imagery"]
+    assert im["after_date"] == "2024"
+    assert im["before_dates"] == ["2019", "2021"]         # NOT "2024" - would be before==after
+    assert "2024" not in im["before_dates"]
+
+
+def test_thumbnails_are_per_observation_white_balanced(client):
+    # 2019 (drought) and 2021 tiles must NOT render blue-starved / yellow under
+    # the per-observation display stretch: mean blue within ~35% of mean green.
+    import io as _io
+
+    import numpy as np
+    from PIL import Image
+
+    seen = {}
+    for date, want in (("2019-03-30", "S2B"), ("2021-03-04", "S2A")):
+        res = client.get("/search/text", params={"q": "open bare ground", "k": 60}).json()["results"]
+        tid = next((r["tile_id"] for r in res if r["acq_date"] == date), None)
+        if tid is None:
+            continue
+        img = np.array(Image.open(_io.BytesIO(
+            client.get(f"/tile/{tid}/thumbnail").content)).convert("RGB")).astype(float)
+        m = img.sum(-1) > 20
+        g, b = img[..., 1][m].mean(), img[..., 2][m].mean()
+        seen[date] = b / max(g, 1)
+    for date, bg in seen.items():
+        assert 0.6 < bg < 1.4, f"{date} thumbnail blue/green ratio {bg:.2f} - not neutral"
+
+
 def test_decision_writes_audit_and_is_append_only(client):
     top = client.get("/candidates", params={"limit": 1}).json()["candidates"][0]["candidate_id"]
 

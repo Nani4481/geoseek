@@ -114,7 +114,7 @@ try {
 
 // 3. SEARCH
 await page.goto(`${BASE}/app/#/search`, { waitUntil: "networkidle" });
-await page.fill("#q", "an open water reservoir or pond");
+await page.fill("#q", "a sandy braided riverbed");
 await page.click("#s_go");
 await page.waitForSelector("#s_cards .card img");
 await page.waitForFunction(() => {

@@ -168,20 +168,20 @@ def test_search_text_filter_excludes_everything_outside_bbox(engine):
 # --------------------------------------------------------------------------
 
 
-def test_thumbnail_png_is_valid_and_natural_looking(engine):
+def test_thumbnail_is_valid_and_natural_looking(engine):
     any_tile_id = next(iter(engine._rows.values()))["tile_id"]
-    png_bytes = engine.get_tile_thumbnail_png(any_tile_id)
-    img = Image.open(__import__("io").BytesIO(png_bytes))
-    assert img.format == "PNG"
+    img_bytes = engine.get_tile_thumbnail_png(any_tile_id)
+    img = Image.open(__import__("io").BytesIO(img_bytes))
+    assert img.format == "JPEG"  # thumbnails are JPEG q85 (small on the wire + in the LRU cache)
     img = img.convert("RGB")
     arr = np.array(img)
     assert arr.dtype == np.uint8
     # A properly scaled true-color tile spans a natural range: highlights near
     # white, real midtones - NOT the near-black cluster raw reflectance cast
     # straight to uint8 gives (DN~1200 median would render as u8~5, max~16).
-    # Bounds are now FIXED S2 true-color (0-0.3 reflectance, same for every tile
-    # and date); this tiny ~6 km demo AOI has no deep water, so its darkest
-    # soil/built pixels land around u8~50 rather than ~0.
+    # Bounds are FIXED S2 true-color (0-0.3 reflectance, same for every tile and
+    # date), plus the Phase 6 per-band cross-date harmonization; this tiny ~6 km
+    # demo AOI has no deep water, so its darkest soil/built pixels land ~u8 50.
     assert arr.max() > 200
     assert arr.min() < 90
     assert 25 < float(arr.mean()) < 210
@@ -242,4 +242,4 @@ def test_api_search_text_and_thumbnail_endpoints():
             tile_id = first["tile_id"]
             thumb_resp = client.get(f"/tile/{tile_id}/thumbnail")
             assert thumb_resp.status_code == 200
-            assert thumb_resp.headers["content-type"] == "image/png"
+            assert thumb_resp.headers["content-type"] in ("image/jpeg", "image/png")

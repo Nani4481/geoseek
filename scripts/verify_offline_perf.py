@@ -101,6 +101,29 @@ api_mod._analyst.repo = SQLiteMetadataRepository(_tmp)
 print(f"app booted offline in {boot_s:.1f}s "
       f"(RemoteCLIP + FAISS + catalog + change report all from local files)\n")
 
+# --- COLD path: the very first search + its 30 result thumbnails, measured
+#     ONCE right after startup (before any warm-up loop touches them) ---
+def _cold_search_view():
+    import concurrent.futures as cf
+
+    t = time.perf_counter()
+    body = client.get("/search/text", params={"q": "an open water reservoir or pond", "k": 30}).json()
+    st_ms = (time.perf_counter() - t) * 1000.0
+    ids = [r["tile_id"] for r in body["results"]]
+    t = time.perf_counter()
+    with cf.ThreadPoolExecutor(max_workers=6) as ex:   # 6 ~ a browser's per-host connections
+        list(ex.map(lambda i: client.get(f"/tile/{i}/thumbnail").content, ids))
+    th_ms = (time.perf_counter() - t) * 1000.0
+    return st_ms, th_ms, len(ids)
+
+_c_st, _c_th, _c_n = _cold_search_view()
+print("COLD start (first interaction; encoders + thumbnail path pre-warmed at startup, "
+      "thumbnail LRU still cold):")
+print(f"  GET /search/text  (1st call)                {_c_st:7.1f} ms")
+print(f"  {_c_n} result thumbnails  (6 concurrent)         {_c_th:7.1f} ms  wall  "
+      f"-> search view first paint {_c_st + _c_th:7.1f} ms  {'OK' if _c_st + _c_th < 1000 else 'OVER'}")
+print()
+
 
 # ---------------------------------------------------------------- timing helper
 def bench(label, fn, n=12, budget_ms=1000.0):
@@ -128,6 +151,8 @@ def run():
     bench("GET /health", lambda: client.get("/health"))
     bench("GET /stats", lambda: client.get("/stats"))
     bench("GET /search/text", lambda: client.get("/search/text", params={"q": "an open water reservoir", "k": 30}))
+    _tid = client.get("/search/text", params={"q": "a river", "k": 1}).json()["results"][0]["tile_id"]
+    bench("GET /tile/{id}/thumbnail (warm)", lambda: client.get(f"/tile/{_tid}/thumbnail"))
     png1 = (b"\x89PNG\r\n\x1a\n")  # not used; image search uses a synthetic array
     import base64
     import io

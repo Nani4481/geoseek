@@ -208,8 +208,16 @@ class AnalystService:
         base["decisions"] = decisions
         base["current_decision"] = decisions[-1] if decisions else None
         base["temporal_trajectory"] = self._trajectory_view(c)
+        earlier_obs, later_obs = (c["pair"].split("->") + ["", ""])[:2]
+        after_date = OBS_TO_DATE.get(later_obs)
+        # the selector only offers valid BEFORE dates: acquisitions strictly
+        # before the pair's later observation (picking the after-date would give
+        # "before 2024 | after 2024" - two identical panels).
+        before_dates = [d for d in DATE_TO_OBS if after_date is None or d < after_date]
         base["imagery"] = {
-            "dates": list(DATE_TO_OBS),
+            "before_dates": before_dates,
+            "after_date": after_date or list(DATE_TO_OBS)[-1],
+            "dates": before_dates,  # back-compat alias
             "views": ["rgb", "overlay"],
             "url_template": f"/candidates/{candidate_id}/imagery?date={{date}}&view={{view}}",
         }

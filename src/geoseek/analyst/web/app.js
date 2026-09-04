@@ -297,14 +297,15 @@ async function exportFiltered() {
 }
 
 /* ---------------------------------------------------------------- DETAIL */
-let detailState = { id: null, date: "2024", data: null };
+let detailState = { id: null, date: null, after: "2024", data: null };
 async function openDetail(id) {
   go("detail/" + id); // keep hash canonical
   $("#d_empty").classList.add("hidden"); $("#d_body").classList.remove("hidden");
   $("#d_head").innerHTML = `<span class="spinner"></span> loading ${esc(id)}…`;
   try {
     const d = await api("/candidates/" + encodeURIComponent(id));
-    detailState = { id, date: "2024", data: d };
+    const before = d.imagery.before_dates || d.imagery.dates || ["2019"];
+    detailState = { id, date: before[before.length - 1], after: d.imagery.after_date || "2024", data: d };
     renderDetail(d);
   } catch (e) { $("#d_head").innerHTML = `<span class="muted">${esc(e.message)}</span>`; }
 }
@@ -322,9 +323,13 @@ function renderDetail(d) {
     <div class="kv"><span class="k">earliest supported</span><span class="v">${esc((d.earliest_supported || []).join(" → ") || "–")}</span></div>
     <div class="kv"><span class="k">verdict</span><span class="v verdict ${d.current_decision ? d.current_decision.decision : "undecided"}">${d.current_decision ? d.current_decision.decision : "undecided"}</span></div>`;
 
-  // date selector + imagery
-  $("#d_dates").innerHTML = d.imagery.dates.map(x =>
-    `<button data-d="${x}" class="${x === detailState.date ? "active" : ""}">${x}</button>`).join("");
+  // date selector — BEFORE dates only (AFTER + overlay are pinned to the pair's later obs)
+  const beforeDates = d.imagery.before_dates || d.imagery.dates || [detailState.date];
+  $("#d_dates").innerHTML =
+    `<span class="datelbl">before:</span>` +
+    beforeDates.map(x =>
+      `<button data-d="${x}" class="${x === detailState.date ? "active" : ""}">${x}</button>`).join("") +
+    `<span class="datelbl">after: ${esc(detailState.after)}</span>`;
   $$("#d_dates button").forEach(b => b.addEventListener("click", () => {
     detailState.date = b.dataset.d;
     $$("#d_dates button").forEach(x => x.classList.toggle("active", x === b));
@@ -332,7 +337,7 @@ function renderDetail(d) {
   }));
   paintImages();
   const es = d.temporal_trajectory.earliest_supported_change || {};
-  $("#d_imgnote").textContent = `Change overlay: red outline = this candidate's component, yellow = other 2019→2024 change in view. ${es.caveat || ""}`;
+  $("#d_imgnote").textContent = `Change overlay: red outline = this candidate's component, yellow = other ${beforeDates[0]}→${detailState.after} change in view. ${es.caveat || ""}`;
 
   // trajectory
   $("#d_traj").innerHTML = d.temporal_trajectory.intervals.map(iv => `
@@ -401,10 +406,9 @@ function renderDetail(d) {
   loadSimilar(d.candidate_id);
 }
 function paintImages() {
-  const id = detailState.id, dt = detailState.date;
-  const cfg = [["before", "rgb", dt], ["after", "rgb", "2024"], ["change overlay", "overlay", "2024"]];
-  // "before" follows the date selector; "after" + "overlay" are pinned to 2024 (the reference)
-  cfg[0][2] = dt;
+  const id = detailState.id, dt = detailState.date, after = detailState.after;
+  // "before" follows the date selector; "after" + "overlay" are the pair's later observation
+  const cfg = [["before", "rgb", dt], ["after", "rgb", after], ["change overlay", "overlay", after]];
   $("#d_imgs").innerHTML = cfg.map(([cap, view, date]) => `
     <figure><figcaption><span>${cap}</span><span>${date}</span></figcaption>
       <img loading="lazy" src="/candidates/${encodeURIComponent(id)}/imagery?date=${date}&view=${view}" alt="${cap} ${date}"></figure>`).join("");

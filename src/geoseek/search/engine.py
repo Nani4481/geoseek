@@ -14,9 +14,11 @@ This module touches neither sqlite3 nor faiss directly: metadata goes through
 
 from __future__ import annotations
 
+import functools
 import io
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -25,13 +27,41 @@ from shapely import wkt as shapely_wkt
 
 from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository
 from geoseek.config import get_settings
-from geoseek.ingest.embed import boa_offset_dn_for_scene, make_true_color_uint8
+from geoseek.ingest.embed import (
+    make_true_color_uint8,
+    true_color_bounds_for_scene,
+    true_color_offsets_for_scene,
+)
 from geoseek.ingest.store import DB_FILENAME, INDEX_FILENAME
 from geoseek.ingest.tiler import read_tile_window
 from geoseek.models import RemoteCLIPEmbeddingModel
 from geoseek.vectorindex import FaissFlatIPIndex
 
 RGB_BANDS = ("B04", "B03", "B02")
+
+
+THUMBNAIL_MEDIA_TYPE = "image/jpeg"
+
+
+@functools.lru_cache(maxsize=4096)
+def _render_thumbnail_bytes(scene_dir: str, row: int, col: int, scene_key: str) -> bytes:
+    """One tile's cross-date-harmonized true-color thumbnail (JPEG q85, ~20 kB).
+
+    Cached (>= the full 3 267-tile catalog): the queue, detail and discovery
+    views all revisit the same tiles, and 30 result cards per search would
+    otherwise re-read 3 COG windows each (~55 ms/tile) on every view. JPEG (not
+    PNG) keeps each thumbnail ~10x smaller on the wire and in the cache."""
+    from PIL import Image
+
+    bands, nodata = read_tile_window(Path(scene_dir), row, col, list(RGB_BANDS))
+    rgb_uint8 = make_true_color_uint8(
+        bands, nodata=nodata,
+        per_band_offset_dn=true_color_offsets_for_scene(scene_key),
+        per_band_bounds_dn=true_color_bounds_for_scene(scene_key),
+    )
+    buf = io.BytesIO()
+    Image.fromarray(rgb_uint8, mode="RGB").save(buf, format="JPEG", quality=85, optimize=True)
+    return buf.getvalue()
 
 
 @dataclass
@@ -100,9 +130,62 @@ class SearchEngine:
         self.vector_index = FaissFlatIPIndex(self.index_dir / INDEX_FILENAME)
         self.repo = SQLiteMetadataRepository(self.index_dir / DB_FILENAME)
         self._rows: dict[int, dict] = {}
+        # ALL model encodes run on this ONE thread. FastAPI serves sync endpoints
+        # from a threadpool; the first GPU op on each fresh worker thread pays a
+        # ~1 s cuBLAS/cuDNN handle init, so a burst of first queries would each
+        # be slow. Pinning every encode to a single pre-warmed thread makes every
+        # query pay the warm ~8 ms instead.
+        self._encode_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="geoseek-encode")
         self.refresh()
+        self._prewarm()
         print(f"[search] SearchEngine ready: {self.vector_index.count()} vectors, "
               f"{len(self._rows)} tile rows.")
+
+    KEEPWARM_INTERVAL_S = 20.0
+
+    def _prewarm(self) -> None:
+        """Pay the one-time cost of the first text/image encode (BPE vocab load
+        + first CUDA kernel launch, ~300 ms) and the first thumbnail render (PIL
+        + libjpeg init) at startup, then keep the GPU encoder hot with a light
+        periodic ping - otherwise, after the GPU goes idle for tens of seconds,
+        the NEXT user search pays a ~1 s CUDA wake-up + kernel re-autotune.
+
+        No bulk background thumbnail pre-render: the LRU + JPEG + the browser's
+        concurrent fetch already put a cold search view's 30 cards well under a
+        second, and a 3 000-tile loop would just contend for the GIL with the
+        first minutes of live requests."""
+        t0 = time.time()
+        try:
+            self._encode_text("warm up the text tower")
+            self._encode_image(np.zeros((32, 32, 3), dtype=np.uint8))
+            first = next(iter(self._rows.values()), None)
+            if first is not None:
+                self.get_tile_thumbnail_png(first["tile_id"])
+            print(f"[search] encoders + thumbnail path pre-warmed in "
+                  f"{(time.time() - t0) * 1000:.0f} ms")
+        except Exception as e:  # never let a warm-up failure block startup
+            print(f"[search] pre-warm skipped: {e}")
+            return
+
+        self._keepwarm_stop = threading.Event()
+
+        def _keepwarm():
+            while not self._keepwarm_stop.wait(self.KEEPWARM_INTERVAL_S):
+                try:
+                    self._encode_text("keepwarm")  # keeps the encode thread's GPU handles hot
+                except Exception:
+                    pass
+
+        self._keepwarm_thread = threading.Thread(target=_keepwarm, name="encoder-keepwarm", daemon=True)
+        self._keepwarm_thread.start()
+
+    # -- all model encodes funnel through the single pre-warmed thread --------
+
+    def _encode_text(self, query: str) -> np.ndarray:
+        return self._encode_pool.submit(self.embedding_model.encode_text, query).result()
+
+    def _encode_image(self, image_rgb_uint8: np.ndarray) -> np.ndarray:
+        return self._encode_pool.submit(self.embedding_model.encode_image, image_rgb_uint8).result()
 
     def refresh(self) -> None:
         """(Re)load the faiss_id -> metadata map from the catalog. Call again after new ingests."""
@@ -159,7 +242,7 @@ class SearchEngine:
     ) -> tuple[list[SearchResult], float]:
         """Text tower -> unit-norm vector -> vector search -> filtered, joined results."""
         t0 = time.time()
-        vec = self.embedding_model.encode_text(query)
+        vec = self._encode_text(query)
         results = self._rank_and_filter(vec, k, filters)
         latency_ms = (time.time() - t0) * 1000.0
         return results, latency_ms
@@ -182,14 +265,15 @@ class SearchEngine:
                 raise KeyError(f"tile_id '{tile_id}' not found in the store")
             vec = self.vector_index.get_vector(tile.faiss_id)
         else:
-            vec = self.embedding_model.encode_image(image_rgb_uint8)
+            vec = self._encode_image(image_rgb_uint8)
 
         results = self._rank_and_filter(vec, k, filters)
         latency_ms = (time.time() - t0) * 1000.0
         return results, latency_ms
 
     def get_tile_thumbnail_png(self, tile_id: str) -> bytes:
-        """Regenerate the stretched true-color PNG for one tile (not stored on disk; recomputed on demand)."""
+        """The stretched, cross-date-harmonized true-color PNG for one tile
+        (not stored on disk; rendered on demand, then LRU-cached)."""
         tile = self.repo.get_tile(tile_id)
         if tile is None:
             raise KeyError(f"tile_id '{tile_id}' not found in the store")
@@ -197,23 +281,20 @@ class SearchEngine:
         if obs is None:
             raise KeyError(f"tile_id '{tile_id}' -> observation '{tile.observation_id}' missing")
         scene = self.repo.get_scene(obs.scene_id)
-        scene_key = scene.scene_id if scene is not None else obs.scene_id  # keys RADIOMETRY_CONFIG
+        scene_key = scene.scene_id if scene is not None else obs.scene_id  # keys the radiometry config
 
         scene_dir = self.settings.datasets_dir / (obs.dataset_dir or obs.observation_id)
-        bands, nodata = read_tile_window(scene_dir, tile.row, tile.col, list(RGB_BANDS))
-        rgb_uint8 = make_true_color_uint8(
-            bands, nodata=nodata, boa_offset_dn=boa_offset_dn_for_scene(scene_key)
-        )
-
-        from PIL import Image
-
-        buf = io.BytesIO()
-        Image.fromarray(rgb_uint8, mode="RGB").save(buf, format="PNG")
-        return buf.getvalue()
+        return _render_thumbnail_bytes(str(scene_dir), tile.row, tile.col, scene_key)
 
     def count(self) -> int:
         """Number of indexed vectors (== catalog tiles with an embedding)."""
         return self.vector_index.count()
 
     def close(self) -> None:
+        stop = getattr(self, "_keepwarm_stop", None)
+        if stop is not None:
+            stop.set()
+        pool = getattr(self, "_encode_pool", None)
+        if pool is not None:
+            pool.shutdown(wait=False)
         self.repo.close()
