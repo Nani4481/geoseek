@@ -1,0 +1,1268 @@
+{
+  "index_vectors": 3267,
+  "k": 15,
+  "text": {
+    "a river with sandbars": [
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r023_c030",
+        "score": 0.360675,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.791334,
+        "lat": 26.56749
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r018_c019",
+        "score": 0.357405,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.510212,
+        "lat": 26.686297
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r013_c004",
+        "score": 0.356766,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.125474,
+        "lat": 26.805424
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r023_c031",
+        "score": 0.356475,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.817026,
+        "lat": 26.567165
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r018_c018",
+        "score": 0.356236,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.48449,
+        "lat": 26.686568
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r016_c011",
+        "score": 0.356172,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.304948,
+        "lat": 26.734553
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r022_c031",
+        "score": 0.354354,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.817391,
+        "lat": 26.590268
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015",
+        "score": 0.354136,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.40732,
+        "lat": 26.687354
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c015",
+        "score": 0.353832,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.406753,
+        "lat": 26.641139
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c021",
+        "score": 0.353677,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.561028,
+        "lat": 26.639529
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r024_c027",
+        "score": 0.352496,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.713912,
+        "lat": 26.545335
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r013_c006",
+        "score": 0.352426,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.176981,
+        "lat": 26.805005
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r018_c020",
+        "score": 0.351504,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.535935,
+        "lat": 26.686021
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r019_c018",
+        "score": 0.349,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.484191,
+        "lat": 26.663461
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r014_c000",
+        "score": 0.348954,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.022252,
+        "lat": 26.783096
+      }
+    ],
+    "dense urban buildings": [
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r011_c003",
+        "score": 0.323993,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.100167,
+        "lat": 26.851846
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c009",
+        "score": 0.317315,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.253476,
+        "lat": 26.735017
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r011_c004",
+        "score": 0.315712,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.125931,
+        "lat": 26.851643
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c010",
+        "score": 0.313257,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.279212,
+        "lat": 26.734787
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r003_c003",
+        "score": 0.311261,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.101964,
+        "lat": 27.036718
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r012_c003",
+        "score": 0.307458,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.099944,
+        "lat": 26.828736
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r018_c013",
+        "score": 0.305957,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.355871,
+        "lat": 26.687854
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r001_c017",
+        "score": 0.305792,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.46382,
+        "lat": 27.079637
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r006_c014",
+        "score": 0.303345,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.384963,
+        "lat": 26.96489
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r017_c011",
+        "score": 0.302009,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.304684,
+        "lat": 26.711444
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r004_c013",
+        "score": 0.300982,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.359732,
+        "lat": 27.011355
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r009_c003",
+        "score": 0.300943,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.100615,
+        "lat": 26.898064
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r018_c016",
+        "score": 0.299892,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.433043,
+        "lat": 26.687096
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r007_c015",
+        "score": 0.296983,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.410462,
+        "lat": 26.941528
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r004_c000",
+        "score": 0.296417,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.024335,
+        "lat": 27.014194
+      }
+    ],
+    "agricultural fields": [
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r013_c006",
+        "score": 0.339447,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.176981,
+        "lat": 26.805005
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r016_c010",
+        "score": 0.332057,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.279212,
+        "lat": 26.734787
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r013_c001",
+        "score": 0.32622,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.048213,
+        "lat": 26.806017
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r022_c026",
+        "score": 0.326074,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.688901,
+        "lat": 26.59185
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r012_c001",
+        "score": 0.32073,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.048426,
+        "lat": 26.829127
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r008_c017",
+        "score": 0.320271,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.461726,
+        "lat": 26.917898
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r017_c012",
+        "score": 0.320062,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.330415,
+        "lat": 26.711206
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r013_c002",
+        "score": 0.319804,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.073967,
+        "lat": 26.805824
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r017_c013",
+        "score": 0.319355,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.356145,
+        "lat": 26.710962
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r020_c023",
+        "score": 0.319296,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.61245,
+        "lat": 26.638955
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r011_c023",
+        "score": 0.318809,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.615386,
+        "lat": 26.846898
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r008_c007",
+        "score": 0.317801,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.203956,
+        "lat": 26.920332
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r013_c001",
+        "score": 0.317341,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.048213,
+        "lat": 26.806017
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r016_c015",
+        "score": 0.317076,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.407888,
+        "lat": 26.733568
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r018_c028",
+        "score": 0.316732,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.741699,
+        "lat": 26.683646
+      }
+    ],
+    "open bare ground": [
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r013_c009",
+        "score": 0.325649,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.254237,
+        "lat": 26.804342
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r013_c001",
+        "score": 0.320391,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.048213,
+        "lat": 26.806017
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r021_c022",
+        "score": 0.314498,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.58642,
+        "lat": 26.616139
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r020_c020",
+        "score": 0.312737,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.535316,
+        "lat": 26.639809
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r019_c018",
+        "score": 0.308944,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.484191,
+        "lat": 26.663461
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r012_c009",
+        "score": 0.308654,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.254492,
+        "lat": 26.82745
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r006_c009",
+        "score": 0.308646,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.256025,
+        "lat": 26.966098
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r012_c008",
+        "score": 0.307522,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.228735,
+        "lat": 26.827676
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r013_c000",
+        "score": 0.306708,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.022459,
+        "lat": 26.806206
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r023_c022",
+        "score": 0.304132,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.585783,
+        "lat": 26.569927
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r027_c002",
+        "score": 0.303732,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.070945,
+        "lat": 26.48228
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c024",
+        "score": 0.303454,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.63816,
+        "lat": 26.638661
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r023_c022",
+        "score": 0.303441,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.585783,
+        "lat": 26.569927
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c027",
+        "score": 0.302898,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.715289,
+        "lat": 26.637751
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c029",
+        "score": 0.302244,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.766706,
+        "lat": 26.637121
+      }
+    ],
+    "a bridge over a river": [
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r018_c015",
+        "score": 0.315329,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.40732,
+        "lat": 26.687354
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r012_c006",
+        "score": 0.302094,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.177219,
+        "lat": 26.828114
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r019_c019",
+        "score": 0.301535,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.509908,
+        "lat": 26.66319
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r022_c023",
+        "score": 0.301286,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.611801,
+        "lat": 26.592744
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r025_c026",
+        "score": 0.298152,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.687885,
+        "lat": 26.522537
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r018_c015",
+        "score": 0.297381,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.40732,
+        "lat": 26.687354
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r024_c026",
+        "score": 0.296624,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.688223,
+        "lat": 26.545641
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r018_c014",
+        "score": 0.294011,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.381595,
+        "lat": 26.687606
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r027_c026",
+        "score": 0.293685,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.68721,
+        "lat": 26.476327
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r032_c004",
+        "score": 0.29327,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.121216,
+        "lat": 26.369221
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r013_c003",
+        "score": 0.292689,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.099721,
+        "lat": 26.805627
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r016_c029",
+        "score": 0.292185,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.768132,
+        "lat": 26.729534
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r032_c000",
+        "score": 0.291657,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.018591,
+        "lat": 26.369988
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r015_c012",
+        "score": 0.290797,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.330953,
+        "lat": 26.757421
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c032",
+        "score": 0.290484,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.840615,
+        "lat": 26.636184
+      }
+    ],
+    "green cropland next to a town": [
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r018_c013",
+        "score": 0.307204,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.355871,
+        "lat": 26.687854
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c009",
+        "score": 0.299884,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.253476,
+        "lat": 26.735017
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r012_c003",
+        "score": 0.299296,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.099944,
+        "lat": 26.828736
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r005_c001",
+        "score": 0.299114,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.049921,
+        "lat": 26.990895
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c010",
+        "score": 0.297936,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.279212,
+        "lat": 26.734787
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r008_c004",
+        "score": 0.297003,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.126619,
+        "lat": 26.92097
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r009_c003",
+        "score": 0.29647,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.100615,
+        "lat": 26.898064
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r032_c008",
+        "score": 0.295667,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.223838,
+        "lat": 26.368381
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r013_c002",
+        "score": 0.295601,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.073967,
+        "lat": 26.805824
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r023_c004",
+        "score": 0.295476,
+        "scene_id": "S2A_44RPQ_20210304_1_L2A_scaled",
+        "acq_date": "2021-03-04",
+        "lon": 82.123206,
+        "lat": 26.574327
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r008_c017",
+        "score": 0.294668,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.461726,
+        "lat": 26.917898
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r006_c028",
+        "score": 0.294472,
+        "scene_id": "S2B_44RPQ_20190330_1_L2A_scaled",
+        "acq_date": "2019-03-30",
+        "lon": 82.745944,
+        "lat": 26.960882
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r007_c002",
+        "score": 0.293289,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.075278,
+        "lat": 26.944482
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r000_c018",
+        "score": 0.292821,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.489937,
+        "lat": 27.102471
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r004_c001",
+        "score": 0.292727,
+        "scene_id": "S2A_44RPQ_20240308_0_L2A_scaled",
+        "acq_date": "2024-03-08",
+        "lon": 82.050136,
+        "lat": 27.014004
+      }
+    ]
+  },
+  "filtered": {
+    "river|S2B": {
+      "query": "a river",
+      "filters": {
+        "sensor": "Sentinel-2B"
+      },
+      "results": [
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r016_c029",
+          "score": 0.350322
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015",
+          "score": 0.348046
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r032_c000",
+          "score": 0.34707
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r027_c027",
+          "score": 0.346744
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c032",
+          "score": 0.346506
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c016",
+          "score": 0.346336
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c015",
+          "score": 0.346165
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r020_c017",
+          "score": 0.345703
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r024_c028",
+          "score": 0.345363
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r018_c020",
+          "score": 0.345302
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r023_c030",
+          "score": 0.344776
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r013_c010",
+          "score": 0.343576
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r015_c012",
+          "score": 0.343374
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r023_c025",
+          "score": 0.342327
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r027_c026",
+          "score": 0.342302
+        }
+      ]
+    },
+    "river|2024": {
+      "query": "a river",
+      "filters": {
+        "date_start": "2024-01-01",
+        "date_end": "2024-12-31"
+      },
+      "results": [
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c002",
+          "score": 0.327337
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r026_c025",
+          "score": 0.32342
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r019_c018",
+          "score": 0.321504
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c029",
+          "score": 0.320107
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r013_c006",
+          "score": 0.319477
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r018_c015",
+          "score": 0.319444
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r006_c003",
+          "score": 0.319013
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c012",
+          "score": 0.318483
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r014_c002",
+          "score": 0.318048
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r032_c000",
+          "score": 0.31797
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r014_c000",
+          "score": 0.316669
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r019_c031",
+          "score": 0.314513
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r010_c030",
+          "score": 0.314299
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r021_c023",
+          "score": 0.312508
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r028_c031",
+          "score": 0.311393
+        }
+      ]
+    },
+    "fields|bbox": {
+      "query": "agricultural fields",
+      "filters": {
+        "bbox": [
+          82.1,
+          26.7,
+          82.4,
+          26.95
+        ]
+      },
+      "results": [
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r013_c006",
+          "score": 0.339447
+        },
+        {
+          "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r016_c010",
+          "score": 0.332057
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r017_c012",
+          "score": 0.320062
+        },
+        {
+          "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r017_c013",
+          "score": 0.319355
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r008_c007",
+          "score": 0.317801
+        },
+        {
+          "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r015_c009",
+          "score": 0.313293
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r011_c004",
+          "score": 0.312863
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r012_c011",
+          "score": 0.312571
+        },
+        {
+          "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r016_c009",
+          "score": 0.312396
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r010_c010",
+          "score": 0.31064
+        },
+        {
+          "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r017_c011",
+          "score": 0.310585
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r009_c004",
+          "score": 0.310401
+        },
+        {
+          "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r008_c009",
+          "score": 0.310135
+        },
+        {
+          "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r007_c004",
+          "score": 0.310119
+        },
+        {
+          "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r015_c008",
+          "score": 0.309768
+        }
+      ]
+    },
+    "urban|clear": {
+      "query": "dense urban buildings",
+      "filters": {
+        "max_cloud_fraction": 0.01
+      },
+      "results": [
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r011_c003",
+          "score": 0.323993
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c009",
+          "score": 0.317315
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r011_c004",
+          "score": 0.315712
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c010",
+          "score": 0.313257
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r003_c003",
+          "score": 0.311261
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r012_c003",
+          "score": 0.307458
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r018_c013",
+          "score": 0.305957
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r001_c017",
+          "score": 0.305792
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r006_c014",
+          "score": 0.303345
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r017_c011",
+          "score": 0.302009
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r004_c013",
+          "score": 0.300982
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r009_c003",
+          "score": 0.300943
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r018_c016",
+          "score": 0.299892
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r007_c015",
+          "score": 0.296983
+        },
+        {
+          "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r004_c000",
+          "score": 0.296417
+        }
+      ]
+    }
+  },
+  "image": {
+    "S2B_44RPQ_20190330_1_L2A_scaled_r000_c000": [
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r000_c000",
+        "score": 1.0
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r004_c013",
+        "score": 0.966252
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r011_c016",
+        "score": 0.964355
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r011_c019",
+        "score": 0.961086
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r030_c021",
+        "score": 0.957674
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r025_c026",
+        "score": 0.953073
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r007_c030",
+        "score": 0.95265
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r007_c007",
+        "score": 0.951396
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r028_c021",
+        "score": 0.951242
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r026_c004",
+        "score": 0.949619
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r006_c031",
+        "score": 0.945695
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r007_c027",
+        "score": 0.945606
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r012_c029",
+        "score": 0.945346
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r030_c002",
+        "score": 0.943503
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r028_c029",
+        "score": 0.943058
+      }
+    ],
+    "S2B_44RPQ_20190330_1_L2A_scaled_r024_c024": [
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r024_c024",
+        "score": 1.0
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r025_c026",
+        "score": 0.961011
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r028_c029",
+        "score": 0.954755
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r012_c029",
+        "score": 0.944478
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r000_c000",
+        "score": 0.938469
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r030_c031",
+        "score": 0.938454
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r028_c021",
+        "score": 0.937087
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r030_c002",
+        "score": 0.934884
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r029_c002",
+        "score": 0.93458
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r030_c020",
+        "score": 0.934211
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r015_c004",
+        "score": 0.933241
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r007_c030",
+        "score": 0.932571
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r031_c006",
+        "score": 0.928489
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r028_c030",
+        "score": 0.928356
+      },
+      {
+        "tile_id": "S2B_44RPQ_20190330_1_L2A_scaled_r030_c003",
+        "score": 0.928259
+      }
+    ],
+    "S2A_44RPQ_20240308_0_L2A_scaled_r016_c015": [
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c015",
+        "score": 1.0
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r000_c015",
+        "score": 0.965084
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r006_c000",
+        "score": 0.962335
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r005_c001",
+        "score": 0.960696
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r006_c014",
+        "score": 0.958434
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r001_c001",
+        "score": 0.958077
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r004_c001",
+        "score": 0.957691
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r007_c001",
+        "score": 0.957648
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r017_c016",
+        "score": 0.956584
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r008_c002",
+        "score": 0.956177
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r014_c020",
+        "score": 0.955683
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r004_c002",
+        "score": 0.954173
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r016_c021",
+        "score": 0.954126
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r017_c015",
+        "score": 0.953786
+      },
+      {
+        "tile_id": "S2A_44RPQ_20240308_0_L2A_scaled_r005_c003",
+        "score": 0.953554
+      }
+    ],
+    "S2A_44RPQ_20210304_1_L2A_scaled_r008_c006": [
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r008_c006",
+        "score": 1.0
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r007_c005",
+        "score": 0.955321
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r010_c009",
+        "score": 0.942838
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r010_c008",
+        "score": 0.938759
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r009_c005",
+        "score": 0.936261
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r007_c003",
+        "score": 0.93614
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r008_c010",
+        "score": 0.935764
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r007_c004",
+        "score": 0.935046
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r010_c001",
+        "score": 0.934424
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r004_c002",
+        "score": 0.929312
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r007_c006",
+        "score": 0.928846
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r009_c000",
+        "score": 0.92746
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r005_c008",
+        "score": 0.925434
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r008_c005",
+        "score": 0.924938
+      },
+      {
+        "tile_id": "S2A_44RPQ_20210304_1_L2A_scaled_r017_c024",
+        "score": 0.923134
+      }
+    ]
+  }
+}

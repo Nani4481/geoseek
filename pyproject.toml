@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "geoseek"
+version = "0.1.0"
+description = "Offline-first geospatial ML platform (RemoteCLIP embeddings, FAISS retrieval, raster tiling)."
+readme = "README.md"
+requires-python = ">=3.10,<3.13"
+license = { text = "Apache-2.0" }
+
+dependencies = [
+    # --- ML / embeddings ---
+    # On Windows/conda: installed via environment.yml (pytorch + nvidia channels) for CUDA support.
+    # On Linux/WSL pip-only: this pulls the CPU wheel by default — install the CUDA build first with
+    # `pip install torch --index-url https://download.pytorch.org/whl/cu121` (see README).
+    "torch>=2.2",
+    "open_clip_torch>=2.24",
+    "faiss-cpu>=1.8",
+    "scikit-learn>=1.4",
+    "hdbscan>=0.8.33",
+    "numpy>=1.26,<2.0",
+    "opencv-python>=4.9",
+
+    # --- geospatial ---
+    "rasterio>=1.3",
+    "pyproj>=3.6",
+    "shapely>=2.0",
+    "affine>=2.4",
+    "pillow>=10.0",
+
+    # --- service layer ---
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "pydantic>=2.6",
+    "sqlalchemy>=2.0",
+
+    # --- staging / provenance ---
+    "huggingface_hub>=0.22",
+    "requests>=2.31",
+    "tqdm>=4.66",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
