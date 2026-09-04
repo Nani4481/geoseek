@@ -322,13 +322,27 @@ class AnalystService:
         ))
         return row.as_dict()
 
-    def audit(self, *, candidate_id: str | None = None, limit: int | None = None) -> dict:
+    def audit(self, *, candidate_id: str | None = None, limit: int | None = None,
+              full: bool = False) -> dict:
         rows = self.repo.list_analyst_decisions(candidate_id=candidate_id, limit=limit)
+        out = []
+        for d in rows:
+            r = d.as_dict()
+            if not full:  # keep the log view light - snapshot fetched per-decision
+                snap = r.pop("evidence_snapshot", {}) or {}
+                r["evidence_snapshot_keys"] = sorted(snap.keys())
+                r["has_evidence_snapshot"] = bool(snap)
+            out.append(r)
         return {
-            "count": len(rows),
+            "count": len(out),
             "append_only": True,
-            "decisions": [d.as_dict() for d in rows],
+            "note": "decisions are never updated or deleted; re-deciding appends a new row",
+            "decisions": out,
         }
+
+    def get_decision(self, decision_id: str) -> dict | None:
+        d = self.repo.get_analyst_decision(decision_id)
+        return d.as_dict() if d else None
 
     # -- stats / health --------------------------------------------
 

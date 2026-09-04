@@ -93,18 +93,24 @@ await sleep(600);
 await page.locator("#d_hist").scrollIntoViewIfNeeded();
 await shot("05_candidate_detail_after_decision");
 
-// also reject one, on a different candidate, so /audit shows a confirm AND a reject
-await page.goto(`${BASE}/app/#/queue`, { waitUntil: "networkidle" });
-await page.selectOption("#f_type", "other");
-await page.click("#f_go");
-await page.waitForFunction(() => !document.querySelector("#q_table .spinner") && document.querySelectorAll("#q_table tbody tr").length);
-await page.click("#q_table tbody tr:first-child");
-await page.waitForSelector("#d_body:not(.hidden)");
-await page.waitForSelector("#d_trace tr");
-await page.fill("#d_note", "Weak spectral support and 'other' typing - not a defensible structural change.");
-await page.click("#d_reject");
-await page.waitForFunction(() => [...document.querySelectorAll("#d_hist tr td")].some((t) => t.textContent.includes("reject")));
-await sleep(400);
+// also reject one, on a different candidate, so /audit shows a confirm AND a
+// reject (best-effort - never let this block the screenshots)
+try {
+  await page.goto(`${BASE}/app/#/queue`, { waitUntil: "networkidle" });
+  await page.selectOption("#f_type", "other");
+  await page.click("#f_go");
+  await page.waitForFunction(() => !document.querySelector("#q_table .spinner") && document.querySelectorAll("#q_table tbody tr").length, { timeout: 8000 });
+  const rejectId = await page.$eval("#q_table tbody tr:first-child", (tr) => tr.dataset.id);
+  await page.click("#q_table tbody tr:first-child");
+  await page.waitForFunction((id) => location.hash.endsWith(id) &&
+    document.querySelector("#d_head .mono") && document.querySelector("#d_head .mono").textContent === id,
+    rejectId, { timeout: 10000 });
+  await page.waitForSelector("#d_trace tr", { timeout: 8000 });
+  await page.fill("#d_note", "Weak spectral support and 'other' typing - not a defensible structural change.");
+  await page.click("#d_reject");
+  await page.waitForFunction(() => [...document.querySelectorAll("#d_hist tr td")].some((t) => t.textContent.includes("reject")), { timeout: 8000 });
+  console.log("recorded a reject on candidate", rejectId);
+} catch (e) { console.warn("reject demo skipped:", e.message); }
 
 // 3. SEARCH
 await page.goto(`${BASE}/app/#/search`, { waitUntil: "networkidle" });

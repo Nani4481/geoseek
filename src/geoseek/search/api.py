@@ -252,8 +252,17 @@ def candidate_decision(candidate_id: str, req: DecisionRequest):
 def audit(
     candidate_id: Optional[str] = Query(None),
     limit: Optional[int] = Query(None, ge=1, le=100000),
+    full: bool = Query(False, description="include the full evidence_snapshot per row"),
 ):
-    return _get_analyst().audit(candidate_id=candidate_id, limit=limit)
+    return _get_analyst().audit(candidate_id=candidate_id, limit=limit, full=full)
+
+
+@app.get("/audit/{decision_id}")
+def audit_row(decision_id: str):
+    d = _get_analyst().get_decision(decision_id)
+    if d is None:
+        raise HTTPException(status_code=404, detail=f"no decision {decision_id!r}")
+    return d
 
 
 class ExportRequest(BaseModel):

@@ -221,6 +221,13 @@ def test_decision_writes_audit_and_is_append_only(client):
     mine = [d for d in hist["decisions"] if d["analyst"] == "pytest"]
     assert [d["decision"] for d in mine][-2:] == ["confirm", "reject"]
 
+    # the audit LIST is light (snapshot stripped); the per-decision fetch is full
+    row = mine[-1]
+    assert "evidence_snapshot" not in row and row["has_evidence_snapshot"] is True
+    full = client.get(f"/audit/{row['decision_id']}").json()
+    assert full["evidence_snapshot"]["provenance"]["model"]["weights_sha256"]
+    assert client.get("/audit/nope").status_code == 404
+
     # current verdict reflects the most recent write
     q = client.get("/candidates", params={"decision": "reject", "limit": 5000}).json()
     assert top in [c["candidate_id"] for c in q["candidates"]]
