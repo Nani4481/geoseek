@@ -20,3 +20,12 @@ build/
 dist/
 data/discovery/
 data/index/tile_clusters.json
+
+# Phase 7a retrieval eval: keep the reproducibility JSON (queries / pools /
+# judgments / rationale / report / latency / bench / tile_features), drop the
+# regenerable heavy artifacts.
+data/eval_retrieval/contact_sheets/
+data/eval_retrieval/vanilla_corpus_vectors.npy
+data/eval_retrieval/vanilla_corpus_tile_ids.json
+data/eval_retrieval/judgments_template.json
+data/eval_retrieval/pool_labels.json

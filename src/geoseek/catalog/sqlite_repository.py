@@ -35,7 +35,7 @@ from geoseek.catalog.entities import (
     TileRecord,
 )
 from geoseek.catalog.repository import MetadataRepository
-from geoseek.catalog.schema import CATALOG_TABLES, SCHEMA_SQL
+from geoseek.catalog.schema import CATALOG_TABLES, SCHEMA_SQL, TILE_RTREE_SQL
 from geoseek.config import get_settings
 
 
@@ -75,7 +75,40 @@ class SQLiteMetadataRepository(MetadataRepository):
     def _ensure_schema(self) -> None:
         with self._lock:
             self._conn.executescript(SCHEMA_SQL)
+            self._has_rtree = self._ensure_tile_rtree()
             self._conn.commit()
+
+    def _ensure_tile_rtree(self) -> bool:
+        """Create + backfill the ``tile_rtree`` spatial index (see
+        :mod:`geoseek.catalog.schema`). Returns ``False`` - and
+        :meth:`query_tiles` then falls back to the Python WKT scan - if this
+        SQLite build was compiled without the R*Tree module.
+
+        The backfill only runs when the index is out of step with ``tiles``
+        (first open after this ships, or a raw ingest that bypassed
+        :meth:`add_tiles`); afterwards it is a two-count no-op, and
+        :meth:`add_tiles` keeps the two in lockstep so it never re-fires.
+        """
+        try:
+            self._conn.execute(TILE_RTREE_SQL)
+        except sqlite3.OperationalError:
+            return False
+        (n_tiles,) = self._conn.execute("SELECT COUNT(*) FROM tiles").fetchone()
+        (n_indexed,) = self._conn.execute("SELECT COUNT(*) FROM tile_rtree").fetchone()
+        if n_tiles != n_indexed:
+            self._conn.execute("DELETE FROM tile_rtree")
+            rows = self._conn.execute("SELECT rowid, geom_wkt_4326 FROM tiles").fetchall()
+            self._conn.executemany(
+                "INSERT INTO tile_rtree (id, min_lon, max_lon, min_lat, max_lat) VALUES (?,?,?,?,?)",
+                (self._rtree_row(rid, wkt) for rid, wkt in rows),
+            )
+        return True
+
+    @staticmethod
+    def _rtree_row(rowid: int, wkt: str) -> tuple[int, float, float, float, float]:
+        """``(rowid, min_lon, max_lon, min_lat, max_lat)`` for one tile footprint."""
+        min_lon, min_lat, max_lon, max_lat = shapely_wkt.loads(wkt).bounds
+        return (rowid, min_lon, max_lon, min_lat, max_lat)
 
     @property
     def connection(self) -> sqlite3.Connection:
@@ -162,6 +195,16 @@ class SQLiteMetadataRepository(MetadataRepository):
                     for t in tiles
                 ],
             )
+            if self._has_rtree:
+                placeholders = ",".join("?" * len(tiles))
+                rows = self._conn.execute(
+                    f"SELECT rowid, geom_wkt_4326 FROM tiles WHERE tile_id IN ({placeholders})",
+                    [t.tile_id for t in tiles],
+                ).fetchall()
+                self._conn.executemany(
+                    "INSERT INTO tile_rtree (id, min_lon, max_lon, min_lat, max_lat) VALUES (?,?,?,?,?)",
+                    (self._rtree_row(rid, wkt) for rid, wkt in rows),
+                )
             self._conn.commit()
 
     def upsert_derived(self, d: DerivedProduct) -> None:
@@ -387,6 +430,28 @@ class SQLiteMetadataRepository(MetadataRepository):
         if max_cloud is not None:
             clauses.append("t.cloud_fraction <= ?")
             params.append(float(max_cloud))
+
+        # Spatial prefilter: probe the R*Tree for candidate rowids whose bbox
+        # overlaps the query bbox (index scan, not a table scan), then narrow
+        # the main query to just those rowids. Falls back to no prefilter (the
+        # old full-table-then-shapely-in-Python behaviour) when this SQLite
+        # build lacks the R*Tree module - the exact shapely .intersects() below
+        # still runs either way, so results are identical.
+        if bbox is not None and self._has_rtree:
+            with self._lock:
+                rowids = [
+                    r[0]
+                    for r in self._conn.execute(
+                        "SELECT id FROM tile_rtree WHERE max_lon >= ? AND min_lon <= ? "
+                        "AND max_lat >= ? AND min_lat <= ?",
+                        (bbox[0], bbox[2], bbox[1], bbox[3]),
+                    ).fetchall()
+                ]
+            if not rowids:
+                return []
+            clauses.append(f"t.rowid IN ({','.join('?' * len(rowids))})")
+            params.extend(rowids)
+
         if clauses:
             sql += "WHERE " + " AND ".join(clauses) + " "
         sql += "ORDER BY t.faiss_id"

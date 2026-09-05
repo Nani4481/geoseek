@@ -784,6 +784,72 @@ python scripts/verify_offline_perf.py            # network-off + per-view latenc
 node   scripts/shoot_analyst_ui.mjs              # screenshots of the four views
 ```
 
+## Phase 7a: spatial index fix + measured retrieval metrics
+
+Fix a known performance defect before it distorts scale benchmarking, then
+produce **measured** retrieval numbers for PS 2.3. Full evidence in
+[`PHASE7.md`](PHASE7.md); every number is from a run on the production catalog.
+
+* **Spatial index (Step A)** — `MetadataRepository.query_tiles(bbox=…)` used to
+  load every tile row and run a shapely `.intersects()` over every footprint in
+  Python (O(N)). Point-seeded KNN (`find_more_like_this(lon,lat)`) paid that on
+  every map click: ~230 ms. Fix: a **SQLite R\*Tree** bbox prefilter, one box
+  per tile keyed by `tiles.rowid`, created + backfilled by
+  `SQLiteMetadataRepository` and kept in lockstep by `add_tiles`, **behind the
+  repository seam** (the R\*Tree DDL is the only SQLite-specific bit; `SCHEMA_SQL`
+  stays standard SQL for the PostGIS port; falls back to the scan if the module
+  is absent). The exact `.intersects()` post-filter still runs, so results are
+  byte-identical. Measured on the same DB (6346 tiles):
+
+  | operation | before median / p95 | after median / p95 | speed-up |
+  |---|--:|--:|--:|
+  | bbox filter `query_tiles(bbox=…)` | 230.9 / 312.6 ms | **0.28 / 0.47 ms** | ≈ 837× |
+  | point-seeded KNN total | 237.7 / 314.6 ms | **1.00 / 2.09 ms** | ≈ 238× |
+  | tile-id-seeded KNN (reference) | 0.0 / 1.0 ms | 1.0 / 1.6 ms | unchanged |
+
+* **Retrieval evaluation (Step B, PS 2.3)** — 16 NL queries (incl. the PS's
+  *"newly built structures near a river"* and *"settlement along a riverbank"*),
+  no vehicle-scale. **Relevance judgements are constructed from an independent
+  signal — never RemoteCLIP or any embedding** (judging with the model under
+  test is circular and guarantees ≈ 100 %): per-tile NDVI/NDWI/NDBI/SCL spectral
+  criteria + an NDWI-derived river mask, applied by fixed per-query rules
+  (grades 0/1/2). The retrieval models embed only true-colour RGB; the judge
+  uses bands they never see. Pool per query = RemoteCLIP top-20 ∪ vanilla top-20
+  ∪ 15 random corpus tiles (both systems pooled symmetrically; 30 relevant tiles
+  were found only via the random draw). Vanilla control built with
+  `force_quick_gelu=True`. Macro-averaged, identical judgements:
+
+  | K | RemoteCLIP R / P / NDCG | vanilla CLIP R / P / NDCG |
+  |--:|--:|--:|
+  | 1  | 0.040 / 0.563 / 0.438 | 0.019 / 0.313 / 0.281 |
+  | 5  | 0.228 / 0.425 / 0.397 | 0.062 / 0.263 / 0.231 |
+  | 10 | 0.365 / 0.381 / 0.419 | 0.115 / 0.238 / 0.223 |
+  | 20 | 0.705 / 0.356 / 0.526 | 0.227 / 0.231 / 0.254 |
+
+  RemoteCLIP wins at every K on every metric (edge is largest on the specific,
+  rarer concepts — new construction, riverside settlement, water body, bare
+  ground; on ~70 %-prevalence cropland the metric is near its ceiling for both).
+  These are constructed judgements, not expert ground truth — limitations
+  (spectral proxies, single-date, weak road/bridge criteria at 10 m) are in
+  `PHASE7.md` and `judgments_rationale.json`.
+
+* **Query latency** — `search_text(k=20)`: **warm** (pre-warmed, as production
+  serves) median **17.4 ms**, p95 21.8, p99 26.3; **cold** (fresh process, no
+  pre-warm, first query) median 235 ms, p99 435 ms. The Phase 6 cold-start fix
+  held — no multi-second cliff, all well under 1 s.
+
+* **Reproducible** — `data/eval_retrieval/{queries,pools,tile_features,judgments,
+  judgments_rationale,report,latency}.json` + contact sheets; methodology
+  recorded in the provenance manifest under `retrieval_evaluation`.
+
+```bash
+python scripts/bench_spatial_index.py --label after && python scripts/bench_spatial_index.py --report
+python scripts/eval_retrieval_prepare.py    # rank + pool + contact sheets + latency
+python scripts/eval_retrieval_features.py   # independent per-tile spectral features
+python scripts/eval_retrieval_judge.py      # constructed graded judgements
+python scripts/eval_retrieval_score.py      # metrics table + manifest record
+```
+
 ## Tests
 
 ```bash
@@ -828,7 +894,13 @@ blobs. `test_phase6.py` — Phase 6: the append-only `analyst_decisions` seam
 (round-trip, ordered history, the `BEFORE UPDATE`/`BEFORE DELETE` triggers
 firing), every analyst endpoint (queue filters/sort, full evidence + suppression
 trace + provenance, imagery PNGs, decision → audit, export), the export loading
-in GDAL/OGR, and the light-vs-full audit views. 201 tests total (0 skipped).
+in GDAL/OGR, and the light-vs-full audit views. `test_phase7.py` — Phase 7a:
+the R\*Tree bbox prefilter returns byte-identical result sets to the
+brute-force shapely scan (production catalog, boxes from sliver to whole-AOI,
+combined with a collection filter, prefilter on vs forced-off), the index
+backfills when wiped + reopened and `add_tiles` keeps it in lockstep; and the
+retrieval-evaluation artifacts are internally consistent with a declared
+non-RemoteCLIP judgement provenance. 211 tests total (0 skipped).
 
 ## Layout
 

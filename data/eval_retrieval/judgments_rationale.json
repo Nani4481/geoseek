@@ -1,0 +1,6053 @@
+{
+  "methodology": {
+    "judge_signal": "per-tile NDVI/NDWI/NDBI/SCL spectral criteria + NDWI-derived river mask (from scripts/eval_retrieval_features.py)",
+    "judge_is_the_system_under_test": false,
+    "circularity_avoidance": "The retrieval models (RemoteCLIP, vanilla CLIP) embed only the true-colour RGB. The judge uses NDWI/NDBI/SCL and a river mask, which neither model receives. No embedding, learned or otherwise, is used to assign any grade.",
+    "grades": {
+      "2": "clear physical match",
+      "1": "partial/marginal",
+      "0": "no match"
+    },
+    "pool_definition": "per query: union(RemoteCLIP top-20, vanilla CLIP top-20, fixed random sample of the 3267-tile corpus)",
+    "pool_sampling": "both systems pooled symmetrically to the max reported K (20); a random draw is added so neither model is advantaged by pool bias and so Recall@K can see relevant tiles neither system ranked highly",
+    "tie_and_ambiguity_handling": "graded 0/1/2 by fixed thresholds calibrated to the corpus-wide feature distribution; a tile that meets no positive rule is 0; ambiguous cases land at 1, not 2",
+    "limitations": [
+      "Constructed from spectral proxies, not photointerpretation or field data - not expert ground truth.",
+      "Single-date: 'newly built' / 'construction' are judged as 'built-up near a river', not verified as recent; temporal novelty would need the change pipeline.",
+      "Road / track / bridge criteria are weak at 10 m GSD (sub-pixel width) - these three queries are flagged low-confidence and the report shows metrics with and without them.",
+      "NDBI in this AOI is only weakly positive over low-rise mixed built-up, so 'built' is a relative, texture-assisted threshold, not an absolute one.",
+      "Thresholds are one fixed set; no sensitivity sweep was run."
+    ]
+  },
+  "low_confidence_queries": [
+    "a bridge crossing a river",
+    "a dirt track or unpaved road",
+    "a paved road"
+  ],
+  "per_query": {
+    "newly built structures near a river": {
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c026": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.37, ndvi_p50 0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c004": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 38741, built_frac 0.42)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 34742, built_frac 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c027": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.34, ndvi_p50 0.26)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r022_c023": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.41, ndvi_p50 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c026": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.61, ndvi_p50 0.21)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c025": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.46, ndvi_p50 0.17)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c017": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6040, built_frac 0.23)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c009": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 25754, built_frac 0.53)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r016_c013": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 14513, built_frac 0.50)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 2441, built_frac 0.50)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c025": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.56, ndvi_p50 0.22)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 33849, built_frac 0.42)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c023": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 0, built_frac 0.18)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r015_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 22575, built_frac 0.55)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 23338, built_frac 0.48)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c003": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 40620, built_frac 0.23)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r017_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 11648, built_frac 0.44)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c007": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 31430, built_frac 0.58)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r016_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 17026, built_frac 0.57)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c032": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6033, built_frac 0.10)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c001": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 51428, built_frac 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c031": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 8440, built_frac 0.09)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 9080, built_frac 0.61)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 53678, built_frac 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 18623, built_frac 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c030": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 30447, built_frac 0.14)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c002": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 46168, built_frac 0.13)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c001": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 56055, built_frac 0.31)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r012_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 25574, built_frac 0.29)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 17658, built_frac 0.20)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 12020, built_frac 0.23)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c016": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 13974, built_frac 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c032": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 31515, built_frac 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c031": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 12294, built_frac 0.31)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c003": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 49010, built_frac 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r028_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 26771, built_frac 0.08)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c032": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6033, built_frac 0.05)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 61342, built_frac 0.25)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 56166, built_frac 0.25)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r031_c030": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 17467, built_frac 0.03)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r029_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 32406, built_frac 0.12)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c023": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 1632, built_frac 0.30)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r010_c031": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 31480, built_frac 0.04)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r001_c028": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 46015, built_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c019": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 3000, built_frac 0.06)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c008": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 27566, built_frac 0.21)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c013": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 28346, built_frac 0.31)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c029": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 28527, built_frac 0.06)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r029_c021": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 15350, built_frac 0.12)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 25071, built_frac 0.06)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c021": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 13463, built_frac 0.33)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c019": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 2288, built_frac 0.21)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r027_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 52533, built_frac 0.03)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c020": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 3218, built_frac 0.27)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "settlement along a riverbank": {
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c026": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.37, ndvi_p50 0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c027": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.34, ndvi_p50 0.26)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c021": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.41, ndvi_p50 0.25)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c016": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 7956, built_frac 0.27)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c017": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6040, built_frac 0.23)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c015": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 10161, built_frac 0.31)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c025": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.46, ndvi_p50 0.17)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 9080, built_frac 0.61)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c017": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6040, built_frac 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c025": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.56, ndvi_p50 0.22)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c018": {
+        "grade": 1,
+        "criterion": "partial built-up near the river (dist 1400 m, built_frac 0.41)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 34742, built_frac 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c028": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.39, ndvi_p50 0.31)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 33849, built_frac 0.27)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c024": {
+        "grade": 1,
+        "criterion": "partial built-up near the river (dist 0 m, built_frac 0.23)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 17026, built_frac 0.56)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c028": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 0, built_frac 0.15)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r015_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 22575, built_frac 0.55)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c009": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 25754, built_frac 0.63)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c030": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.33, ndvi_p50 0.37)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r017_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 11648, built_frac 0.52)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 53678, built_frac 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 17658, built_frac 0.20)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c005": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 36287, built_frac 0.51)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c016": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 7956, built_frac 0.35)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c016": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 13974, built_frac 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 22085, built_frac 0.48)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c002": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 46168, built_frac 0.13)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c001": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 56055, built_frac 0.31)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r017_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 11648, built_frac 0.44)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c031": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 12294, built_frac 0.31)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 2441, built_frac 0.62)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c002": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 49207, built_frac 0.12)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 18623, built_frac 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 61342, built_frac 0.25)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c021": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.64, ndvi_p50 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c031": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 8440, built_frac 0.09)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 47575, built_frac 0.17)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r012_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 25574, built_frac 0.29)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c009": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 45890, built_frac 0.26)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 36511, built_frac 0.07)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r027_c016": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 17506, built_frac 0.08)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c005": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 35123, built_frac 0.61)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c025": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 26531, built_frac 0.08)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r010_c011": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 26652, built_frac 0.08)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c024": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6938, built_frac 0.13)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c003": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 40186, built_frac 0.29)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r003_c004": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 51991, built_frac 0.22)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c001": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 45481, built_frac 0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r017_c025": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 9438, built_frac 0.05)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c013": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 19415, built_frac 0.10)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r030_c019": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 20704, built_frac 0.10)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c025": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 9438, built_frac 0.05)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r001_c028": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 46015, built_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "a river with sandbars": {
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c030": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.10, exposed sediment bare_frac 0.29",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c019": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.09, exposed sediment bare_frac 0.38",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c004": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 38741, water_frac 0.13)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c031": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.09, exposed sediment bare_frac 0.27",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c018": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 1400, water_frac 0.07)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c011": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 19552, water_frac 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r022_c031": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 760, water_frac 0.03)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 9080, water_frac 0.01)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c015": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 10161, water_frac 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c021": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.11, exposed sediment bare_frac 0.22",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c027": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.18, exposed sediment bare_frac 0.33",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c006": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 33849, water_frac 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c020": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.10, exposed sediment bare_frac 0.27",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 2441, water_frac 0.07)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c000": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 48169, water_frac 0.11)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c028": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.07, exposed sediment bare_frac 0.14",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c012": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 17026, water_frac 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c021": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.11, exposed sediment bare_frac 0.34",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c025": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.09, exposed sediment bare_frac 0.36",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c010": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 24347, water_frac 0.08)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c010": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 22575, water_frac 0.11)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c029": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.14, exposed sediment bare_frac 0.57",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c000": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 48169, water_frac 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c011": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 20104, water_frac 0.06)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c001": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 45648, water_frac 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c015": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 9298, water_frac 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c013": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 14513, water_frac 0.12)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c016": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 7956, water_frac 0.12)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r017_c014": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 11648, water_frac 0.13)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c001": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 45648, water_frac 0.10)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c031": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.13, exposed sediment bare_frac 0.24",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c030": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 30447, water_frac 0.00)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c008": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 29036, water_frac 0.11)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r022_c025": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.15, exposed sediment bare_frac 0.27",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r016_c013": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 14513, water_frac 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c013": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 17186, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c002": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 51111, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c016": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 21912, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r017_c014": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 11648, water_frac 0.13)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c016": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 17506, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c002": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 44871, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r031_c032": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 17320, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r000_c015": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 44888, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c030": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 509, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c008": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 30790, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r031_c016": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 26086, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c030": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 41917, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r009_c018": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 20967, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r006_c031": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 39458, water_frac 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c025": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 2319, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "dense urban buildings": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c003": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.19, ndvi_p50 0.62)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c009": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.19, ndvi_p50 0.53)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c004": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.15, ndvi_p50 0.65)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c010": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.21, ndvi_p50 0.58)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r003_c003": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.24, ndvi_p50 0.51)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c003": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.21, ndvi_p50 0.55)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c013": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.18, ndvi_p50 0.66)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r001_c017": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.09, ndvi_p50 0.71)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r006_c014": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.10, ndvi_p50 0.64)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c011": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.29, ndvi_p50 0.49)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c013": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.14, ndvi_p50 0.60)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c003": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.17, ndvi_p50 0.62)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c016": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.12, ndvi_p50 0.66)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c015": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.08, ndvi_p50 0.69)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c000": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.22, ndvi_p50 0.57)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c005": {
+        "grade": 1,
+        "criterion": "moderate built-up (built_frac 0.63, ndvi_p50 0.21)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c017": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.05, ndvi_p50 0.79)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c002": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.07, ndvi_p50 0.74)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r014_c004": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.20, ndvi_p50 0.45)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c004": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.21, ndvi_p50 0.58)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c002": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.31, ndvi_p50 0.46)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c005": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.08, ndvi_p50 0.63)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c010": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.07, ndvi_p50 0.67)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c005": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.23, ndvi_p50 0.56)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c015": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.09, ndvi_p50 0.72)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c015": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.14, ndvi_p50 0.60)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r020_c023": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.14, ndvi_p50 0.64)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c007": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.17, ndvi_p50 0.58)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c008": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.09, ndvi_p50 0.62)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r003_c006": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.17, ndvi_p50 0.56)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c026": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.09, ndvi_p50 0.66)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c020": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.10, ndvi_p50 0.61)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c007": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.13, ndvi_p50 0.58)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c001": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.07, ndvi_p50 0.71)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c014": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.08, ndvi_p50 0.68)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c003": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.19, ndvi_p50 0.58)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c014": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.13, ndvi_p50 0.62)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c001": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.25, ndvi_p50 0.48)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c007": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.16, ndvi_p50 0.56)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c022": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.08, ndvi_p50 0.70)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r030_c005": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.07, ndvi_p50 0.68)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r026_c026": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.04, ndvi_p50 0.77)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c019": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.08, ndvi_p50 0.73)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r002_c031": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.05, ndvi_p50 0.69)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c022": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.07, ndvi_p50 0.69)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c000": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.31, ndvi_p50 0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r004_c026": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.04, ndvi_p50 0.69)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r004_c020": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.11, ndvi_p50 0.51)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r031_c012": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.28, ndvi_p50 0.35)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c018": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.11, ndvi_p50 0.39)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c012": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.07, ndvi_p50 0.64)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r026_c011": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.10, ndvi_p50 0.60)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c008": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.08, ndvi_p50 0.62)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c003": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.18, ndvi_p50 0.39)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c017": {
+        "grade": 0,
+        "criterion": "not densely built (built_frac 0.18, ndvi_p50 0.39)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "agricultural fields": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c006": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.58, edges 0.13)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r016_c010": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.52, edges 0.18)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c001": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.26, edges 0.01, built 0.66)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r022_c026": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.73, edges 0.13)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c001": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.45, edges 0.28, built 0.32)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c017": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.39, edges 0.01, built 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c012": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.37, edges 0.24, built 0.34)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c002": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.42, edges 0.22, built 0.34)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r017_c013": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.60, edges 0.14)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c023": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.68, edges 0.21, built 0.08)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c023": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.39, edges 0.02, built 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c007": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.38, edges 0.05, built 0.24)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c001": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.50, edges 0.21)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c015": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.34, edges 0.02, built 0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c028": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.74, edges 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r020_c019": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.69, edges 0.23, built 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c017": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.38, edges 0.02, built 0.16)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c029": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.65, edges 0.13)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r001_c028": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.73, edges 0.09, built 0.03)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r000_c007": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.38, edges 0.02, built 0.20)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c004": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.52, edges 0.31, built 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c003": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.56, edges 0.29, built 0.18)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c003": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.49, edges 0.30)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r004_c003": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.51, edges 0.29, built 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r004_c005": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.45, edges 0.29)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c004": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.55, edges 0.26, built 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r026_c032": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.29, edges 0.01, built 0.54)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c027": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.42, edges 0.00, built 0.04)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r032_c005": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.69, edges 0.29, built 0.08)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c010": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.37, edges 0.05, built 0.25)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r008_c002": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.54, edges 0.34, built 0.18)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c004": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.35, edges 0.05, built 0.36)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c013": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.60, edges 0.21, built 0.09)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c017": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.37, edges 0.01, built 0.18)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r030_c032": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.72, edges 0.21, built 0.05)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c001": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.59, edges 0.22, built 0.12)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c003": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.53, edges 0.31, built 0.19)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c032": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.72, edges 0.06, built 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r002_c032": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.72, edges 0.09, built 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c013": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.60, edges 0.24, built 0.10)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c025": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.34, edges 0.01, built 0.31)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c000": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.58, edges 0.34, built 0.16)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c027": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.38, edges 0.02, built 0.17)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r008_c012": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.64, edges 0.37, built 0.10)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c016": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.68, edges 0.21, built 0.05)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c022": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.36, edges 0.01, built 0.21)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c031": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.58, edges 0.21, built 0.14)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c016": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.64, edges 0.17, built 0.06)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c011": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.15, edges 0.00, built 0.67)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c023": {
+        "grade": 0,
+        "criterion": "not cropland (ndvi_p50 0.34, edges 0.03, built 0.30)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r002_c018": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.55, edges 0.25, built 0.10)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c025": {
+        "grade": 1,
+        "criterion": "vegetated, weaker field texture (ndvi_p50 0.80, edges 0.18)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r032_c009": {
+        "grade": 2,
+        "criterion": "vegetated + field texture (ndvi_p50 0.66, edges 0.22, built 0.07)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "open bare ground": {
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c009": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.27, ndvi_p50 0.30)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c001": {
+        "grade": 1,
+        "criterion": "partly bare (bare_frac 0.23, ndvi_p50 0.26)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c022": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.05, ndvi_p50 0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c020": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.21, ndvi_p50 0.58)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.43, ndvi_p50 0.19)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c009": {
+        "grade": 1,
+        "criterion": "partly bare (bare_frac 0.36, ndvi_p50 0.30)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c009": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.00, ndvi_p50 0.43)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c008": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.36, ndvi_p50 0.45)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c000": {
+        "grade": 1,
+        "criterion": "partly bare (bare_frac 0.25, ndvi_p50 0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c022": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.20, ndvi_p50 0.53)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c002": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.04, ndvi_p50 0.36)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c024": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.32)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c022": {
+        "grade": 1,
+        "criterion": "partly bare (bare_frac 0.30, ndvi_p50 0.28)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c027": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.01, ndvi_p50 0.35)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c029": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.01, ndvi_p50 0.38)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c006": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.37, ndvi_p50 0.41)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c026": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.09, ndvi_p50 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r022_c027": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.36)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c010": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.50, ndvi_p50 0.18)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c022": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.53)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c017": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.37)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c022": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.04, ndvi_p50 0.34)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c006": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.39)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c015": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.34)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c007": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.36)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c019": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.04, ndvi_p50 0.34)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c003": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.38)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c015": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.38)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c000": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.43)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c021": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.04, ndvi_p50 0.34)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c007": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.38)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c019": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.05, ndvi_p50 0.35)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c010": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.39)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c005": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.04, ndvi_p50 0.38)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r026_c012": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.04, ndvi_p50 0.35)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c016": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.32)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c005": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.39)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c013": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.37)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c024": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.36)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c007": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.38)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r005_c022": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.01, ndvi_p50 0.59)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c023": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.00, ndvi_p50 0.38)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r012_c011": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.04, ndvi_p50 0.39)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c024": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.09, ndvi_p50 0.65)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r003_c010": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.63)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r005_c001": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.05, ndvi_p50 0.60)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c022": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.56)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c024": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.11, ndvi_p50 0.31)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r004_c019": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.56)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r027_c025": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.75)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c028": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.02, ndvi_p50 0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r030_c002": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.05, ndvi_p50 0.65)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c022": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.00, ndvi_p50 0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c000": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.65)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r032_c013": {
+        "grade": 0,
+        "criterion": "not bare ground (bare_frac 0.03, ndvi_p50 0.65)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "a water body": {
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c022": {
+        "grade": 1,
+        "criterion": "water_frac 0.06 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c022": {
+        "grade": 1,
+        "criterion": "water_frac 0.02 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c023": {
+        "grade": 2,
+        "criterion": "water_frac 0.13 >= 0.10 (substantial open water in tile)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r032_c032": {
+        "grade": 1,
+        "criterion": "water_frac 0.05 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r006_c019": {
+        "grade": 1,
+        "criterion": "water_frac 0.03 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c031": {
+        "grade": 2,
+        "criterion": "water_frac 0.13 >= 0.10 (substantial open water in tile)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c026": {
+        "grade": 1,
+        "criterion": "water_frac 0.02 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c028": {
+        "grade": 1,
+        "criterion": "water_frac 0.09 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c018": {
+        "grade": 1,
+        "criterion": "water_frac 0.09 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c020": {
+        "grade": 1,
+        "criterion": "water_frac 0.07 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c026": {
+        "grade": 2,
+        "criterion": "water_frac 0.12 >= 0.10 (substantial open water in tile)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r028_c028": {
+        "grade": 1,
+        "criterion": "water_frac 0.06 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c006": {
+        "grade": 1,
+        "criterion": "water_frac 0.02 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip",
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r029_c031": {
+        "grade": 1,
+        "criterion": "water_frac 0.07 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r007_c012": {
+        "grade": 1,
+        "criterion": "water_frac 0.03 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c014": {
+        "grade": 1,
+        "criterion": "water_frac 0.02 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c031": {
+        "grade": 1,
+        "criterion": "water_frac 0.02 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c006": {
+        "grade": 1,
+        "criterion": "water_frac 0.08 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c021": {
+        "grade": 1,
+        "criterion": "water_frac 0.03 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r029_c030": {
+        "grade": 1,
+        "criterion": "water_frac 0.06 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c011": {
+        "grade": 1,
+        "criterion": "water_frac 0.09 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c002": {
+        "grade": 2,
+        "criterion": "water_frac 0.17 >= 0.10 (substantial open water in tile)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c010": {
+        "grade": 1,
+        "criterion": "water_frac 0.08 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c011": {
+        "grade": 1,
+        "criterion": "water_frac 0.06 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c026": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c020": {
+        "grade": 1,
+        "criterion": "water_frac 0.10 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c028": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c025": {
+        "grade": 1,
+        "criterion": "water_frac 0.09 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c031": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c019": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "water_frac 0.01 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r017_c014": {
+        "grade": 2,
+        "criterion": "water_frac 0.13 >= 0.10 (substantial open water in tile)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c025": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c032": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c023": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c031": {
+        "grade": 1,
+        "criterion": "water_frac 0.06 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r005_c024": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c012": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c014": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c022": {
+        "grade": 1,
+        "criterion": "water_frac 0.09 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c023": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c013": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c000": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r031_c015": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c001": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r027_c007": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c015": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c023": {
+        "grade": 0,
+        "criterion": "water_frac 0.01 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c000": {
+        "grade": 1,
+        "criterion": "water_frac 0.02 / touches water (dist_water_m 0)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c017": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r011_c007": {
+        "grade": 0,
+        "criterion": "water_frac 0.00 < 0.03 and not on water",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "cropland with visible field boundaries": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c018": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.80, edge_density 0.22)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c013": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.71, edge_density 0.26)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r020_c025": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.74, edge_density 0.25)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c005": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.56, edge_density 0.37)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r008_c021": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.62, edge_density 0.37)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c027": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.77, edge_density 0.19)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c011": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.37, edge_density 0.02)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r003_c022": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.77, edge_density 0.31)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r009_c016": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.38, edge_density 0.02)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c000": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.70, edge_density 0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r008_c003": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.66, edge_density 0.36)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r010_c028": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.80, edge_density 0.20)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c003": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.55, edge_density 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c007": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.38, edge_density 0.05)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c002": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.42, edge_density 0.22)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c015": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.34, edge_density 0.02)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c017": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.79, edge_density 0.23)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c026": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.72, edge_density 0.27)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c017": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.39, edge_density 0.01)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c024": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.74, edge_density 0.28)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c032": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.76, edge_density 0.23)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r027_c032": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.75, edge_density 0.19)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c032": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.70, edge_density 0.30)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r014_c032": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.74, edge_density 0.28)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c004": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.52, edge_density 0.31)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c030": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.73, edge_density 0.23)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c027": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.81, edge_density 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r030_c029": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.76, edge_density 0.20)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c013": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.35, edge_density 0.05)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c024": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.37, edge_density 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c019": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.34, edge_density 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c031": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.76, edge_density 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r025_c030": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.73, edge_density 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r006_c032": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.83, edge_density 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c031": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.83, edge_density 0.14)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c003": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.39, edge_density 0.03)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r030_c032": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.77, edge_density 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c032": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.68, edge_density 0.29)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r008_c032": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.81, edge_density 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c001": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.64, edge_density 0.30)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r026_c010": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.62, edge_density 0.35)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c000": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.39, edge_density 0.05)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r015_c028": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.65, edge_density 0.13)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r032_c032": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.75, edge_density 0.20)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c018": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.36, edge_density 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c028": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.34, edge_density 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c014": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.38, edge_density 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r008_c009": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.76, edge_density 0.22)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c023": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.72, edge_density 0.29)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r009_c021": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.37, edge_density 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c032": {
+        "grade": 0,
+        "criterion": "no visible field boundaries (ndvi_p50 0.29, edge_density 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r029_c027": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.74, edge_density 0.18)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c000": {
+        "grade": 2,
+        "criterion": "strong field-boundary texture (ndvi_p50 0.76, edge_density 0.23)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c025": {
+        "grade": 1,
+        "criterion": "some field-boundary texture (ndvi_p50 0.77, edge_density 0.17)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "a paved road": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c004": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.25, ndvi_p10 0.25, built 0.11)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c001": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.23, ndvi_p10 0.32, built 0.08)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c013": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.28, ndvi_p10 0.30, built 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c014": {
+        "grade": 1,
+        "criterion": "possible paved corridor (edges 0.25, ndvi_p10 0.18)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r031_c021": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.24, ndvi_p10 0.30, built 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c019": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.32, ndvi_p10 0.27, built 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c002": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.27, ndvi_p10 0.33, built 0.07)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c022": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.18, ndvi_p10 0.34, built 0.06)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c019": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.28, ndvi_p10 0.31, built 0.08)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c025": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.23, ndvi_p10 0.34, built 0.06)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r026_c016": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.27, ndvi_p10 0.33, built 0.07)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r027_c020": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.20, ndvi_p10 0.36, built 0.06)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c002": {
+        "grade": 1,
+        "criterion": "possible paved corridor (edges 0.26, ndvi_p10 0.19)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c020": {
+        "grade": 1,
+        "criterion": "possible paved corridor (edges 0.26, ndvi_p10 0.17)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r030_c003": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.24, ndvi_p10 0.27, built 0.11)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c006": {
+        "grade": 1,
+        "criterion": "possible paved corridor (edges 0.26, ndvi_p10 0.19)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c011": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.29, ndvi_p10 0.29, built 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c003": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.21, ndvi_p10 0.37, built 0.05)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c005": {
+        "grade": 1,
+        "criterion": "possible paved corridor (edges 0.29, ndvi_p10 0.16)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c024": {
+        "grade": 1,
+        "criterion": "possible paved corridor (edges 0.28, ndvi_p10 0.20)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c009": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.02, ndvi_p10 0.22, built 0.36)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r012_c032": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.26, built 0.27)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c025": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.03, ndvi_p10 0.26, built 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c028": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.24, built 0.41)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r026_c027": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.24, built 0.30)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c021": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.03, ndvi_p10 0.23, built 0.25)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c017": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.26, built 0.23)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c024": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.04, ndvi_p10 0.27, built 0.13)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c028": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.26, built 0.23)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c005": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.04, ndvi_p10 0.24, built 0.27)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r027_c024": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.17, ndvi_p10 0.36, built 0.06)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c012": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.27, built 0.20)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c013": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.03, ndvi_p10 0.28, built 0.12)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r001_c024": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.27, built 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r007_c030": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.29, built 0.11)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c009": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.03, ndvi_p10 0.22, built 0.36)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c031": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.02, ndvi_p10 0.23, built 0.28)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c018": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.00, ndvi_p10 0.27, built 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c030": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.02, ndvi_p10 0.26, built 0.17)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c013": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.03, ndvi_p10 0.26, built 0.18)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c014": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.16, ndvi_p10 -0.24, built 0.43)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r022_c022": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.08, built 0.42)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c015": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.25, ndvi_p10 0.34, built 0.06)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c005": {
+        "grade": 1,
+        "criterion": "possible paved corridor (edges 0.37, ndvi_p10 0.20)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c022": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.37, ndvi_p10 0.30, built 0.10)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c026": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.15, ndvi_p10 0.48, built 0.03)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c025": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.28, built 0.14)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c028": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.01, ndvi_p10 0.28, built 0.18)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r006_c016": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.32, ndvi_p10 0.31, built 0.08)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c001": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.28, ndvi_p10 0.26, built 0.11)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c030": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.15, ndvi_p10 0.42, built 0.04)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r026_c013": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.05, ndvi_p10 0.25, built 0.22)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r026_c026": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.18, ndvi_p10 0.42, built 0.04)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c021": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.28, ndvi_p10 0.32, built 0.08)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r000_c010": {
+        "grade": 0,
+        "criterion": "no paved-road signature (edges 0.02, ndvi_p10 0.28, built 0.15)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "riverside construction": {
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c026": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.37, ndvi_p50 0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c027": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.34, ndvi_p50 0.26)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 34742, built_frac 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 33849, built_frac 0.42)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 2441, built_frac 0.50)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r022_c023": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.41, ndvi_p50 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c026": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.61, ndvi_p50 0.21)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c017": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6040, built_frac 0.23)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c028": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 0, built_frac 0.15)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c025": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.46, ndvi_p50 0.17)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 48169, built_frac 0.54)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c016": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 7956, built_frac 0.27)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c004": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 38741, built_frac 0.42)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 9080, built_frac 0.31)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c003": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 41208, built_frac 0.45)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c027": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.52, ndvi_p50 0.19)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c006": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 33849, built_frac 0.27)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c004": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 40453, built_frac 0.15)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r029_c029": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 11790, built_frac 0.18)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c024": {
+        "grade": 1,
+        "criterion": "partial built-up near the river (dist 0 m, built_frac 0.23)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c023": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 2264, built_frac 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c023": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.32, ndvi_p50 0.37)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c024": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 1358, built_frac 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r017_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 11648, built_frac 0.52)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c030": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.59, ndvi_p50 0.24)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c019": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.62, ndvi_p50 0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 15139, built_frac 0.06)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c000": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 61342, built_frac 0.25)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r022_c023": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.65, ndvi_p50 0.23)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r012_c008": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 30072, built_frac 0.35)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 12020, built_frac 0.23)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r031_c004": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 48101, built_frac 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c031": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 12294, built_frac 0.31)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c027": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.31, ndvi_p50 0.28)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c020": {
+        "grade": 2,
+        "criterion": "built-up on the riverbank (dist 0 m, built_frac 0.50, ndvi_p50 0.26)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 9080, built_frac 0.61)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c001": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 51428, built_frac 0.15)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c012": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 18623, built_frac 0.22)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r030_c003": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 49160, built_frac 0.18)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c019": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 4794, built_frac 0.05)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c024": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 6720, built_frac 0.04)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c026": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 32255, built_frac 0.14)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r028_c011": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 28837, built_frac 0.08)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c009": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 27334, built_frac 0.22)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c024": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 9337, built_frac 0.06)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c010": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 23009, built_frac 0.21)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c032": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 43071, built_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r030_c011": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 32007, built_frac 0.05)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c014": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 12900, built_frac 0.25)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r029_c007": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 38894, built_frac 0.07)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r012_c022": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 14181, built_frac 0.13)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r026_c003": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 44507, built_frac 0.26)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r009_c029": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 30331, built_frac 0.26)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c023": {
+        "grade": 0,
+        "criterion": "not built-up near a river (dist_river_m 4741, built_frac 0.08)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "a bridge crossing a river": {
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 9080)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r022_c023": {
+        "grade": 1,
+        "criterion": "built/linear feature adjacent to river (dist 0 m, built 0.41, edges 0.14)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 9080)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c026": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 6240)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c026": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 1120)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c006": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 34742)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c004": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 49433)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c012": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 17658)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c003": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 41208)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c029": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 16168)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r019_c019": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 1467)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r032_c000": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 58320)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c001": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 51428)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c026": {
+        "grade": 1,
+        "criterion": "built/linear feature adjacent to river (dist 0 m, built 0.37, edges 0.17)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c014": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 11640)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c000": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 53678)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 9080)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r028_c000": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 53678)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c032": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 6033)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c030": {
+        "grade": 1,
+        "criterion": "built/linear feature adjacent to river (dist 0 m, built 0.33, edges 0.14)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c025": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 1252)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c030": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 5880)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c031": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 12294)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c025": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 1252)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c028": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 1414)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c021": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 8578)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r026_c027": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 3560)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r009_c011": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 28476)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c012": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 39964)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c010": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 36010)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c003": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 48095)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c008": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 27000)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c002": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 49207)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r005_c026": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 34575)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r032_c012": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 33894)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c018": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 31191)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c013": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 16358)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c024": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 30364)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c013": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 14207)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r011_c028": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 24909)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r027_c009": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 31989)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r007_c031": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 37570)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r017_c008": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 27004)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c000": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 58320)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r008_c009": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 33891)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r025_c023": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 4741)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c002": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 47244)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r007_c000": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 54152)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c005": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 37706)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c020": {
+        "grade": 0,
+        "criterion": "no bridging structure at the river (dist_river_m 15824)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "dense vegetation along a riverbank": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c020": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 15380, dense_veg_frac 0.77)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 2441, dense_veg_frac 0.33)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r032_c018": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 26179, dense_veg_frac 0.74)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c026": {
+        "grade": 2,
+        "criterion": "dense canopy on the riverbank (dist 0 m, dense_veg_frac 0.65)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c026": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 0, dense_veg_frac 0.30)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c006": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 40033, dense_veg_frac 0.77)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c020": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 17084, dense_veg_frac 0.46)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r026_c001": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 49139, dense_veg_frac 0.72)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c002": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 42466, dense_veg_frac 0.73)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r031_c024": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 16773, dense_veg_frac 0.78)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c003": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 48095, dense_veg_frac 0.73)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r026_c016": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 15646, dense_veg_frac 0.70)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c016": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 7956, dense_veg_frac 0.40)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c016": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 44441, dense_veg_frac 0.72)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r030_c020": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 18956, dense_veg_frac 0.52)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c027": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 0, dense_veg_frac 0.00)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c015": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 13952, dense_veg_frac 0.77)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c030": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 0, dense_veg_frac 0.37)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r026_c006": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 37796, dense_veg_frac 0.62)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r001_c016": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 41910, dense_veg_frac 0.76)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c016": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 13974, dense_veg_frac 0.11)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r010_c002": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 46168, dense_veg_frac 0.57)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c002": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 46168, dense_veg_frac 0.08)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c000": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 53678, dense_veg_frac 0.03)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c015": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 9080, dense_veg_frac 0.42)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c026": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 6240, dense_veg_frac 0.05)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c031": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 12294, dense_veg_frac 0.75)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r000_c011": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 48018, dense_veg_frac 0.13)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c001": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 51428, dense_veg_frac 0.05)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r007_c004": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 45441, dense_veg_frac 0.50)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c030": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 10468, dense_veg_frac 0.69)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c031": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 19938, dense_veg_frac 0.03)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r009_c011": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 28476, dense_veg_frac 0.03)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c026": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 0, dense_veg_frac 0.25)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c000": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 61342, dense_veg_frac 0.07)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c003": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 48095, dense_veg_frac 0.05)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c031": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 8440, dense_veg_frac 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c012": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 17658, dense_veg_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r005_c024": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 32818, dense_veg_frac 0.04)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c024": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 1358, dense_veg_frac 0.60)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r001_c017": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 41589, dense_veg_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c005": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 36777, dense_veg_frac 0.63)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c005": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 38110, dense_veg_frac 0.19)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c031": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 400, dense_veg_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c015": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 9563, dense_veg_frac 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r003_c018": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 36307, dense_veg_frac 0.48)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c016": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 29334, dense_veg_frac 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r014_c011": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 20957, dense_veg_frac 0.65)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r029_c022": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 13871, dense_veg_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c024": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 1720, dense_veg_frac 0.56)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c019": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 2852, dense_veg_frac 0.60)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r008_c013": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 27440, dense_veg_frac 0.41)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c032": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 16188, dense_veg_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r032_c002": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 53816, dense_veg_frac 0.62)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c001": {
+        "grade": 0,
+        "criterion": "not riverbank vegetation (dist_river_m 46558, dense_veg_frac 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "an urban residential neighborhood": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c009": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.19, ndvi_p50 0.53)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c010": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.21, ndvi_p50 0.58)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r001_c017": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.09, ndvi_p50 0.71)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c004": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.15, ndvi_p50 0.65)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c013": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.14, ndvi_p50 0.60)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c003": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.21, ndvi_p50 0.55)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c002": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.18, ndvi_p50 0.58)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r003_c003": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.24, ndvi_p50 0.51)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c016": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.12, ndvi_p50 0.66)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c016": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.05, ndvi_p50 0.78)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c015": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.08, ndvi_p50 0.69)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r006_c014": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.10, ndvi_p50 0.64)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c002": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.07, ndvi_p50 0.74)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c013": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.18, ndvi_p50 0.66)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c010": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.26, ndvi_p50 0.49)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c003": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.19, ndvi_p50 0.62)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c017": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.05, ndvi_p50 0.79)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r004_c000": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.22, ndvi_p50 0.57)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c014": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.13, ndvi_p50 0.66)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c011": {
+        "grade": 1,
+        "criterion": "partial residential mix (built_frac 0.29, ndvi_p50 0.49)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r019_c013": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.11, ndvi_p50 0.63)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r020_c012": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.10, ndvi_p50 0.71)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c003": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.26, ndvi_p50 0.48)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c012": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.06, ndvi_p50 0.65)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c014": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.06, ndvi_p50 0.70)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c007": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.16, ndvi_p50 0.56)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c015": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.05, ndvi_p50 0.74)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r002_c007": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.13, ndvi_p50 0.58)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c002": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.06, ndvi_p50 0.69)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c013": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.09, ndvi_p50 0.67)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c001": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.25, ndvi_p50 0.48)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c023": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.16, ndvi_p50 0.58)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r008_c019": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.07, ndvi_p50 0.69)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c006": {
+        "grade": 1,
+        "criterion": "partial residential mix (built_frac 0.33, ndvi_p50 0.40)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c017": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.05, ndvi_p50 0.73)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c010": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.07, ndvi_p50 0.67)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c012": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.07, ndvi_p50 0.67)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c014": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.13, ndvi_p50 0.62)",
+        "source_pools": [
+          "vanilla",
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c009": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.04, ndvi_p50 0.70)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c000": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.11, ndvi_p50 0.65)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r000_c025": {
+        "grade": 1,
+        "criterion": "partial residential mix (built_frac 0.36, ndvi_p50 0.32)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c021": {
+        "grade": 1,
+        "criterion": "partial residential mix (built_frac 0.44, ndvi_p50 0.19)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r017_c012": {
+        "grade": 1,
+        "criterion": "partial residential mix (built_frac 0.50, ndvi_p50 0.30)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c016": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.07, ndvi_p50 0.69)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c002": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.21, ndvi_p50 0.37)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c024": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.20, ndvi_p50 0.35)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r006_c013": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.09, ndvi_p50 0.64)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c004": {
+        "grade": 1,
+        "criterion": "partial residential mix (built_frac 0.53, ndvi_p50 0.17)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r018_c015": {
+        "grade": 1,
+        "criterion": "partial residential mix (built_frac 0.31, ndvi_p50 0.45)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c013": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.19, ndvi_p50 0.37)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r003_c019": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.08, ndvi_p50 0.57)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r027_c007": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.09, ndvi_p50 0.61)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c023": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.11, ndvi_p50 0.38)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c026": {
+        "grade": 0,
+        "criterion": "not a residential built pattern (built_frac 0.12, ndvi_p50 0.36)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "irrigated farmland": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c006": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.58, ndwi_p90 -0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r013_c002": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.42, ndwi_p90 -0.19)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c012": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.37, ndwi_p90 -0.07)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c005": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.26, ndwi_p90 -0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c011": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.49, ndwi_p90 -0.19)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c004": {
+        "grade": 2,
+        "criterion": "green + moist fields (ndvi_p50 0.58, ndwi_p90 -0.17)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r014_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.74, ndwi_p90 -0.43)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r009_c004": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.65, ndwi_p90 -0.29)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r025_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.70, ndwi_p90 -0.37)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c001": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.26, ndwi_p90 -0.22)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.73, ndwi_p90 -0.43)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c001": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.48, ndwi_p90 -0.20)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.76, ndwi_p90 -0.45)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r020_c019": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.69, ndwi_p90 -0.32)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r000_c018": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.80, ndwi_p90 -0.44)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r016_c010": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.52, ndwi_p90 -0.22)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r020_c023": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.64, ndwi_p90 -0.32)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.83, ndwi_p90 -0.53)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r011_c002": {
+        "grade": 2,
+        "criterion": "green + moist fields (ndvi_p50 0.66, ndwi_p90 -0.27)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r030_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.77, ndwi_p90 -0.45)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c027": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.42, ndwi_p90 -0.36)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c026": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.37, ndwi_p90 -0.34)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c015": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.34, ndwi_p90 -0.28)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r009_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.42, ndwi_p90 -0.34)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r026_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.29, ndwi_p90 -0.29)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c024": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.36, ndwi_p90 -0.30)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c022": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.36, ndwi_p90 -0.34)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r000_c017": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.35, ndwi_p90 -0.33)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c032": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.29, ndwi_p90 -0.28)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c021": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.37, ndwi_p90 -0.32)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c016": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.38, ndwi_p90 -0.29)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c004": {
+        "grade": 2,
+        "criterion": "green + moist fields (ndvi_p50 0.52, ndwi_p90 -0.27)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c018": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.38, ndwi_p90 -0.33)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r021_c014": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.40, ndwi_p90 -0.33)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c029": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.38, ndwi_p90 -0.31)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c022": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.35, ndwi_p90 -0.32)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r002_c028": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.38, ndwi_p90 -0.33)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r010_c010": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.37, ndwi_p90 -0.28)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r005_c030": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.37, ndwi_p90 -0.33)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c009": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.30, ndwi_p90 -0.21)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c019": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.69, ndwi_p90 -0.40)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r007_c010": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.55, ndwi_p90 -0.38)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c001": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.38, ndwi_p90 -0.27)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c029": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.73, ndwi_p90 -0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c003": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.64, ndwi_p90 -0.37)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c029": {
+        "grade": 2,
+        "criterion": "green + moist fields (ndvi_p50 0.51, ndwi_p90 -0.24)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c006": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.61, ndwi_p90 -0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c025": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.65, ndwi_p90 -0.32)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r012_c013": {
+        "grade": 1,
+        "criterion": "green fields, drier signal (ndvi_p50 0.39, ndwi_p90 -0.30)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r022_c001": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.63, ndwi_p90 -0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r009_c018": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.60, ndwi_p90 -0.36)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r005_c022": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.59, ndwi_p90 -0.38)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r012_c019": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.63, ndwi_p90 -0.39)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c018": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.64, ndwi_p90 -0.38)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r017_c026": {
+        "grade": 0,
+        "criterion": "not irrigated farmland (ndvi_p50 0.71, ndwi_p90 -0.45)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "a braided river channel with sandbars": {
+      "S2B_44RPQ_20190330_1_L2A_scaled_r022_c025": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.15, exposed sediment bare_frac 0.27",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c016": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 7956, water_frac 0.12)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c010": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 24347, water_frac 0.04)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c030": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.11, exposed sediment bare_frac 0.29",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r012_c005": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 37121, water_frac 0.11)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c020": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.10, exposed sediment bare_frac 0.27",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r019_c020": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.10, exposed sediment bare_frac 0.47",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c015": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 10161, water_frac 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c029": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.14, exposed sediment bare_frac 0.57",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c025": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.12, exposed sediment bare_frac 0.40",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c011": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 19552, water_frac 0.12)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r022_c025": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.17, exposed sediment bare_frac 0.30",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c019": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 1467, water_frac 0.00)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c005": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 36287, water_frac 0.04)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c002": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 43131, water_frac 0.17)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c010": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 24347, water_frac 0.08)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 2441, water_frac 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r016_c011": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 19552, water_frac 0.14)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r016_c012": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 17026, water_frac 0.12)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c004": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 38741, water_frac 0.13)",
+        "source_pools": [
+          "remoteclip",
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c010": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 22575, water_frac 0.11)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c015": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 9298, water_frac 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c018": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 2441, water_frac 0.07)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c028": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.09, exposed sediment bare_frac 0.40",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r014_c001": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 45648, water_frac 0.10)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r013_c006": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 33849, water_frac 0.03)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r014_c001": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 45648, water_frac 0.16)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c020": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.06, exposed sediment bare_frac 0.41",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r015_c011": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 20104, water_frac 0.06)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c028": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.08, exposed sediment bare_frac 0.37",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r019_c015": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 9298, water_frac 0.03)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r023_c029": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.14, exposed sediment bare_frac 0.56",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c026": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 13875, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r000_c017": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 44138, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c008": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 35425, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c001": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 51428, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r011_c027": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 23094, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r021_c023": {
+        "grade": 2,
+        "criterion": "on river (dist 0 m), water_frac 0.09, exposed sediment bare_frac 0.27",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c001": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 44920, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r006_c030": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 37807, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r024_c009": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 28572, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c019": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 4794, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r032_c001": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 56055, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r008_c017": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 23812, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r021_c018": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 5311, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r030_c000": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 56166, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c021": {
+        "grade": 0,
+        "criterion": "not on the river channel (dist_river_m 17407, water_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    },
+    "a dirt track or unpaved road": {
+      "S2A_44RPQ_20240308_0_L2A_scaled_r022_c013": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.28, bare_frac 0.03)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c004": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.25, bare_frac 0.07)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r007_c019": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.32, bare_frac 0.05)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c001": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.23, bare_frac 0.03)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r031_c021": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.24, bare_frac 0.04)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c023": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.24)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c022": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.18, bare_frac 0.02)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r017_c002": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.27, bare_frac 0.03)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r024_c024": {
+        "grade": 1,
+        "criterion": "possible unpaved track (edges 0.28, bare_frac 0.09)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r028_c019": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.28, bare_frac 0.03)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c020": {
+        "grade": 2,
+        "criterion": "exposed-soil linear feature (edges 0.26, ndvi_p10 0.17, bare_frac 0.14)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r029_c003": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.21, bare_frac 0.01)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c005": {
+        "grade": 2,
+        "criterion": "exposed-soil linear feature (edges 0.29, ndvi_p10 0.16, bare_frac 0.14)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r031_c007": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.03, bare_frac 0.06)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c002": {
+        "grade": 1,
+        "criterion": "possible unpaved track (edges 0.26, bare_frac 0.11)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r023_c014": {
+        "grade": 1,
+        "criterion": "possible unpaved track (edges 0.25, bare_frac 0.11)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r028_c030": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.06)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r027_c020": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.20, bare_frac 0.02)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r026_c016": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.27, bare_frac 0.03)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r016_c006": {
+        "grade": 1,
+        "criterion": "possible unpaved track (edges 0.26, bare_frac 0.11)",
+        "source_pools": [
+          "remoteclip"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r031_c004": {
+        "grade": 2,
+        "criterion": "exposed-soil linear feature (edges 0.27, ndvi_p10 0.18, bare_frac 0.11)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r005_c026": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c017": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r027_c024": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.04, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r003_c012": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.00)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c019": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.00)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c013": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.03, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c018": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.03, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r030_c003": {
+        "grade": 2,
+        "criterion": "exposed-soil linear feature (edges 0.30, ndvi_p10 0.16, bare_frac 0.12)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r006_c010": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.00, bare_frac 0.00)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r001_c024": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r025_c028": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r020_c006": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.06, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r032_c009": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.02, bare_frac 0.08)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r030_c031": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.02, bare_frac 0.05)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r018_c032": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.00, bare_frac 0.00)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r019_c010": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.04, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c018": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r001_c031": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.01)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r013_c031": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.02)",
+        "source_pools": [
+          "vanilla"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r007_c007": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.20, bare_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c024": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.02, bare_frac 0.14)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r031_c005": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.04, bare_frac 0.09)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r018_c003": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.34, bare_frac 0.03)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r011_c006": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.05, bare_frac 0.05)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r005_c001": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.26, bare_frac 0.03)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r023_c002": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.03, bare_frac 0.03)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r020_c030": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.29, bare_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r000_c005": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.03, bare_frac 0.00)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r028_c012": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.32, bare_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20210304_1_L2A_scaled_r020_c013": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.25, bare_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r027_c019": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.20, bare_frac 0.02)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r032_c005": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.22, bare_frac 0.01)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2A_44RPQ_20240308_0_L2A_scaled_r015_c020": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.35, bare_frac 0.03)",
+        "source_pools": [
+          "random"
+        ]
+      },
+      "S2B_44RPQ_20190330_1_L2A_scaled_r024_c029": {
+        "grade": 0,
+        "criterion": "no unpaved-track signature (edges 0.01, bare_frac 0.04)",
+        "source_pools": [
+          "random"
+        ]
+      }
+    }
+  }
+}

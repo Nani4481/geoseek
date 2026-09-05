@@ -1,0 +1,44 @@
+{
+  "label": "before",
+  "has_rtree": false,
+  "n_tiles": 6346,
+  "n_points": 30,
+  "params": {
+    "eps_deg": 0.002,
+    "bbox_repeats": 8,
+    "knn_repeats": 5,
+    "seed": 7
+  },
+  "bbox_query_tiles": {
+    "n": 240,
+    "median_ms": 230.946,
+    "mean_ms": 198.345,
+    "p95_ms": 312.556,
+    "p99_ms": 363.13,
+    "max_ms": 420.928
+  },
+  "point_seeded_knn_total": {
+    "n": 150,
+    "median_ms": 237.735,
+    "mean_ms": 209.004,
+    "p95_ms": 314.57,
+    "p99_ms": 351.87,
+    "max_ms": 420.68
+  },
+  "point_seeded_knn_lookup_component": {
+    "n": 150,
+    "median_ms": 236.735,
+    "mean_ms": 207.564,
+    "p95_ms": 313.08,
+    "p99_ms": 350.87,
+    "max_ms": 419.66
+  },
+  "tile_seeded_knn_total": {
+    "n": 150,
+    "median_ms": 0.0,
+    "mean_ms": 0.463,
+    "p95_ms": 1.02,
+    "p99_ms": 1.58,
+    "max_ms": 1.88
+  }
+}

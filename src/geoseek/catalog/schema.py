@@ -115,6 +115,26 @@ BEGIN
 END;
 """
 
+# --- spatial index for tile footprints -------------------------------------
+# Created and maintained by SQLiteMetadataRepository, NOT part of SCHEMA_SQL:
+#   * SCHEMA_SQL is kept standard-SQL so it ports verbatim to PostGIS; a virtual
+#     table is SQLite-only.
+#   * not every SQLite build ships the R*Tree module, so the repository creates
+#     this under a guard and falls back to the Python WKT scan if it is absent.
+# `tile_rtree` holds one bounding box per tile, keyed by tiles.rowid, turning the
+# bbox / point-in-AOI lookup in query_tiles() from an O(N) shapely scan over
+# every footprint into an O(log N + k) index probe. SQLite's R*Tree rounds
+# stored bounds outward (min down, max up) so it never drops a true match; the
+# exact shapely .intersects() post-filter still runs on the (now tiny) candidate
+# set, so results are identical to the brute-force path. The PostGIS port
+# replaces this with a GiST index on the geometry column - callers are
+# unaffected either way, the predicate stays a bbox on MetadataRepository.
+TILE_RTREE_TABLE = "tile_rtree"
+TILE_RTREE_SQL = (
+    "CREATE VIRTUAL TABLE IF NOT EXISTS tile_rtree USING rtree("
+    "id, min_lon, max_lon, min_lat, max_lat)"
+)
+
 CATALOG_TABLES = ("collections", "scenes", "observations", "tiles", "derived")
 
 # The audit table is deliberately NOT in CATALOG_TABLES: it is not part of the
