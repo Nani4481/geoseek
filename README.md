@@ -850,6 +850,55 @@ python scripts/eval_retrieval_judge.py      # constructed graded judgements
 python scripts/eval_retrieval_score.py      # metrics table + manifest record
 ```
 
+## Phase 7b: scalability, measured (3,267 → 100,887 tiles)
+
+Does the same pipeline — same RemoteCLIP weights, same `FaissFlatIPIndex`,
+zero retraining — hold up 30x larger, and generalize to terrain it has
+never seen? Full evidence (three tiers, every number measured on this
+machine) in [`PHASE7B.md`](PHASE7B.md).
+
+* **Diverse-AOI staging** (`scripts/stage_diverse_aois.py`) — a *generic*
+  STAC-item-asset-href fetch (any MGRS tile, not `download_datasets.py`'s
+  hardcoded 44RPQ path) across 8 regions: Himalayan foothills, Thar desert,
+  Sundarbans delta, Delhi NCR, Central India forest/plateau, Kerala
+  backwaters, Rann of Kutch, Deccan plateau — 69 scenes, 14 distinct MGRS
+  tiles. Ingested through the **unmodified** `geoseek.ingest` pipeline
+  (`scripts/ingest_diverse_scene.py` calls the exact same functions
+  `ingest.pipeline.ingest_scene` does).
+* **Scale**: 3,267 → 12,418 (Tier 1) → 50,126 (Tier 2) → 100,887 (Tier 3)
+  tiles, each tier's incremental-add proof re-confirming byte-identical
+  pre-existing vectors (no rebuild) up to 100k+.
+* **FlatIP query latency scales close to linearly** in vector count for
+  every FAISS-scan-bound path (image search, both KNN variants), and the
+  R\*Tree bbox filter and every RAM/VRAM/ingest-throughput number stay flat
+  — the expected signature. The HNSW crossover for sub-200 ms interactivity
+  is estimated at ~300k–700k vectors depending on which of two observed
+  trends holds; FlatIP remains comfortably fine at 100k (21.7 ms image
+  search median).
+* **Retrieval quality under scale, measured not asserted**: recall of the
+  original Phase 7a relevant tile set for the same 16 queries drops to
+  10.6% @K=20 once ~30x more genuinely diverse content competes for the
+  same slots — the "more distractors" effect, quantified.
+* **Two honest degradations, reported plainly**: ingestion throughput
+  step-changed ~2x worse partway through the unattended ~4-hour Tier 3 run
+  (host-level cause unconfirmed); FAISS's whole-file-rewrite persist cost
+  scales super-linearly (18.6 ms → 1.36 s across the three tiers).
+* **HDBSCAN re-clustering did not hold up unmodified at 100k/512-d** —
+  49+ minutes single-threaded, 60m50s even after adding multi-core support,
+  both abandoned without a result: a genuine, disclosed scalability wall,
+  distinct from (and unrelated to) the search-latency scaling above. The
+  Tier 1 result (12,418 tiles) stands as this phase's clustering evidence:
+  HDBSCAN's `leaf` mode surfaces clusters that are >96% single-region with
+  *zero* location metadata — the generalization claim, made concrete.
+
+```bash
+python scripts/run_diverse_ingest.py --target 100000 --regions dehradun jaisalmer sundarbans delhi_ncr kanha kerala_backwaters kutch deccan
+python scripts/measure_tier.py --tier tier3 --incremental-region kanha --ledger-since-index 31
+python scripts/cluster_tiles.py --min-cluster-size 40 --n-jobs -1
+python scripts/eval_retrieval_at_scale.py --tier tier3
+python scripts/plot_scale.py
+```
+
 ## Tests
 
 ```bash
@@ -991,7 +1040,7 @@ geoseek/
     index/spectral_indices_per_tile.csv gitignored, per-tile NDVI/NDWI/NDBI per date (change.prep)
   tests/
     test_env.py  test_ingest.py  test_search.py  test_change.py  test_change_model.py
-    test_change_pipeline.py  test_phase5.py  test_phase6.py  test_catalog.py
+    test_change_pipeline.py  test_phase5.py  test_phase6.py  test_phase7.py  test_catalog.py
     test_vectorindex.py  test_models.py  test_temporal.py  test_search_parity.py
     test_change_align.py
     fixtures/search_baseline.json  fixtures/pre_migration_tiles.json
@@ -1000,4 +1049,12 @@ geoseek/
     validate_export.py        Phase 6 Step D: build the GeoJSON export + validate it in GDAL/OGR
     verify_offline_perf.py    Phase 6 Step E: network-disabled run + per-view latency
     shoot_analyst_ui.mjs      Phase 6: Playwright screenshots of the four views (off-origin aborted)
+    bench_spatial_index.py    Phase 7a Step A: R*Tree bbox/KNN latency before/after
+    eval_retrieval_{prepare,features,judge,score}.py   Phase 7a Step B: PS 2.3 retrieval evaluation
+    stage_diverse_aois.py     Phase 7b: generic diverse-AOI staging (any MGRS tile)
+    ingest_diverse_scene.py   Phase 7b: the unmodified ingest pipeline, correct per-region provenance
+    run_diverse_ingest.py     Phase 7b: stage+ingest driver until a target vector count is reached
+    measure_tier.py           Phase 7b: storage/latency/RAM-VRAM/incremental-proof per tier
+    eval_retrieval_at_scale.py  Phase 7b Tier 3: retrieval recall/distractor-rate at scale
+    plot_scale.py             Phase 7b Tier 3: latency-vs-scale + storage-vs-scale plots
 ```
