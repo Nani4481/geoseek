@@ -1,0 +1,76 @@
+{
+  "tier": "tier2",
+  "measured_at": "2026-09-06T09:01:26Z",
+  "storage": {
+    "faiss_index_mb": 102.66,
+    "sqlite_db_mb": 47.59,
+    "raw_datasets_mb": 18344.43,
+    "derived_products_mb": 531.32,
+    "models_mb": 1210.35,
+    "total_data_dir_mb": 20250.58,
+    "faiss_full_rewrite_persist_ms": 117.72
+  },
+  "query": {
+    "n_vectors": 50126,
+    "latency": {
+      "text_search_k20": {
+        "n": 40,
+        "median_ms": 14.399,
+        "p95_ms": 17.148,
+        "max_ms": 18.039
+      },
+      "image_search_k20": {
+        "n": 120,
+        "median_ms": 7.19,
+        "p95_ms": 10.797,
+        "max_ms": 13.658
+      },
+      "point_seeded_knn": {
+        "n": 150,
+        "median_ms": 7.93,
+        "p95_ms": 11.55,
+        "max_ms": 14.43
+      },
+      "tile_seeded_knn": {
+        "n": 150,
+        "median_ms": 7.325,
+        "p95_ms": 10.92,
+        "max_ms": 14.87
+      },
+      "bbox_filter": {
+        "n": 240,
+        "median_ms": 0.229,
+        "p95_ms": 0.32,
+        "max_ms": 0.643
+      }
+    },
+    "peak_memory_during_query": {
+      "peak_rss_mb": 1896.3,
+      "peak_vram_mb": 619.6
+    }
+  },
+  "ingest": {
+    "peak_rss_mb": 2468.7,
+    "peak_vram_mb": 739.0,
+    "n_scenes": 27,
+    "total_tiles_added": 37708,
+    "total_wall_s": 185.3,
+    "mean_end_to_end_tiles_per_sec": 203.46,
+    "mean_pure_embed_tiles_per_sec": 375.87
+  },
+  "ledger_row_count_at_measurement": 31,
+  "incremental_proof": {
+    "region": "deccan",
+    "scene_id": "S2B_43QGU_20231227_0_L2A",
+    "size_km": 81.0,
+    "tiles_added": 1056,
+    "before_count": 50126,
+    "after_count": 51182,
+    "elapsed_s": 5.66,
+    "tiles_per_sec": 186.47,
+    "n_sampled_preexisting_vectors": 25,
+    "byte_identical": true,
+    "max_abs_diff_over_sample": 0.0,
+    "no_rebuild": true
+  }
+}

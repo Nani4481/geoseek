@@ -252,6 +252,80 @@ grepped too: no direct sqlite3/faiss imports — all go through
 
 ---
 
+## Tier 2 — reach ~50,000 tiles
+
+**Result: 50,126 tiles** (target crossed on the 27th new scene). Continued
+cycling through all 5 Tier 1 regions plus 3 newly-registered ones (Kerala
+backwaters, Rann of Kutch salt marsh, Deccan plateau) for maximum diversity.
+27 scenes, 37,708 tiles, in **101m 24s** wall clock (12,418 → 50,126,
+including the incremental-proof scene) — driven entirely by
+`scripts/run_diverse_ingest.py --target 50000` with zero manual intervention
+between scenes.
+
+By region across all 34 scenes staged so far: dehradun 6, jaisalmer 5,
+sundarbans 5, delhi_ncr 4, kanha 4, deccan 4, kerala_backwaters 3, kutch 3.
+Kutch is the one region with non-trivial cloud (14.7–16.4% on its 3 dates,
+still under the 20% search threshold) — every other region's scenes are
+sub-0.1% cloud. Nodata varies genuinely by AOI/date: sundarbans 22.6–49.1%
+(coastal, expected), kerala_backwaters 16.0–24.3% (backwater/sea edge,
+expected), deccan 0–27.2% (swath-edge variation across different orbit
+passes over the same tile), everyone else ~0%. Full 34-scene table is in the
+provenance manifest's `diverse_aois` section (SHA256 + source URL per band,
+per scene).
+
+### Measurement table
+
+| metric | Tier 1 (12,418) | **Tier 2 (50,126)** | ratio |
+|---|--:|--:|--:|
+| FAISS index size | 23.33 MB | **102.66 MB** | 4.40x *(exact: n×512×4B)* |
+| SQLite catalog size | 14.69 MB | **47.59 MB** | 3.24x |
+| raw staged imagery | 7,577.8 MB | **18,344.4 MB** | 2.42x |
+| total `data/` footprint | 9,370.5 MB | **20,250.6 MB** | 2.16x |
+| FAISS full-file persist (rewrite-on-save) | 18.6 ms | **117.7 ms** | 6.3x |
+| text search (k=20), median / p95 | 8.41 / 10.37 ms | **14.40 / 17.15 ms** | 1.71x / 1.65x |
+| image search (k=20), median / p95 | 1.51 / 3.00 ms | **7.19 / 10.80 ms** | 4.76x / 3.60x |
+| point-seeded KNN, median / p95 | 2.00 / 3.00 ms | **7.93 / 11.55 ms** | 3.97x / 3.85x |
+| tile-seeded KNN, median / p95 | 1.58 / 2.93 ms | **7.33 / 10.92 ms** | 4.64x / 3.73x |
+| bbox filter, median / p95 | 0.21 / 0.39 ms | **0.23 / 0.32 ms** | flat (R\*Tree, not FAISS-bound) |
+| peak RSS during query burst | 1,829.5 MB | **1,896.3 MB** | flat |
+| peak VRAM during query burst | 619.6 MB | **619.6 MB** | flat |
+| peak RSS during ingest (27 scenes) | 2,452.8 MB | **2,468.7 MB** | flat |
+| peak VRAM during ingest | 739.0 MB | **739.0 MB** | flat |
+| ingestion throughput (pipeline only) | 205.4 tiles/s | **203.5 tiles/s** | flat |
+| pure embedding throughput | 393.2 tiles/s | **375.9 tiles/s** | flat |
+
+**This is the O(n) FlatIP signature showing up cleanly.** Vector count grew
+4.04x (12,418→50,126). Operations that always scan the *entire* index
+(`search_text`, `search_image`, both KNN paths — `SearchEngine._rank_and_filter`
+asks FAISS for `n` results every call, not just `k`) scaled at **3.6–4.8x** —
+essentially linear in n, exactly as expected for `IndexFlatIP`. The bbox
+filter (SQLite R\*Tree, never touches FAISS) stayed flat, as did every
+memory and ingestion-throughput number — RAM/VRAM/ingest speed are bounded
+by per-tile/per-batch work and the (small, constant) resident model, not by
+how many vectors already exist. Text search grew *less* than 4x (1.7x)
+because query-side text encoding is a fixed cost per call that doesn't scale
+with n, so it dilutes the growing FAISS-scan cost in the total.
+
+### Incremental +1000 proof
+
+A brand-new Deccan scene (`S2B_43QGU_20231227_0_L2A`, 81×81 km crop, a date
+not previously staged for this region):
+
+- **1,056 tiles added** (50,126 → 51,182). Ingest: **5.66s** (186.5 tiles/s —
+  same order as Tier 1's 211.3 tiles/s; the small run-to-run variance here is
+  well within what different scene content/tile mix produces, not a scale
+  trend).
+- **25 sampled pre-existing vectors byte-identical before/after** (max abs
+  diff 0.0), `after_count == before_count + tiles_added` — no rebuild, same
+  proof as Tier 1, now confirmed at 50k+.
+
+### Tests / seams
+
+`pytest -q`: 211 tests (208 passed, 3 skipped by the same pre-existing
+design). `grep -rn "import sqlite3\|import faiss" src/`: still clean.
+
+---
+
 ## Run it
 
 ```
@@ -260,4 +334,7 @@ python scripts/run_diverse_ingest.py --target 10000 --regions dehradun jaisalmer
 python scripts/measure_tier.py --tier tier1 --incremental-region kanha
 python scripts/cluster_tiles.py --min-cluster-size 40
 pytest -q
+
+python scripts/run_diverse_ingest.py --target 50000 --regions dehradun jaisalmer sundarbans delhi_ncr kanha kerala_backwaters kutch deccan
+python scripts/measure_tier.py --tier tier2 --incremental-region deccan --ledger-since-index 4
 ```
