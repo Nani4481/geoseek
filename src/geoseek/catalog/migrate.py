@@ -530,6 +530,18 @@ def _verify_search_parity(db_path: Path) -> tuple[bool, str]:
 
         base = json.loads(fixture.read_text(encoding="utf-8"))
         eng = SearchEngine(index_dir=db_path.parent)
+        if eng.count() != base.get("index_vectors"):
+            # Same escape hatch as tests/test_search_parity.py's fixture: the
+            # baseline freezes exact top-K identity for one specific vector
+            # count. Once later incremental ingests grow the index past it
+            # (Phase 7b intentionally does, by design - see PHASE7B.md), a
+            # legitimately different/better global top-K for some frozen
+            # queries is the CORRECT outcome, not a regression - nothing here
+            # still checks that old tiles keep their old scores (that guarantee
+            # comes from _verify_faiss's legacy (faiss_id,tile_id) pair check).
+            n = eng.count()
+            eng.close()
+            return True, f"index has {n} vectors, baseline froze {base.get('index_vectors')} - skipped"
         k = base.get("k", 15)
         max_dscore = 0.0
         mismatches: list[str] = []

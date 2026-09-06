@@ -1,0 +1,76 @@
+{
+  "tier": "tier1",
+  "measured_at": "2026-09-06T06:54:33Z",
+  "storage": {
+    "faiss_index_mb": 23.33,
+    "sqlite_db_mb": 14.69,
+    "raw_datasets_mb": 7577.79,
+    "derived_products_mb": 530.65,
+    "models_mb": 1210.35,
+    "total_data_dir_mb": 9370.5,
+    "faiss_full_rewrite_persist_ms": 18.61
+  },
+  "query": {
+    "n_vectors": 11394,
+    "latency": {
+      "text_search_k20": {
+        "n": 40,
+        "median_ms": 8.406,
+        "p95_ms": 10.368,
+        "max_ms": 10.624
+      },
+      "image_search_k20": {
+        "n": 120,
+        "median_ms": 1.512,
+        "p95_ms": 3.002,
+        "max_ms": 3.597
+      },
+      "point_seeded_knn": {
+        "n": 150,
+        "median_ms": 2.0,
+        "p95_ms": 3.0,
+        "max_ms": 3.79
+      },
+      "tile_seeded_knn": {
+        "n": 150,
+        "median_ms": 1.58,
+        "p95_ms": 2.93,
+        "max_ms": 4.06
+      },
+      "bbox_filter": {
+        "n": 240,
+        "median_ms": 0.206,
+        "p95_ms": 0.394,
+        "max_ms": 0.561
+      }
+    },
+    "peak_memory_during_query": {
+      "peak_rss_mb": 1829.5,
+      "peak_vram_mb": 619.6
+    }
+  },
+  "ingest": {
+    "peak_rss_mb": 2452.8,
+    "peak_vram_mb": 739.0,
+    "n_scenes": 4,
+    "total_tiles_added": 6278,
+    "total_wall_s": 30.6,
+    "mean_end_to_end_tiles_per_sec": 205.43,
+    "mean_pure_embed_tiles_per_sec": 393.16
+  },
+  "ledger_row_count_at_measurement": 4,
+  "incremental_proof": {
+    "region": "kanha",
+    "scene_id": "S2A_44QMK_20240308_0_L2A",
+    "size_km": 81.0,
+    "tiles_added": 1024,
+    "before_count": 11394,
+    "after_count": 12418,
+    "elapsed_s": 4.85,
+    "tiles_per_sec": 211.29,
+    "n_sampled_preexisting_vectors": 25,
+    "byte_identical": true,
+    "max_abs_diff_over_sample": 0.0,
+    "no_rebuild": true
+  }
+}

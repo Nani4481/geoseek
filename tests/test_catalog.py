@@ -329,7 +329,12 @@ def test_production_catalog_provenance_chain_for_every_observation():
 def test_production_catalog_has_the_third_date_with_alignment_provenance():
     db = _production_db()
     repo = SQLiteMetadataRepository(db)
-    s2_obs = repo.list_observations(collection="sentinel-2-l2a")
+    # Scoped to the original 3-date Ayodhya stack (aoi_name tags every Ayodhya
+    # observation "ayodhya_..."): Phase 7b adds many more sentinel-2-l2a
+    # observations over other AOIs, so an unscoped list_observations(collection=)
+    # would no longer sum to the fixed Ayodhya tile count below.
+    s2_obs = [o for o in repo.list_observations(collection="sentinel-2-l2a")
+              if (o.aoi_name or "").startswith("ayodhya")]
     obs_by_date = {o.acquired_at: o for o in s2_obs}
     if "2021-03-04" not in obs_by_date:
         pytest.skip("third date not staged/ingested yet")
