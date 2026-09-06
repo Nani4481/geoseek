@@ -128,6 +128,7 @@ def plot_latency(rows: list[dict], out_path) -> None:
 
     ax.set_xscale("log")
     ax.set_yscale("log")
+    ax.set_xlim(left=min(xs_all) * 0.55)  # headroom so the legend doesn't sit on the first points
     ax.set_xlabel("index size (vectors, log scale)")
     ax.set_ylabel("latency, ms (log scale) — solid = median, dashed = p95")
     ax.set_title("Query latency vs. index size (FaissFlatIP, warm)", color=INK_PRIMARY, fontsize=13, pad=12)

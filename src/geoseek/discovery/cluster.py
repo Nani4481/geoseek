@@ -59,11 +59,19 @@ def load_all_vectors(vector_index) -> np.ndarray:
 
 def cluster_embeddings(vectors: np.ndarray, tile_ids: list[str], embedding_model, *,
                        min_cluster_size: int = DEFAULT_MIN_CLUSTER_SIZE,
-                       min_samples: int | None = None) -> ClusterResult:
+                       min_samples: int | None = None,
+                       core_dist_n_jobs: int = 1) -> ClusterResult:
     from hdbscan import HDBSCAN
 
+    # core_dist_n_jobs: parallelism for the core-distance computation only - a
+    # pure performance knob (sklearn's KNN backend), not part of the HDBSCAN
+    # algorithm itself; same inputs produce the same labels regardless of
+    # this value. Default 1 preserves exact prior behavior. At Phase 7b's
+    # ~100k tiles / 512-d, single-threaded core-distance computation in this
+    # dimensionality is impractical (>45 min, still not finished) - see
+    # PHASE7B.md.
     clf = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples,
-                  metric="euclidean", core_dist_n_jobs=1)
+                  metric="euclidean", core_dist_n_jobs=core_dist_n_jobs)
     labels = clf.fit_predict(vectors.astype(np.float64))
     uniq = sorted(int(x) for x in set(labels) if x >= 0)
     sizes = {int(c): int((labels == c).sum()) for c in uniq}

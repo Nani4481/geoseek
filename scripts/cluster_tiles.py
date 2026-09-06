@@ -29,6 +29,8 @@ def main(argv: list[str] | None = None) -> None:
     p.add_argument("--min-samples", type=int, default=None)
     p.add_argument("--knn-seed-lon", type=float, default=82.1998)
     p.add_argument("--knn-seed-lat", type=float, default=26.7922)
+    p.add_argument("--n-jobs", type=int, default=1,
+                    help="core-distance parallelism (performance only, does not change results); -1 = all cores")
     args = p.parse_args(argv)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -48,7 +50,8 @@ def main(argv: list[str] | None = None) -> None:
 
         t0 = time.time()
         res = cluster_embeddings(vectors, tile_ids, eng.embedding_model,
-                                 min_cluster_size=args.min_cluster_size, min_samples=args.min_samples)
+                                 min_cluster_size=args.min_cluster_size, min_samples=args.min_samples,
+                                 core_dist_n_jobs=args.n_jobs)
         print(f"\n  HDBSCAN (min_cluster_size={args.min_cluster_size}) in {time.time()-t0:.1f}s")
         print(f"  clusters: {res.n_clusters}   noise: {res.noise_count} "
               f"({100*res.noise_count/len(tile_ids):.1f}%)")
