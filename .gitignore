@@ -29,3 +29,8 @@ data/eval_retrieval/vanilla_corpus_vectors.npy
 data/eval_retrieval/vanilla_corpus_tile_ids.json
 data/eval_retrieval/judgments_template.json
 data/eval_retrieval/pool_labels.json
+
+# Phase 7b follow-up: keep the JSON (precision_at_scale, throughput diagnosis,
+# judge_diagnosis manifest + hand annotations + summary), drop the regenerable
+# contact-sheet PNGs.
+data/eval_retrieval/judge_diagnosis/*.png

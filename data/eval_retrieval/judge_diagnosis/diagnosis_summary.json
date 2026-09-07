@@ -1,0 +1,109 @@
+{
+  "per_query": {
+    "newly built structures near a river": {
+      "plausibly_relevant": 5,
+      "irrelevant": 2,
+      "ambiguous": 5,
+      "n": 12
+    },
+    "settlement along a riverbank": {
+      "plausibly_relevant": 10,
+      "irrelevant": 1,
+      "ambiguous": 0,
+      "n": 11
+    },
+    "a river with sandbars": {
+      "plausibly_relevant": 5,
+      "irrelevant": 0,
+      "ambiguous": 4,
+      "n": 9
+    },
+    "dense urban buildings": {
+      "plausibly_relevant": 11,
+      "irrelevant": 1,
+      "ambiguous": 0,
+      "n": 12
+    },
+    "agricultural fields": {
+      "plausibly_relevant": 12,
+      "irrelevant": 0,
+      "ambiguous": 0,
+      "n": 12
+    },
+    "open bare ground": {
+      "plausibly_relevant": 12,
+      "irrelevant": 0,
+      "ambiguous": 0,
+      "n": 12
+    },
+    "a water body": {
+      "plausibly_relevant": 11,
+      "irrelevant": 0,
+      "ambiguous": 1,
+      "n": 12
+    },
+    "cropland with visible field boundaries": {
+      "plausibly_relevant": 12,
+      "irrelevant": 0,
+      "ambiguous": 0,
+      "n": 12
+    },
+    "a paved road": {
+      "plausibly_relevant": 5,
+      "irrelevant": 3,
+      "ambiguous": 4,
+      "n": 12
+    },
+    "riverside construction": {
+      "plausibly_relevant": 10,
+      "irrelevant": 0,
+      "ambiguous": 2,
+      "n": 12
+    },
+    "a bridge crossing a river": {
+      "plausibly_relevant": 3,
+      "irrelevant": 1,
+      "ambiguous": 8,
+      "n": 12
+    },
+    "dense vegetation along a riverbank": {
+      "plausibly_relevant": 9,
+      "irrelevant": 2,
+      "ambiguous": 1,
+      "n": 12
+    },
+    "an urban residential neighborhood": {
+      "plausibly_relevant": 12,
+      "irrelevant": 0,
+      "ambiguous": 0,
+      "n": 12
+    },
+    "irrigated farmland": {
+      "plausibly_relevant": 12,
+      "irrelevant": 0,
+      "ambiguous": 0,
+      "n": 12
+    },
+    "a braided river channel with sandbars": {
+      "plausibly_relevant": 10,
+      "irrelevant": 0,
+      "ambiguous": 1,
+      "n": 11
+    },
+    "a dirt track or unpaved road": {
+      "plausibly_relevant": 6,
+      "irrelevant": 0,
+      "ambiguous": 6,
+      "n": 12
+    }
+  },
+  "by_bucket_fraction_plausibly_relevant": {
+    "unjudged_other": 0.8101,
+    "judged_zero": 0.0
+  },
+  "by_bucket_n": {
+    "unjudged_other": 179,
+    "judged_zero": 8
+  },
+  "overall_fraction_plausibly_relevant": 0.7754
+}

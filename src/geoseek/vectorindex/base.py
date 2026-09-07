@@ -52,6 +52,22 @@ class VectorIndex(abc.ABC):
     def get_vector(self, vector_id: int) -> np.ndarray:
         """Reconstruct the stored vector for ``vector_id`` (float32, dim,)."""
 
+    def reconstruct_all(self) -> np.ndarray:
+        """Reconstruct every stored vector as one ``(count, dim)`` float32 array.
+
+        Batch jobs (clustering, discovery) need the whole matrix at once. The
+        default reconstructs id-by-id via :meth:`get_vector`; implementations
+        backed by a contiguous store should override with a bulk read.
+        """
+        n = self.count()
+        out = np.zeros((n, self._reconstruct_dim()), dtype=np.float32)
+        for i in range(n):
+            out[i] = self.get_vector(i)
+        return out
+
+    def _reconstruct_dim(self) -> int:
+        return int(getattr(self, "dim", self.get_vector(0).shape[0]) if self.count() else 0)
+
     @abc.abstractmethod
     def delete(self, vector_ids: list[int]) -> None:
         """Remove vectors by id.

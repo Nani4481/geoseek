@@ -12,6 +12,18 @@ same `FaissFlatIPIndex`, same catalog schema — see "What changed" below for
 the one honest exception), and measured with `scripts/measure_tier.py`.
 Nothing is estimated except where explicitly marked.
 
+> **Follow-up (`PHASE7B_FOLLOWUP.md`).** Four Tier-3 threads were run down after
+> this report: (1) the retrieval "precision drop" at 100k is ~78% a
+> judge-coverage artifact — restricting the eval to the Ayodhya sub-corpus
+> reproduces the Phase 7a metrics exactly; (2) a region metadata pre-filter
+> recovers full precision, score-thresholding/near-dup-suppression are
+> second-order; (3) the ingestion-throughput step-change was the **laptop being
+> unplugged from AC power** at 2026-09-06 11:10:29 UTC (ledger rows 47→48) — a
+> measurement-environment artifact, not corpus-size or thermal, and ingestion
+> is index-size-independent on AC; (4) HDBSCAN now completes at 100k in 3.6 min
+> via stratified-sample + nearest-centroid assignment (non-noise ARI 0.96 vs
+> the Tier-1 full clustering).
+
 ## AOI selection
 
 Five geographically diverse AOIs, each a near-full Sentinel-2 MGRS tile
@@ -402,6 +414,19 @@ attributed to a specific cause. It does not change the scalability
 conclusions: even at the degraded rate, ingestion (144 tiles/s) remains
 vastly faster than network fetch (a full scene still takes minutes to
 download vs. seconds to ingest).
+>
+> **RESOLVED (`PHASE7B_FOLLOWUP.md` Part 3).** Root cause found in the OS power
+> logs: the laptop was **disconnected from AC power at 2026-09-06 11:10:29 UTC**
+> (Windows `Kernel-Power` event 105 + `powercfg /batteryreport`), which falls
+> exactly between ledger row 47 (last AC scene, 203.6 tiles/s) and row 48
+> (first battery scene, 93.4 tiles/s); the machine stayed on battery for the
+> rest of the run. On battery the RTX 4060 Laptop GPU and CPU power limits are
+> both cut, ~halving both preprocessing and embedding. This is a
+> measurement-environment artifact, **not** thermal and **not** corpus-size:
+> within the AC segment the index grew ~11× (6,965 → 75,843 vectors) with
+> throughput flat at 210 tiles/s ±6%. Tier-3 ingestion numbers measured after
+> 11:10:29 UTC (rows 48–64) are on battery and understate the AC capability of
+> ~205–210 tiles/s.
 
 **2. FAISS full-file persist time is scaling worse than linearly.** 18.6 ms
 (Tier 1, n=11,394) → 117.7 ms (Tier 2, n=50,126, 6.3x for 4.4x more vectors)
@@ -418,30 +443,55 @@ system ingesting continuously at this size would want either less frequent
 batched saves or an id-mapped/incremental-write index format. Reported
 plainly, per the task's honesty constraint — not a hidden problem.
 
-### Retrieval quality at 100k (`scripts/eval_retrieval_at_scale.py`)
+### Retrieval quality at 100k (`scripts/eval_precision_at_scale.py`)
 
 Re-ran the same 16 Phase 7a queries against the grown index, scoring against
-the **frozen, unchanged** independently-judged ground truth (see the script's
-methodology note in PHASE7B's header and its own docstring for why new
-regions' tiles are not judged — no NIR/SWIR staged for them, a disclosed
-scope boundary):
+the **frozen, unchanged** independently-judged ground truth. The Phase 7a
+judge is a set of per-tile spectral criteria calibrated on 3,267 **Ayodhya**
+tiles (5 of the 16 queries are relative to the Ayodhya river mask
+specifically), and the 8 new regions were staged RGB + SCL only — no
+NIR/SWIR — so their tiles **cannot** be judged by it at all. We therefore
+report two figures and explain why they differ.
+
+**Primary — Ayodhya-domain evaluation (the judgeable corpus), RemoteCLIP,
+macro-avg over 16 queries:**
+
+| | @K=5 | @K=10 | @K=20 |
+|---|--:|--:|--:|
+| recall | 0.228 | 0.365 | **0.705** |
+| precision (padded to K) | 0.425 | 0.381 | **0.356** |
+| NDCG | 0.397 | 0.418 | **0.526** |
+
+This **reproduces the Phase 7a numbers to within rounding** after a 31×
+corpus growth across 8 new biomes. It is expected and it is the point: the
+incremental-ingest proofs already showed the Ayodhya vectors are
+byte-identical at every tier, so the same deterministic RemoteCLIP text
+encoder ranking the same 3,267 Ayodhya tiles yields the same top-K.
+Retrieval quality inside the judgeable domain is unchanged at scale. This is
+also how an analyst actually searches — a sector, not the whole archive — so
+it is the operative figure.
+
+**Retained — global 101,911-tile evaluation (out-of-domain judgement
+artifact):**
 
 | | @K=20 | @K=100 | @K=500 |
 |---|--:|--:|--:|
-| mean recall of originally-relevant tiles | **10.6%** | 24.0% | 53.5% |
-| mean fraction of results from outside Ayodhya (distractors) | **90.6%** | 92.1% | 94.8% |
+| mean recall of originally-relevant tiles | 10.6% | 24.0% | 53.5% |
+| mean fraction of results from outside Ayodhya | 90.6% | 92.1% | 94.8% |
 
-**This is the "more distractors lowers precision" prediction, realized and
-measured.** At 3267 tiles every result for these queries came from the
-single Ayodhya AOI; at 100,887 (a 30.9x larger, far more diverse corpus),
-picking a query's top-20 now returns Ayodhya-relevant hits barely 1 time in
-10, because ~30x more genuinely different content is now competing for the
-same slots. Recall recovers substantially by K=500 (53.5%) — the relevant
-tiles haven't vanished, they've been pushed down the ranking by legitimate
-competition, exactly as expected. Reported without attempting to spin it:
-this is a real, expected cost of scale for a small, curated query set
-evaluated against a much bigger, more diverse corpus — not a defect in
-RemoteCLIP or the search path.
+The original Phase 7b report presented this as "more distractors lowers
+precision, realized and measured." The follow-up
+(`PHASE7B_FOLLOWUP.md` Part 1) ran it down: of the global top-20, only
+**6.6%** are Ayodhya tiles the judge graded 0 (genuine retrieval error);
+**90.6%** are unjudged tiles from the 8 new regions — and visual inspection
+of 187 of them found **81% are on-target for their query text** (desert for
+"open bare ground", tidal channels for "a water body", etc.). Scoring those
+correctly-retrieved but unjudgeable tiles as "irrelevant" is what produces
+the collapse. So the drop is **~78% a judge-coverage artifact** and only a
+few percent real retrieval error — not a defect in RemoteCLIP or the search
+path, and not a genuine precision regression. A region metadata pre-filter
+(the same operation as the domain restriction) recovers the primary figure
+in full; see `PHASE7B_FOLLOWUP.md` Part 2.
 
 ### FlatIP scaling behaviour + the HNSW crossover estimate
 
@@ -543,6 +593,14 @@ computation — was not attempted here: it would change the clustering
 methodology (not just its performance), which is a bigger change than this
 report's scope, and is called out as follow-up work rather than quietly
 substituted in.
+>
+> **DONE (`PHASE7B_FOLLOWUP.md` Part 4).** Stratified-sample (20k across the 9
+> regions) + HDBSCAN on the sample + nearest-centroid assignment of the
+> remaining ~82k tiles completes in **3.6 min** and recovers the Tier-1 cluster
+> structure (non-noise ARI 0.96; the 3 Tier-1 EOM clusters map ~1:1 onto 3 of
+> the 6 at-scale clusters). Hard centroid assignment labels every tile, so it
+> does not reproduce HDBSCAN's ~27% noise set (all-tiles ARI ~0.5). PCA-first
+> and leaf-mode remain open for finer structure.
 
 ### Tests / seams
 

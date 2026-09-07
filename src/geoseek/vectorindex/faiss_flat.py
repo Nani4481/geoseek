@@ -46,6 +46,13 @@ class FaissFlatIPIndex(VectorIndex):
     def get_vector(self, vector_id: int) -> np.ndarray:
         return self._index.reconstruct(int(vector_id))
 
+    def reconstruct_all(self) -> np.ndarray:
+        """Bulk reconstruct all vectors in one call (``faiss.reconstruct_n``)."""
+        n = self._index.ntotal
+        if n == 0:
+            return np.zeros((0, self.dim), dtype=np.float32)
+        return np.ascontiguousarray(self._index.reconstruct_n(0, n), dtype=np.float32)
+
     def delete(self, vector_ids: list[int]) -> None:
         raise NotImplementedError(
             "FaissFlatIPIndex is append-only: positional ids cannot be deleted without "

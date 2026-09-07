@@ -1,0 +1,42 @@
+{
+  "finding": "The Tier-3 ingestion throughput step-change is a measurement-environment artifact: the laptop was disconnected from AC power mid-run. It is NOT a corpus-size / index-scale degradation and NOT thermal throttling.",
+  "root_cause": "AC power disconnected at 2026-09-06T11:10:29Z (16:40:29 IST), which falls between ledger row 47 (last AC scene, finished 2026-09-06T11:06:25Z, 203.6 tiles/s) and row 48 (first battery scene, finished 2026-09-06T11:15:32Z, 93.4 tiles/s). On DC/battery the RTX 4060 Laptop GPU power/clock budget and the CPU package power limit are both cut, ~halving BOTH the CPU-side tile preprocessing and the GPU-side embedding forward pass - which is why mean_embed_latency_ms and build_time_s doubled together and stayed doubled for the rest of the run (the machine remained on battery until 2026-09-06T13:04:07Z, after the run ended at ~12:35Z).",
+  "evidence": {
+    "windows_event_log": "System log, Microsoft-Windows-Kernel-Power event ID 105 'Power source change' at 2026-09-06 16:40:27 IST (= 11:10:27 UTC).",
+    "windows_battery_report": [
+      "2026-09-06 11:06:45  Active  AC       60%   (Tier-3 run in progress on AC)",
+      "2026-09-06 16:40:29  Active  Battery  100%  (unplugged at full charge = 11:10:29 UTC)",
+      "2026-09-06 18:34:07  Active  AC       32%   (reconnected, long after run ended)"
+    ],
+    "ledger_segments": {
+      "AC_rows_0_to_47": {
+        "n_scenes": 48,
+        "n_big_scenes": 31,
+        "index_vectors_first": 6965,
+        "index_vectors_last": 75843,
+        "big_scene_tiles_per_sec_mean": 210.5,
+        "big_scene_tiles_per_sec_min": 193.9,
+        "big_scene_tiles_per_sec_max": 218.8,
+        "big_scene_embed_ms_per_tile_mean": 2.475,
+        "first_row_ts": "2026-09-06T06:32:33.224248+00:00",
+        "last_row_ts": "2026-09-06T11:06:25.571768+00:00"
+      },
+      "BATTERY_rows_48_to_64": {
+        "n_scenes": 17,
+        "n_big_scenes": 11,
+        "index_vectors_first": 77692,
+        "index_vectors_last": 100887,
+        "big_scene_tiles_per_sec_mean": 123.7,
+        "big_scene_tiles_per_sec_min": 88.7,
+        "big_scene_tiles_per_sec_max": 155.9,
+        "big_scene_embed_ms_per_tile_mean": 4.598,
+        "first_row_ts": "2026-09-06T11:15:32.952004+00:00",
+        "last_row_ts": "2026-09-06T12:35:01.995825+00:00"
+      }
+    },
+    "index_size_independence": "Within the AC segment the index grew 6,965 -> 75,843 vectors (~11x) while big-scene throughput stayed 210.5 tiles/s mean (193.9-218.8, +/-6%) - flat. The drop to 123.7 tiles/s mean coincides with the power-source change, not with any index-size threshold. Ingestion cost in this architecture is per-tile (preprocess + forward pass + FAISS append + SQLite insert) and does not scale with existing corpus size; this was the expectation and it held on AC.",
+    "thermal_ruled_out": "A thermal throttle would relax during the multi-minute network-fetch gaps between scenes (GPU idle, short duty cycle). The degradation instead persisted uniformly across all 17 post-switch scenes and every inter-scene gap - the signature of a sustained power-envelope change, not heat."
+  },
+  "impact_on_reported_numbers": "All Tier-3 ingestion-throughput numbers measured after 2026-09-06T11:10:29Z (ledger rows 48-64, i.e. the 'ingestion throughput 144.1 tiles/s / -29%' and 'pure embedding 293.4 tiles/s / -22%' cells in the Tier-3 measurement table) are on battery power and UNDERSTATE the machine's actual capability. The AC-power rate (rows 0-47, and Phase 7a / Tier 1 / Tier 2, all on AC) is ~205-210 tiles/s and is the number that reflects sustained capability. No re-run is required to establish this; the OS power-state log is authoritative.",
+  "hardware_note_for_PS2.3": "Hardware: RTX 4060 Laptop GPU (8 GB), driver 592.82, 16 logical CPUs, Windows 11. Power scheme 'Balanced'. AC vs battery materially changes sustained GPU/CPU throughput on this class of machine - benchmarks intended to characterise capability must be run on AC and the power source recorded."
+}

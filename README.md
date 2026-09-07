@@ -881,8 +881,10 @@ machine) in [`PHASE7B.md`](PHASE7B.md).
   same slots — the "more distractors" effect, quantified.
 * **Two honest degradations, reported plainly**: ingestion throughput
   step-changed ~2x worse partway through the unattended ~4-hour Tier 3 run
-  (host-level cause unconfirmed); FAISS's whole-file-rewrite persist cost
-  scales super-linearly (18.6 ms → 1.36 s across the three tiers).
+  (**follow-up root cause: the laptop was unplugged from AC** — a
+  measurement-environment artifact, not scalability); FAISS's
+  whole-file-rewrite persist cost scales super-linearly (18.6 ms → 1.36 s
+  across the three tiers).
 * **HDBSCAN re-clustering did not hold up unmodified at 100k/512-d** —
   49+ minutes single-threaded, 60m50s even after adding multi-core support,
   both abandoned without a result: a genuine, disclosed scalability wall,
@@ -891,12 +893,40 @@ machine) in [`PHASE7B.md`](PHASE7B.md).
   HDBSCAN's `leaf` mode surfaces clusters that are >96% single-region with
   *zero* location metadata — the generalization claim, made concrete.
 
+### Phase 7b follow-up ([`PHASE7B_FOLLOWUP.md`](PHASE7B_FOLLOWUP.md))
+
+Four Tier-3 threads run down:
+
+* **The precision drop is ~78% a judgement artifact.** The frozen Phase 7a
+  judge only scores Ayodhya tiles (NDVI/NDWI/NDBI + an Ayodhya river mask); at
+  100k the top-K is 90% tiles from 8 other regions it *cannot* score. Visual
+  inspection: **81% of those un-scoreable high-ranked tiles are on-target** for
+  their query. Restricting the eval to the Ayodhya sub-corpus **reproduces the
+  Phase 7a metrics exactly** (P@20 0.356, NDCG@20 0.526) — retrieval quality
+  inside the judgeable domain is unchanged after a 31× corpus growth.
+* **Region metadata pre-filter recovers full precision** (P@20 0.028 → 0.356);
+  near-duplicate suppression is a marginal positive; score-thresholding is a
+  no-op at K ≤ 20 on a corpus this large. Measured each alone and combined
+  (`scripts/eval_precision_at_scale.py`).
+* **The ingestion slowdown was the laptop unplugged from AC** at 2026-09-06
+  11:10:29 UTC (Windows power logs), landing exactly between ledger rows 47 and
+  48 — a measurement-environment artifact, not thermal and not corpus-size
+  (throughput was flat at 210 tiles/s ±6% across an 11× index growth on AC).
+* **HDBSCAN now completes at 100k in 3.6 min** — stratified 20k sample +
+  nearest-centroid assignment (`scripts/cluster_at_scale.py`), recovering the
+  Tier-1 cluster structure (non-noise ARI 0.96).
+
 ```bash
 python scripts/run_diverse_ingest.py --target 100000 --regions dehradun jaisalmer sundarbans delhi_ncr kanha kerala_backwaters kutch deccan
 python scripts/measure_tier.py --tier tier3 --incremental-region kanha --ledger-since-index 31
 python scripts/cluster_tiles.py --min-cluster-size 40 --n-jobs -1
 python scripts/eval_retrieval_at_scale.py --tier tier3
 python scripts/plot_scale.py
+
+# follow-up
+python scripts/eval_precision_at_scale.py
+python scripts/diagnose_judge_transfer.py --top-n 12
+python scripts/cluster_at_scale.py --sample-size 20000 --n-jobs -1
 ```
 
 ## Tests
@@ -1057,4 +1087,7 @@ geoseek/
     measure_tier.py           Phase 7b: storage/latency/RAM-VRAM/incremental-proof per tier
     eval_retrieval_at_scale.py  Phase 7b Tier 3: retrieval recall/distractor-rate at scale
     plot_scale.py             Phase 7b Tier 3: latency-vs-scale + storage-vs-scale plots
+    eval_precision_at_scale.py  Phase 7b follow-up: corrected precision + region-filter/threshold/dedup deltas
+    diagnose_judge_transfer.py  Phase 7b follow-up: contact sheets of un-scoreable high-ranked tiles
+    cluster_at_scale.py       Phase 7b follow-up: HDBSCAN on a stratified sample + nearest-centroid assignment
 ```
