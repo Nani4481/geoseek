@@ -570,6 +570,31 @@ re-implement any rule. Stage-1 numbers reproduce §8 exactly (a self-check).
 
 ### 9.1 OSCD — cumulative pixel metrics @ the deployed operating point (0.80)
 
+> **How to read this table — the two columns measure different regimes and must be
+> read together.** The **OSCD column** scores each stage on a benchmark of
+> **same-season, mostly urban, bitemporal pairs**. The suppression stages (quality,
+> radiometric, phenology) are calibrated for the **deployment regime** — Ayodhya's
+> **multi-year interval with a strong seasonal confounder** (a drought March in
+> 2019 vs a green March in 2024) — a confounder that OSCD, by construction, does
+> **not** contain. So a stage that scores **negative on OSCD is not evidence it
+> fails**; it is evidence the benchmark lacks the very confounder that stage
+> exists to remove. The OSCD column is a *safety check* (does the stage break the
+> raw detector on labelled data?) and a *domain-transfer probe*; the **Ayodhya
+> column (§9.3–9.4) is the deployment-regime evidence** and is where each
+> suppression stage earns or fails to earn its place. Concretely: **phenology
+> removes 110 seasonal false positives on Ayodhya** (§9.3) **while costing recall
+> on OSCD, which has no seasonal gap to suppress.**
+>
+> **What ships by default.** `python -m geoseek.change.analyze` runs the **full
+> pipeline — all five suppression gates + persistence + SAR + the 6-term
+> confidence score + `queue_score` ranking + diversify — at the frozen
+> precision-favouring operating point 0.80** (the threshold embedded in the
+> checkpoint's eval card; §8). No gate is disabled. The rationale is PS 2.2.3's
+> precision bias: the analyst queue must **lead with trustworthy, temporally-
+> confirmed detections**, and on the deployment data every stage 4–8 measurably
+> serves that goal (§9.3–9.4). The OSCD-negative stages are kept on because the
+> benchmark they under-perform on is not the regime the system runs in.
+
 | # | stage | P | R | F1 | IoU | FPR | ΔF1 |
 |---|---|--:|--:|--:|--:|--:|--:|
 | 1 | FC-Siam-diff raw output | 0.6034 | 0.5101 | **0.5528** | 0.3820 | 0.0183 | — |
