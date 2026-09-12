@@ -147,7 +147,10 @@ def run():
     global CID
     print("per-view interactive latency (network disabled, N=12, budget < 1000 ms):\n")
 
-    print(" SEARCH view")
+    print(" OVERVIEW view (presentation layer)")
+    bench("GET /presentation/summary", lambda: client.get("/presentation/summary"))
+
+    print("\n SEARCH view")
     bench("GET /health", lambda: client.get("/health"))
     bench("GET /stats", lambda: client.get("/stats"))
     bench("GET /search/text", lambda: client.get("/search/text", params={"q": "an open water reservoir", "k": 30}))
@@ -186,6 +189,9 @@ def run():
           lambda: client.get(f"/candidates/{CID}/imagery", params={"date": "2019", "view": "rgb"}))
     bench("GET .../imagery overlay (cold)", lambda: (_render_cached.cache_clear(),
           client.get(f"/candidates/{CID}/imagery", params={"date": "2024", "view": "overlay"}))[1], n=8)
+    # the visual-first detail + overview cards request scale=2 (native render cached, PIL upsample on top)
+    bench("GET .../imagery rgb x2 (cold)", lambda: (_render_cached.cache_clear(),
+          client.get(f"/candidates/{CID}/imagery", params={"date": "2019", "view": "rgb", "scale": 2}))[1], n=8)
 
     print("\n DECISION + AUDIT + EXPORT")
     bench("POST /candidates/{id}/decision",
@@ -210,6 +216,11 @@ def functional_checks():
     checks = []
     h = client.get("/health").json()
     checks.append(("health / stats", h["status"] == "ok" and client.get("/stats").json()["index"]["tiles"] > 0))
+    ps = client.get("/presentation/summary").json()
+    checks.append(("overview summary (counters + featured, offline)",
+                   ps["offline"] and ps["counters"]["change_candidates"] > 1000
+                   and 1 <= len(ps["featured"]) <= 4
+                   and all(f["caption"] and f["confidence_band"] for f in ps["featured"])))
     s = client.get("/search/text", params={"q": "river", "k": 5}).json()
     checks.append(("search returns hits", s["count"] >= 1))
     q = client.get("/candidates", params={"limit": 20}).json()

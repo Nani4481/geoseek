@@ -185,6 +185,14 @@ def stats():
     return _get_analyst().stats()
 
 
+@app.get("/presentation/summary")
+def presentation_summary():
+    """Headline counters + plain-language featured findings for the demo /
+    overview layer. Read-only projection over the ranked detail list and the
+    catalog seam - the analyst endpoints above are unaffected."""
+    return _get_analyst().presentation_summary()
+
+
 @app.get("/candidates")
 def list_candidates(
     bbox: Optional[str] = Query(None, description="west,south,east,north (EPSG:4326)"),
@@ -219,6 +227,7 @@ def candidate_imagery(
     candidate_id: str,
     date: str = Query("2024", description="2019 | 2021 | 2024"),
     view: str = Query("rgb", description="rgb | overlay (change mask on that date)"),
+    scale: int = Query(1, ge=1, le=4, description="integer upsample for the presentation layer; 1 = native"),
 ):
     svc = _get_analyst()
     c = svc._by_id.get(candidate_id)
@@ -230,6 +239,16 @@ def candidate_imagery(
         png = render_candidate_imagery(c, date=date, view=view, prob_raster_path=svc.prob_raster_path)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
+    if scale > 1:  # presentation layer only - the native render + its LRU are untouched
+        import io as _io
+
+        from PIL import Image
+
+        im = Image.open(_io.BytesIO(png))
+        im = im.resize((im.width * scale, im.height * scale), Image.LANCZOS)
+        buf = _io.BytesIO()
+        im.save(buf, format="PNG")
+        png = buf.getvalue()
     return Response(content=png, media_type="image/png",
                     headers={"Cache-Control": "public, max-age=86400"})
 
@@ -341,5 +360,5 @@ def _root():
     return {"service": "geoseek analyst interface", "ui": "/app/", "docs": "/docs",
             "endpoints": ["/search/text", "/search/image", "/candidates", "/candidates/{id}",
                           "/candidates/{id}/imagery", "/candidates/{id}/decision", "/audit",
-                          "/export", "/health", "/stats", "/discovery/clusters",
-                          "/discovery/similar", "/candidates/{id}/similar"]}
+                          "/export", "/health", "/stats", "/presentation/summary",
+                          "/discovery/clusters", "/discovery/similar", "/candidates/{id}/similar"]}

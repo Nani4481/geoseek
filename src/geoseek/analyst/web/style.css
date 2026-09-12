@@ -165,3 +165,121 @@ button.reject { background: var(--bad); color: #fff; border: 0; padding: 9px 18p
 #toast.show { opacity: .95; }
 .kvline { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--muted); }
 .kvline b { color: var(--ink); font-weight: 600; }
+
+/* =====================================================================
+   PRESENTATION LAYER — overview / demo-mode / visual-first detail.
+   Sits on top of the analyst views; none of the rules above change.
+   ===================================================================== */
+
+/* ---- header demo button ---- */
+.demo-launch {
+  background: var(--ink); color: var(--bg); border: 1px solid var(--ink);
+  padding: 6px 14px; border-radius: 999px; font-weight: 600; font-size: 12px; white-space: nowrap;
+}
+.demo-launch:hover { opacity: .88; }
+
+/* ---- overview hero ---- */
+.ov-hero { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; margin-bottom: 18px; }
+.ov-title { margin: 0; font-size: 30px; letter-spacing: -.5px; }
+.ov-tag { margin: 4px 0 0; color: var(--muted); font-size: 15px; max-width: 62ch; }
+.ov-offline {
+  display: inline-flex; align-items: center; gap: 8px; white-space: nowrap;
+  background: color-mix(in srgb, var(--ok) 12%, var(--panel)); color: var(--ok);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, var(--line));
+  padding: 8px 14px; border-radius: 999px; font-weight: 700; font-size: 13px;
+}
+.ov-offline i { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); box-shadow: 0 0 0 4px color-mix(in srgb, var(--ok) 22%, transparent); }
+
+/* ---- counters ---- */
+.ov-counters { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; margin-bottom: 20px; }
+.ov-counters .stat { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; box-shadow: var(--shadow); }
+.ov-counters .stat .n { font-size: 30px; font-weight: 700; letter-spacing: -.5px; line-height: 1.1; }
+.ov-counters .stat .l { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: .5px; margin-top: 4px; }
+.ov-counters .stat.accent .n { color: var(--accent); }
+
+.ov-mappanel canvas.map { height: 560px; }
+.ov-mappanel { margin-bottom: 18px; }
+
+/* ---- featured findings ---- */
+.ov-featured { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.ff-card { margin: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; box-shadow: var(--shadow); cursor: pointer; transition: border-color .12s, transform .12s; }
+.ff-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.ff-imgs { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; background: var(--line); }
+.ff-im { position: relative; }
+.ff-im img { width: 100%; aspect-ratio: 1/1; object-fit: cover; display: block; background: var(--chip); }
+.ff-im span { position: absolute; left: 6px; bottom: 6px; background: rgba(0,0,0,.66); color: #fff; font-size: 10px; padding: 2px 6px; border-radius: 5px; letter-spacing: .3px; }
+.ff-card figcaption { padding: 12px 13px 14px; }
+.ff-badges { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-bottom: 7px; }
+.ff-card p { margin: 0 0 8px; font-size: 13.5px; line-height: 1.45; }
+.ff-sub { font-size: 12px; color: var(--muted); }
+
+/* plain-language confidence band pill (used on cards + detail head) */
+.band { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: 11px; font-weight: 700; letter-spacing: .3px; border: 1px solid transparent; }
+.band.high { background: color-mix(in srgb, var(--ok) 16%, var(--panel)); color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); }
+.band.medium { background: color-mix(in srgb, var(--warn) 16%, var(--panel)); color: var(--warn); border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+.band.low { background: color-mix(in srgb, var(--bad) 14%, var(--panel)); color: var(--bad); border-color: color-mix(in srgb, var(--bad) 38%, var(--line)); }
+
+/* ---- overview search bar ---- */
+.ov-searchbar { display: flex; gap: 12px; align-items: flex-end; margin: 20px 0 4px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; box-shadow: var(--shadow); }
+.ov-searchbar label { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .4px; }
+.ov-searchbar .grow { flex: 1; }
+.ov-searchbar input { font: inherit; padding: 9px 12px; border: 1px solid var(--line-strong); border-radius: 8px; background: var(--panel); color: var(--ink); width: 100%; }
+
+/* ---- visual-first candidate detail ---- */
+.imagery-panel .imgrow.big { grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.imagery-panel .imgrow.big img { aspect-ratio: 4/3; min-height: 300px; image-rendering: auto; }
+@media (min-width: 1100px) { .imagery-panel .imgrow.big img { min-height: 40vh; } }
+@media (max-width: 900px) { .imagery-panel .imgrow.big { grid-template-columns: 1fr; } }
+.imagery-panel figcaption { font-size: 13px; padding: 8px 12px; }
+
+.detail-head .plain { font-size: 12px; color: var(--muted); font-weight: 500; margin-top: 3px; }
+.detail-head .kv .band { align-self: flex-start; }
+.detail-head .kv .under { font-size: 13px; font-weight: 600; margin-top: 3px; }
+
+/* collapsible disclosure panels (evidence + provenance) */
+details.disclosure { padding: 0; }
+details.disclosure > summary {
+  list-style: none; cursor: pointer; margin: 0; padding: 13px 16px;
+  font-size: 13px; font-weight: 600; color: var(--ink);
+  display: flex; align-items: center; gap: 10px;
+}
+details.disclosure > summary::-webkit-details-marker { display: none; }
+details.disclosure > summary::before {
+  content: "▸"; color: var(--muted); font-size: 12px; transition: transform .12s;
+}
+details.disclosure[open] > summary { border-bottom: 1px solid var(--line); }
+details.disclosure[open] > summary::before { transform: rotate(90deg); }
+details.disclosure > summary:hover { background: var(--chip); }
+
+/* ---- guided demo overlay ---- */
+body.demo-on { scroll-behavior: smooth; }
+#demo { position: fixed; inset: 0; z-index: 60; pointer-events: none; }
+.demo-banner {
+  position: absolute; top: 0; left: 0; right: 0; pointer-events: none;
+  background: var(--ink); color: var(--bg); text-align: center;
+  font-size: 12px; font-weight: 700; letter-spacing: .5px; padding: 7px 12px;
+}
+.demo-banner .demo-esc { font-weight: 400; opacity: .7; margin-left: 12px; }
+.demo-caption {
+  position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px)); pointer-events: auto;
+  background: var(--panel); border: 1px solid var(--line-strong); border-radius: 14px;
+  box-shadow: 0 8px 40px rgba(10,20,40,.28); padding: 18px 20px;
+}
+.demo-progress { display: flex; gap: 5px; margin-bottom: 10px; }
+.demo-progress i { flex: 1; height: 4px; border-radius: 999px; background: var(--line); }
+.demo-progress i.on { background: var(--accent); }
+.demo-step { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); }
+.demo-caption h4 { margin: 3px 0 6px; font-size: 17px; }
+.demo-caption p { margin: 0 0 14px; font-size: 14px; color: var(--ink); line-height: 1.5; }
+.demo-controls { display: flex; gap: 10px; align-items: center; }
+.demo-controls .spacer { flex: 1; }
+.demo-controls button { padding: 8px 16px; border-radius: 8px; }
+.demo-controls button:disabled { opacity: .4; cursor: default; }
+
+/* pulse used by demo step 4 to draw the eye to the offline proof */
+.demo-pulse { animation: demopulse 1s ease-in-out 3; }
+@keyframes demopulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent); }
+  50% { box-shadow: 0 0 0 10px transparent; }
+}

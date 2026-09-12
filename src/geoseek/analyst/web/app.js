@@ -9,6 +9,13 @@ const CTYPE_COLOR = {
   clearance: "#b5850b", road: "#6b7280", other: "#3f9e6b",
 };
 const AOI_FALLBACK = [82.0124, 26.3613, 82.8459, 27.1098];
+const CTYPE_HUMAN = {
+  water_gain: "New open water / flooding", water_loss: "Water body shrank or dried",
+  construction: "New built-up surface", clearance: "Vegetation or land cleared",
+  road: "New road / linear corridor", other: "Surface change (unclassified)",
+};
+let PRES = null;          // /presentation/summary, fetched once at boot
+let OBS_DATES = [];        // e.g. ["2019-03-30","2021-03-04","2024-03-08"]
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -143,13 +150,14 @@ function legend(elId, types) {
 }
 
 /* ---------------------------------------------------------------- routing */
-const views = ["search", "queue", "detail", "discovery"];
+const views = ["overview", "search", "queue", "detail", "discovery"];
 function go(route) { location.hash = "#/" + route; }
 function router() {
-  const parts = (location.hash || "#/queue").slice(2).split("/");
-  const route = views.includes(parts[0]) ? parts[0] : "queue";
+  const parts = (location.hash || "#/overview").slice(2).split("/");
+  const route = views.includes(parts[0]) ? parts[0] : "overview";
   views.forEach(v => $("#view-" + v).classList.toggle("active", v === route));
   $$("nav button").forEach(b => b.classList.toggle("active", b.dataset.route === route));
+  if (route === "overview") ensureOverview();
   if (route === "search") ensureSearch();
   if (route === "queue") ensureQueue();
   if (route === "discovery") ensureDiscovery();
@@ -157,6 +165,122 @@ function router() {
 }
 window.addEventListener("hashchange", router);
 $$("nav button").forEach(b => b.addEventListener("click", () => go(b.dataset.route)));
+
+/* ---------------------------------------------------------------- OVERVIEW
+   Demo-facing landing view. Read-only projection of /presentation/summary +
+   the same /candidates footprints the Review Queue uses. */
+let overviewMap, overviewInit = false;
+const nf = (n) => (n == null ? "–" : Number(n).toLocaleString());
+
+function persistenceHuman(persistence, nLater) {
+  const obs = nLater === 1 ? "observation" : "observations";
+  return ({
+    persistent: `Confirmed across ${nLater} later ${obs}`,
+    progressive: `Grew steadily across ${nLater} later ${obs}`,
+    recent: "Only visible in the most recent interval",
+    transient: "Appeared, then reverted — treat with caution",
+    inconsistent: "Flickers across dates — low trust",
+  })[persistence] || "Single before / after pair only";
+}
+function laterObsCount(traj) {
+  const end = ((traj && traj.earliest_supported_change) || {}).window;
+  const e = end ? end[1] : null;
+  const dates = OBS_DATES.length ? OBS_DATES
+    : Array.from(new Set([].concat(...((traj && traj.intervals) || []).map(i => i.window || [])))).sort();
+  const n = e ? dates.filter(d => d >= e).length : 0;
+  return n || 1;
+}
+function confBand(v) { v = +v || 0; return v >= 0.85 ? "high" : (v >= 0.60 ? "medium" : "low"); }
+
+function ensureOverview() {
+  if (overviewInit) { return; }
+  overviewInit = true;
+  overviewMap = new CoordMap($("#ov_map"), (it) => { if (it.id) go("detail/" + it.id); });
+  $("#ov_legend").innerHTML = TYPES.map(t =>
+    `<span><i style="background:${CTYPE_COLOR[t] || "#888"}"></i>${esc(CTYPE_HUMAN[t] || t)}</span>`).join("");
+  $("#ov-go").addEventListener("click", overviewSearch);
+  $("#ov-q").addEventListener("keydown", e => { if (e.key === "Enter") overviewSearch(); });
+  loadOverview();
+}
+function overviewSearch() {
+  const q = $("#ov-q").value.trim();
+  if (q) $("#q").value = q;
+  go("search");
+}
+async function loadOverview() {
+  try {
+    if (!PRES) PRES = await api("/presentation/summary");
+    OBS_DATES = PRES.observation_dates || OBS_DATES;
+    renderOverviewCounters(PRES);
+    renderFeatured(PRES.featured || []);
+    prewarm(featuredUrls(PRES.featured || []));
+  } catch (e) {
+    $("#ov-featured").innerHTML = `<span class="muted">${esc(e.message)}</span>`;
+  }
+  try {
+    const d = await api("/candidates?limit=400&sort=queue_score");
+    overviewMap.setData((d.candidates || []).map(c => ({
+      id: c.candidate_id, ring: c.geometry && c.geometry.coordinates[0],
+      lon: c.centroid_lonlat[0], lat: c.centroid_lonlat[1],
+      color: CTYPE_COLOR[c.change_type] || "#888",
+    })), AOI_FALLBACK);
+  } catch (e) { /* map is a nicety; counters + cards already rendered */ }
+}
+function renderOverviewCounters(p) {
+  const c = p.counters || {};
+  if (p.aoi) $("#ov-aoi").textContent = p.aoi;
+  const cells = [
+    ["change_candidates", "change candidates", true],
+    ["tiles_indexed", "tiles indexed", false],
+    ["regions", "regions", false],
+    ["scenes", "satellite scenes", false],
+    ["high_confidence", "high-confidence", false],
+  ];
+  $("#ov-counters").innerHTML = cells.map(([k, label, accent]) =>
+    `<div class="stat${accent ? " accent" : ""}"><div class="n">${nf(c[k])}</div><div class="l">${label}</div></div>`
+  ).join("");
+}
+function featuredUrls(featured) {
+  const u = [];
+  for (const f of featured) {
+    if (!f.imagery) continue;
+    u.push(f.imagery.before + "&scale=2", f.imagery.after + "&scale=2");
+  }
+  return u;
+}
+function renderFeatured(featured) {
+  if (!featured.length) { $("#ov-featured").innerHTML = `<span class="muted">no featured findings</span>`; return; }
+  $("#ov-featured").innerHTML = featured.map(f => {
+    const band = (f.confidence_band || confBand(f.confidence)).toLowerCase();
+    return `<figure class="ff-card" data-id="${esc(f.candidate_id)}">
+      <div class="ff-imgs">
+        <div class="ff-im"><img loading="lazy" src="${esc(f.imagery.before)}&scale=2" alt="before"><span>before · ${esc(f.before_date)}</span></div>
+        <div class="ff-im"><img loading="lazy" src="${esc(f.imagery.after)}&scale=2" alt="after"><span>after · ${esc(f.after_date)}</span></div>
+      </div>
+      <figcaption>
+        <div class="ff-badges">
+          <span class="badge b-${esc(f.change_type)}">${esc(f.change_type_human || CTYPE_HUMAN[f.change_type] || f.change_type)}</span>
+          <span class="band ${band}">${band[0].toUpperCase() + band.slice(1)} confidence</span>
+        </div>
+        <p>${esc(f.caption)}</p>
+        <div class="ff-sub">confidence ${num(f.confidence)} · ${esc(f.persistence_human)}</div>
+      </figcaption>
+    </figure>`;
+  }).join("");
+  $$("#ov-featured .ff-card").forEach(el =>
+    el.addEventListener("click", () => go("detail/" + el.dataset.id)));
+}
+
+/* fire-and-forget: pull demo-path imagery into the HTTP cache so the guided
+   walkthrough paints instantly. Same-origin only. */
+const _prewarmed = new Set();
+function prewarm(urls) {
+  for (const u of urls) {
+    if (!u || _prewarmed.has(u)) continue;
+    _prewarmed.add(u);
+    fetch(u, { cache: "force-cache" }).catch(() => {});
+  }
+}
 
 /* ---------------------------------------------------------------- SEARCH */
 let searchMap, searchInit = false;
@@ -311,15 +435,21 @@ async function openDetail(id) {
 }
 function renderDetail(d) {
   const ct = d.change_type;
+  const band = confBand(d.confidence);
+  const nLater = laterObsCount(d.temporal_trajectory);
+  const persHuman = persistenceHuman(d.persistence, nLater);
   $("#d_head").innerHTML = `
     <div class="kv"><span class="k">candidate</span><span class="v mono">${esc(d.candidate_id)}</span></div>
-    <div class="kv"><span class="k">type</span><span class="v"><span class="badge b-${ct}">${esc(ct)}</span></span></div>
-    <div class="kv" style="min-width:160px"><span class="k">confidence ${num(d.confidence)}</span>
-      <span class="v"><span class="meter"><i style="width:${Math.round((d.confidence || 0) * 100)}%"></i></span></span></div>
+    <div class="kv"><span class="k">type</span><span class="v"><span class="badge b-${ct}">${esc(ct)}</span></span>
+      <span class="plain">${esc(CTYPE_HUMAN[ct] || ct)}</span></div>
+    <div class="kv" style="min-width:150px"><span class="k">confidence</span>
+      <span class="v"><span class="band ${band}">${band[0].toUpperCase() + band.slice(1)}</span></span>
+      <span class="under">${num(d.confidence)}</span></div>
     <div class="kv"><span class="k">significance</span><span class="v">${num(d.significance)}</span></div>
     <div class="kv"><span class="k">area</span><span class="v">${Math.round(d.area_m2).toLocaleString()} m²</span></div>
     <div class="kv"><span class="k">location</span><span class="v">${num(d.centroid_lonlat[1], 4)}°N ${num(d.centroid_lonlat[0], 4)}°E</span></div>
-    <div class="kv"><span class="k">persistence</span><span class="v">${esc(d.persistence)}</span></div>
+    <div class="kv"><span class="k">persistence</span><span class="v">${esc(d.persistence)}</span>
+      <span class="plain">${esc(persHuman)}</span></div>
     <div class="kv"><span class="k">earliest supported</span><span class="v">${esc((d.earliest_supported || []).join(" → ") || "–")}</span></div>
     <div class="kv"><span class="k">verdict</span><span class="v verdict ${d.current_decision ? d.current_decision.decision : "undecided"}">${d.current_decision ? d.current_decision.decision : "undecided"}</span></div>`;
 
@@ -411,7 +541,7 @@ function paintImages() {
   const cfg = [["before", "rgb", dt], ["after", "rgb", after], ["change overlay", "overlay", after]];
   $("#d_imgs").innerHTML = cfg.map(([cap, view, date]) => `
     <figure><figcaption><span>${cap}</span><span>${date}</span></figcaption>
-      <img loading="lazy" src="/candidates/${encodeURIComponent(id)}/imagery?date=${date}&view=${view}" alt="${cap} ${date}"></figure>`).join("");
+      <img loading="lazy" src="/candidates/${encodeURIComponent(id)}/imagery?date=${date}&view=${view}&scale=2" alt="${cap} ${date}"></figure>`).join("");
 }
 function ndeltas(ev) {
   return `NDVI ${sgn(ev.ndvi_anomaly)} · NDBI ${sgn(ev.ndbi_anomaly)} · NDWI ${sgn(ev.ndwi_anomaly)}`;
@@ -502,13 +632,152 @@ async function runDiscovery() {
   } catch (e) { $("#disc_results").innerHTML = `<span class="muted">${esc(e.message)}</span>`; }
 }
 
+/* ---------------------------------------------------------------- GUIDED DEMO
+   A scripted 4-step walkthrough for non-specialist viewers. It drives the real
+   views by calling the same functions the analyst UI uses and hits the live API
+   at every step — no mock data, no hardcoded results. Escapable at any time. */
+const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+function waitFor(pred, timeout = 8000, interval = 120) {
+  return new Promise((resolve) => {
+    const t0 = performance.now();
+    const tick = () => {
+      let ok = false; try { ok = !!pred(); } catch (e) {}
+      if (ok || performance.now() - t0 > timeout) return resolve(ok);
+      setTimeout(tick, interval);
+    };
+    tick();
+  });
+}
+
+const DEMO = { active: false, i: 0, running: false };
+const DEMO_STEPS = [
+  {
+    title: "Ask in plain language",
+    body: "No keywords, no coordinates — a sentence. The tile index is searched " +
+      "semantically and the best-matching Sentinel-2 tiles come back ranked and " +
+      "plotted on the offline canvas.",
+    run: async () => {
+      go("search"); ensureSearch();
+      $("#q").value = (PRES && PRES.demo && PRES.demo.search_query) || "an open water reservoir or pond";
+      await runSearch();
+      await waitFor(() => $$("#s_cards .card img").length > 0, 9000);
+    },
+  },
+  {
+    title: "One place, three dates, and the change overlay",
+    body: "The strongest water-gain candidate. Before / after / overlay imagery " +
+      "dominates the view; the 2019 · 2021 · 2024 selector steps through every " +
+      "observation. “Why did the system flag this?” opens the full evidence and suppression trace.",
+    run: async () => {
+      const id = PRES && PRES.demo && PRES.demo.water_gain_candidate_id;
+      if (!id) return;
+      // visual-first: the walkthrough always shows the collapsed detail,
+      // whatever state a presenter left the disclosures in earlier
+      $$("#view-detail details.disclosure").forEach(d => { d.open = false; });
+      await openDetail(id);
+      await waitFor(() => {
+        const im = $$("#d_imgs img");
+        return im.length === 3 && im.every(x => x.complete && x.naturalWidth > 0);
+      }, 14000);
+    },
+  },
+  {
+    title: "Find more places like it",
+    body: "One click runs a nearest-neighbour search in the same embedding space — " +
+      "other tiles across every indexed region that look like this one, with the " +
+      "HDBSCAN cluster map for context.",
+    run: async () => {
+      const seed = PRES && PRES.demo && PRES.demo.discovery_seed;
+      if (seed) $("#disc_seed").value = seed;
+      go("discovery"); ensureDiscovery();
+      await runDiscovery();
+      await waitFor(() => $$("#disc_results .card img").length > 0, 10000);
+    },
+  },
+  {
+    title: "All of this ran offline",
+    body: "No CDN, no web fonts, no map tiles, no outbound calls — RemoteCLIP, the " +
+      "FAISS index, the SQLite catalog and the change rasters are local files. Every " +
+      "candidate carries its full provenance chain and every analyst decision goes to " +
+      "an append-only audit trail.",
+    run: async () => {
+      go("overview"); ensureOverview();
+      await waitFor(() => $("#ov-counters").children.length > 0, 5000);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      for (const el of [$("#ov-offline"), $("#ov-counters")]) {
+        if (!el) continue;
+        el.classList.remove("demo-pulse"); void el.offsetWidth; el.classList.add("demo-pulse");
+      }
+    },
+  },
+];
+
+async function demoPrewarm() {
+  const id = PRES && PRES.demo && PRES.demo.water_gain_candidate_id;
+  const u = [];
+  if (id) {
+    const b = `/candidates/${encodeURIComponent(id)}/imagery`;
+    for (const dt of ["2019", "2021", "2024"]) u.push(`${b}?date=${dt}&view=rgb&scale=2`);
+    u.push(`${b}?date=2024&view=overlay&scale=2`);
+  }
+  u.push(...featuredUrls((PRES && PRES.featured) || []));
+  prewarm(u);
+  await Promise.race([
+    Promise.allSettled(u.map(x => fetch(x, { cache: "force-cache" }))),
+    sleep(3000),
+  ]);
+}
+async function demoStart() {
+  if (DEMO.active) return;
+  try {
+    if (!PRES) { PRES = await api("/presentation/summary"); OBS_DATES = PRES.observation_dates || []; }
+  } catch (e) {}
+  DEMO.active = true; DEMO.i = 0;
+  $("#demo").hidden = false;
+  document.body.classList.add("demo-on");
+  toast("pre-warming demo imagery…");
+  await demoPrewarm();
+  await demoGo(0);
+}
+function demoExit() {
+  DEMO.active = false;
+  $("#demo").hidden = true;
+  document.body.classList.remove("demo-on");
+  $$(".demo-pulse").forEach(el => el.classList.remove("demo-pulse"));
+}
+async function demoGo(i) {
+  if (!DEMO.active || DEMO.running) return;
+  DEMO.i = Math.max(0, Math.min(DEMO_STEPS.length - 1, i));
+  const s = DEMO_STEPS[DEMO.i];
+  $("#demo-progress").innerHTML = DEMO_STEPS.map((_, k) => `<i class="${k <= DEMO.i ? "on" : ""}"></i>`).join("");
+  $("#demo-step").textContent = `Step ${DEMO.i + 1} / ${DEMO_STEPS.length}`;
+  $("#demo-title").textContent = s.title;
+  $("#demo-body").textContent = s.body;
+  $("#demo-back").disabled = DEMO.i === 0;
+  $("#demo-next").textContent = DEMO.i === DEMO_STEPS.length - 1 ? "Finish" : "Next →";
+  DEMO.running = true;
+  try { await s.run(); } catch (e) { /* never let a step kill the walkthrough */ }
+  DEMO.running = false;
+}
+
 /* ---------------------------------------------------------------- boot */
 async function boot() {
   try {
     const h = await api("/health");
     $("#offlineChip").textContent = `offline · ${h.vectors} vectors · ${h.candidates} candidates`;
   } catch (e) { $("#offlineChip").textContent = "backend unreachable"; $("#offlineChip").classList.remove("ok"); }
-  if (!location.hash) location.hash = "#/queue";
+  try {
+    PRES = await api("/presentation/summary");
+    OBS_DATES = PRES.observation_dates || [];
+  } catch (e) { /* overview will retry; other views don't need it */ }
+
+  $("#demoBtn").addEventListener("click", demoStart);
+  $("#demo-next").addEventListener("click", () => (DEMO.i >= DEMO_STEPS.length - 1 ? demoExit() : demoGo(DEMO.i + 1)));
+  $("#demo-back").addEventListener("click", () => demoGo(DEMO.i - 1));
+  $("#demo-exit").addEventListener("click", demoExit);
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && DEMO.active) demoExit(); });
+
+  if (!location.hash) location.hash = "#/overview";
   router();
 }
 boot();

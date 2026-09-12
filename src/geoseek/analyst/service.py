@@ -22,6 +22,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -34,6 +35,34 @@ from geoseek.staging.manifest import load_manifest
 
 S2_COLLECTION = "sentinel-2-l2a"
 OBS_TO_DATE = {v: k for k, v in DATE_TO_OBS.items()}
+
+# --- plain-language phrasing for the demo / overview presentation layer -----
+# These never replace the technical values the analyst UI already shows; they
+# sit *beside* them so a non-specialist viewer can read a finding at a glance.
+HUMAN_CHANGE_TYPE = {
+    "water_gain": "New open water / flooding",
+    "water_loss": "Water body shrank or dried",
+    "construction": "New built-up surface",
+    "clearance": "Vegetation or land cleared",
+    "road": "New road / linear corridor",
+    "other": "Surface change (unclassified)",
+}
+_REGION_DROP_TOKENS = {"diverse", "scaled", "82km", ""}
+
+
+def _region_of(aoi_name: str | None) -> str:
+    """Collapse an observation ``aoi_name`` (``kerala_backwaters_43PFL_diverse``)
+    to its human region (``kerala_backwaters``) by dropping the MGRS tile token
+    and the staging suffixes."""
+    toks = [t for t in re.split(r"[_\-]", aoi_name or "")
+            if t.lower() not in _REGION_DROP_TOKENS
+            and not re.fullmatch(r"\d{2}[a-z]{3}", t.lower())]
+    return "_".join(toks) or (aoi_name or "unknown")
+
+
+def _confidence_band(v: float | None) -> str:
+    v = float(v or 0.0)
+    return "High" if v >= 0.85 else ("Medium" if v >= 0.60 else "Low")
 _SUMMARY_KEYS = (
     "rank", "candidate_id", "pair", "centroid_lonlat", "area_px", "area_m2", "change_type",
     "confidence", "significance", "queue_score", "persistence", "earliest_supported",
@@ -397,6 +426,174 @@ class AnalystService:
             "probability_raster_present": self.prob_raster_path.is_file(),
             "vectors": self._engine.count() if self._engine is not None else None,
             "audit_decisions": len(self.repo.list_analyst_decisions()),
+        }
+
+    # -- presentation layer (demo / overview) ----------------------------
+    #
+    # A read-only projection for non-specialist viewers. Everything here is
+    # derived from data the analyst service already holds - the ranked detail
+    # list and the catalog seam - joined to plain-language phrasing. No new
+    # storage, no recompute; the real analyst views are untouched.
+
+    def _observation_dates(self) -> list[str]:
+        out = []
+        for obs_id in self.report.get("observations", []):
+            m = re.search(r"_(\d{4})(\d{2})(\d{2})_", obs_id)
+            if m:
+                out.append("-".join(m.groups()))
+        return sorted(set(out))
+
+    def _later_observation_count(self, c: dict) -> int:
+        """How many acquisitions sit at or after the end of a candidate's
+        earliest supported change window - i.e. how many later looks agree the
+        change is still there."""
+        win = ((c.get("trajectory") or {}).get("earliest_supported_change") or {}).get("window")
+        end = (win or c.get("earliest_supported") or ["", ""])[1]
+        dates = self._observation_dates()
+        n = sum(1 for d in dates if end and d >= end)
+        return n or 1
+
+    def _persistence_human(self, c: dict) -> str:
+        n = self._later_observation_count(c)
+        p = c.get("persistence")
+        obs = "observation" if n == 1 else "observations"
+        return {
+            "persistent": f"Confirmed across {n} later {obs}",
+            "progressive": f"Grew steadily across {n} later {obs}",
+            "recent": "Only visible in the most recent interval",
+            "transient": "Appeared, then reverted - treat with caution",
+            "inconsistent": "Flickers across dates - low trust",
+        }.get(p, "Single before / after pair only")
+
+    def _imagery_dates(self, c: dict) -> tuple[str, str]:
+        earlier_obs, later_obs = (c["pair"].split("->") + ["", ""])[:2]
+        after = OBS_TO_DATE.get(later_obs) or list(DATE_TO_OBS)[-1]
+        w0 = (c.get("earliest_supported") or [""])[0][:4]
+        before = w0 if w0 in DATE_TO_OBS else list(DATE_TO_OBS)[0]
+        if before >= after:  # never show before == after
+            before = next((d for d in DATE_TO_OBS if d < after), list(DATE_TO_OBS)[0])
+        return before, after
+
+    def _plain_caption(self, c: dict) -> str:
+        d0, d1 = c.get("earliest_supported") or ["the first date", "a later date"]
+        dates = self._observation_dates()
+        last = dates[-1] if dates else d1
+        n = self._later_observation_count(c)
+        obs = "observation" if n == 1 else "observations"
+        ct = c.get("change_type")
+        pers = c.get("persistence")
+        if ct == "water_gain":
+            if pers in ("persistent", "progressive"):
+                return (f"Open water appeared here between {d0} and {d1} and was still "
+                        f"present in {last} - confirmed across {n} later {obs}.")
+            return f"Open water appeared here between {d0} and {d1}."
+        if ct == "water_loss":
+            return f"An open-water surface shrank or dried between {d0} and {d1}."
+        if ct == "construction":
+            tail = ("and has stayed built-up since" if pers in ("persistent", "progressive")
+                    else "in the most recent interval")
+            return f"New built-up surface appeared between {d0} and {d1} {tail}."
+        if ct == "road":
+            return (f"A new linear cleared corridor - most likely a road or track - "
+                    f"appeared between {d0} and {d1}.")
+        if ct == "clearance":
+            return f"Vegetation or land cover was cleared here between {d0} and {d1}."
+        return (f"{HUMAN_CHANGE_TYPE.get(ct, 'A surface change')} was detected between "
+                f"{d0} and {d1}; {self._persistence_human(c).lower()}.")
+
+    def _featured_card(self, c: dict) -> dict:
+        before, after = self._imagery_dates(c)
+        cid = c["candidate_id"]
+        return {
+            "candidate_id": cid,
+            "change_type": c.get("change_type"),
+            "change_type_human": HUMAN_CHANGE_TYPE.get(c.get("change_type"), "Surface change"),
+            "confidence": c.get("confidence"),
+            "confidence_band": _confidence_band(c.get("confidence")),
+            "persistence": c.get("persistence"),
+            "persistence_human": self._persistence_human(c),
+            "later_observations": self._later_observation_count(c),
+            "area_m2": c.get("area_m2"),
+            "centroid_lonlat": c.get("centroid_lonlat"),
+            "queue_score": c.get("queue_score"),
+            "caption": self._plain_caption(c),
+            "before_date": before,
+            "after_date": after,
+            "imagery": {
+                "before": f"/candidates/{cid}/imagery?date={before}&view=rgb",
+                "after": f"/candidates/{cid}/imagery?date={after}&view=rgb",
+                "overlay": f"/candidates/{cid}/imagery?date={after}&view=overlay",
+            },
+        }
+
+    def _pick_featured(self, n: int = 4) -> list[dict]:
+        """Best candidates, diversified by change type: highest-queue candidate
+        of each distinct type first, then fill by queue score."""
+        ranked = sorted(self.details, key=lambda c: c.get("queue_score") or 0.0, reverse=True)
+        ranked = [c for c in ranked if (c.get("confidence") or 0.0) >= 0.60]
+        picked, seen_types, used = [], set(), set()
+        for c in ranked:
+            t = c.get("change_type")
+            if t not in seen_types:
+                picked.append(c); seen_types.add(t); used.add(c["candidate_id"])
+            if len(picked) == n:
+                break
+        for c in ranked:
+            if len(picked) == n:
+                break
+            if c["candidate_id"] not in used:
+                picked.append(c); used.add(c["candidate_id"])
+        return [self._featured_card(c) for c in picked]
+
+    def presentation_summary(self) -> dict:
+        try:
+            observations = self.repo.list_observations()
+        except Exception:
+            observations = []
+        regions = sorted({_region_of(o.aoi_name) for o in observations}) if observations else []
+
+        dist: dict[str, int] = {}
+        conf_vals = []
+        for c in self.details:
+            dist[c.get("change_type", "other")] = dist.get(c.get("change_type", "other"), 0) + 1
+            if c.get("confidence") is not None:
+                conf_vals.append(float(c["confidence"]))
+        high_conf = sum(1 for v in conf_vals if v >= 0.85)
+
+        featured = self._pick_featured(4)
+        by_q = sorted(self.details, key=lambda x: x.get("queue_score") or 0.0, reverse=True)
+        water = next((c for c in by_q if c.get("change_type") == "water_gain"), None)
+        demo_cid = (water or (by_q[0] if by_q else {})).get("candidate_id")
+
+        return {
+            "offline": True,
+            "aoi": self.report.get("aoi"),
+            "span_pair": self.span_pair_name,
+            "observation_dates": self._observation_dates(),
+            "counters": {
+                "tiles_indexed": self.repo.count_tiles(),
+                "regions": len(regions),
+                "scenes": len(self.repo.list_scenes()),
+                "change_candidates": len(self.details),
+                "vectors": self._engine.count() if self._engine is not None else None,
+                "high_confidence": high_conf,
+                "analyst_decisions": len(self.repo.list_analyst_decisions()),
+            },
+            "regions": regions,
+            "change_type_distribution": dist,
+            "change_type_labels": HUMAN_CHANGE_TYPE,
+            "featured": featured,
+            "demo": {
+                "search_query": "an open water reservoir or pond",
+                "water_gain_candidate_id": demo_cid,
+                "discovery_seed": demo_cid,
+                "steps": [
+                    "Natural-language search over the tile index",
+                    "Open the strongest water-gain candidate - 2019 / 2021 / 2024 + change overlay",
+                    "Find more places that look like it",
+                    "Everything ran offline, with full provenance and an append-only audit trail",
+                ],
+            },
         }
 
     # -- discovery pass-through -----------------------------------

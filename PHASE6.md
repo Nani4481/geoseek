@@ -136,6 +136,45 @@ every off-origin request aborted):
 - `06_search.png` — natural-language search, result cards + map
 - `07_discovery.png` — KNN neighbours + the HDBSCAN cluster map
 
+### 3b. Presentation layer (demo-facing, on top of the analyst views)
+
+A read-only layer for non-specialist viewers — the analyst views above are
+unchanged. Added:
+
+- **Overview** (`/app/#/overview`, the new default): headline counters (tiles
+  indexed, regions, scenes, change candidates, high-confidence) + an OFFLINE
+  badge; the candidate map colour-coded by change type with a plain-language
+  legend; 4 "featured finding" cards (before/after thumbnail pair + one-line
+  plain-English caption); a search box that jumps to Search.
+- **Visual-first candidate detail**: imagery enlarged to dominate the viewport;
+  the evidence grid + suppression trace collapse behind "Why did the system flag
+  this?" and the provenance chain behind "Where did this data come from?" (both
+  collapsed by default, expanding to the full existing detail); plain-language
+  badges beside the technical values (High/Medium/Low confidence, "Confirmed
+  across N later observations", human change-type phrasing) — both kept.
+- **Guided demo** (the "▶ Demo" header button): a scripted 4-step walkthrough
+  (search → top water-gain candidate with 2019/2021/2024 + overlay → "find more
+  like this" → offline/provenance summary) with a caption panel, Next/Back, and
+  Esc to exit. Uses the live API at every step — no mock data. Demo-path
+  thumbnails are pre-warmed and pre-cached so each step renders instantly.
+
+Backend: one new read-only endpoint `GET /presentation/summary` (counters +
+featured findings + demo targets, all derived from the ranked detail list and
+the catalog seam) and an optional `scale=1..4` param on
+`/candidates/{id}/imagery` (native render + LRU untouched; PIL upsample on top,
+presentation layer only). Constraints held: no build tooling, no external assets,
+`grep`-clean of `http`. Offline + <1 s per view still verified
+(`scripts/verify_offline_perf.py`: `/presentation/summary` p95 ~20 ms, imagery
+`scale=2` cold ~300 ms). Screenshots:
+
+- `08_overview.png` — counters, colour-coded map + legend, featured findings, search box
+- `09_candidate_detail_collapsed.png` — visual-first, both disclosures collapsed, plain-language badges
+- `10_candidate_detail_expanded.png` — both disclosures open = the full prior detail
+- `11_demo_step1.png` … `14_demo_step4.png` — the four guided-demo steps
+
+`node scripts/shoot_demo_ui.mjs` captures 08–14; `scripts/shoot_analyst_ui.mjs`
+still captures 01–07 (it now opens the disclosures before shooting the detail).
+
 ### 4. Sample exported GeoJSON feature (full provenance)
 
 ```json
@@ -244,6 +283,7 @@ uvicorn geoseek.search.api:app --host 127.0.0.1 --port 8000
 # verification
 python scripts/demo_audit_trail.py       # audit schema + append-only demo
 python scripts/validate_export.py         # GeoJSON built + validated in GDAL/OGR
-python scripts/verify_offline_perf.py     # network disabled + per-view latency
-node   scripts/shoot_analyst_ui.mjs       # screenshots of the four views
+python scripts/verify_offline_perf.py     # network disabled + per-view latency (incl. overview)
+node   scripts/shoot_analyst_ui.mjs       # screenshots of the four analyst views (01-07)
+node   scripts/shoot_demo_ui.mjs          # screenshots of the presentation layer (08-14)
 ```

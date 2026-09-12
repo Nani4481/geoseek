@@ -70,6 +70,10 @@ await page.click("#f_go");
 await page.waitForFunction(() => !document.querySelector("#q_table .spinner"));
 await page.click("#q_table tbody tr:first-child");
 await page.waitForSelector("#d_body:not(.hidden)");
+// the presentation layer collapses evidence + provenance behind disclosures;
+// open them so the analyst screenshots still show the full detail.
+await page.evaluate(() =>
+  document.querySelectorAll("#view-detail details.disclosure").forEach((d) => (d.open = true)));
 await page.waitForSelector("#d_imgs img");
 await page.waitForFunction(() => {
   const imgs = [...document.querySelectorAll("#d_imgs img")];
@@ -105,6 +109,8 @@ try {
   await page.waitForFunction((id) => location.hash.endsWith(id) &&
     document.querySelector("#d_head .mono") && document.querySelector("#d_head .mono").textContent === id,
     rejectId, { timeout: 10000 });
+  await page.evaluate(() =>
+    document.querySelectorAll("#view-detail details.disclosure").forEach((d) => (d.open = true)));
   await page.waitForSelector("#d_trace tr", { timeout: 8000 });
   await page.fill("#d_note", "Weak spectral support and 'other' typing - not a defensible structural change.");
   await page.click("#d_reject");

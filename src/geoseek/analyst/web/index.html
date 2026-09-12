@@ -10,17 +10,55 @@
 <header>
   <div class="brand">geoseek <span>/ analyst</span></div>
   <nav>
+    <button data-route="overview">Overview</button>
     <button data-route="search">Search</button>
     <button data-route="queue">Review Queue</button>
     <button data-route="detail">Candidate Detail</button>
     <button data-route="discovery">Discovery</button>
   </nav>
   <div class="spacer"></div>
+  <button class="demo-launch" id="demoBtn" title="Run the scripted 4-step walkthrough">&#9654;&nbsp;Demo</button>
   <span class="chip" id="latencyChip">&nbsp;</span>
   <span class="chip ok" id="offlineChip">offline &middot; no external calls</span>
 </header>
 
 <main>
+  <!-- ============ OVERVIEW / LANDING (presentation layer) ============ -->
+  <section class="view" id="view-overview">
+    <div class="ov-hero">
+      <div>
+        <h1 class="ov-title">geoseek</h1>
+        <p class="ov-tag">Semantic search &amp; satellite change detection over
+          <b id="ov-aoi">the study area</b> &mdash; running entirely on this machine.</p>
+      </div>
+      <span class="ov-offline" id="ov-offline"><i></i>OFFLINE &middot; no external calls</span>
+    </div>
+
+    <div class="ov-counters" id="ov-counters"></div>
+
+    <div class="panel ov-mappanel">
+      <h3>Where the change candidates are</h3>
+      <div class="body">
+        <div class="mapwrap"><canvas class="map" id="ov_map"></canvas></div>
+        <div class="maplegend" id="ov_legend"></div>
+        <div class="mapnote">Every flagged change over the 2019 &rarr; 2024 window, coloured by type.
+          Offline canvas in EPSG:4326 &mdash; no web map tiles. Click a footprint to open it.</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h3>Featured findings</h3>
+      <div class="body"><div class="ov-featured" id="ov-featured"><span class="spinner"></span></div></div>
+    </div>
+
+    <div class="ov-searchbar">
+      <label class="grow">Ask in plain language
+        <input id="ov-q" placeholder="e.g. a river with wide sandbars near cropland">
+      </label>
+      <button class="primary" id="ov-go">Search &rarr;</button>
+    </div>
+  </section>
+
   <!-- ============ SEARCH ============ -->
   <section class="view" id="view-search">
     <div class="filters">
@@ -113,14 +151,14 @@
     <div id="d_body" class="stack hidden">
       <div class="panel"><div class="body detail-head" id="d_head"></div></div>
 
-      <div class="panel">
+      <div class="panel imagery-panel">
         <h3>Before &middot; After &middot; Change overlay
           <span style="float:right; text-transform:none; letter-spacing:0">
             <span class="dateseg" id="d_dates"></span>
           </span>
         </h3>
         <div class="body">
-          <div class="imgrow" id="d_imgs"></div>
+          <div class="imgrow big" id="d_imgs"></div>
           <p class="mapnote" id="d_imgnote"></p>
         </div>
       </div>
@@ -132,7 +170,8 @@
         </div>
       </div>
 
-      <div class="panel"><h3>Evidence</h3>
+      <details class="panel disclosure" id="d_why">
+        <summary>Why did the system flag this?</summary>
         <div class="body stack">
           <div class="evgrid" id="d_ev"></div>
           <div>
@@ -143,14 +182,15 @@
             </div>
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="panel"><h3>Provenance</h3>
+      <details class="panel disclosure" id="d_provwrap">
+        <summary>Where did this data come from?</summary>
         <div class="body stack">
           <div class="prov" id="d_prov"></div>
           <div class="kvline" id="d_provcode"></div>
         </div>
-      </div>
+      </details>
 
       <div class="panel"><h3>Analyst decision</h3>
         <div class="body stack">
@@ -201,6 +241,24 @@
 </main>
 
 <div id="toast"></div>
+
+<!-- ============ GUIDED DEMO (presentation layer) ============ -->
+<div id="demo" hidden>
+  <div class="demo-banner">GUIDED DEMO &mdash; live API, no mock data <span class="demo-esc">press Esc to exit</span></div>
+  <div class="demo-caption" role="dialog" aria-label="guided demo">
+    <div class="demo-progress" id="demo-progress"></div>
+    <div class="demo-step" id="demo-step">Step 1 / 4</div>
+    <h4 id="demo-title">&nbsp;</h4>
+    <p id="demo-body">&nbsp;</p>
+    <div class="demo-controls">
+      <button class="ghost" id="demo-back">&larr; Back</button>
+      <button class="primary" id="demo-next">Next &rarr;</button>
+      <div class="spacer"></div>
+      <button class="ghost" id="demo-exit">Exit</button>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
