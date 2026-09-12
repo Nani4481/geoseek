@@ -1,1093 +1,153 @@
 # geoseek
 
-Offline-first geospatial ML platform. Target hardware: NVIDIA RTX 4060
-Laptop (8GB VRAM, CUDA), Ryzen 7 7840HS.
+Search satellite imagery in plain English, detect what changed, fully offline.
 
-## Hard rule: offline after staging
+Built for Smart India Hackathon 2026, Problem Statement 26227: analysts need
+a way to search large volumes of satellite imagery by describing what they're
+looking for, and to be alerted when something in an area of interest changes
+between observations — without depending on a live internet connection or a
+cloud vendor. geoseek indexes Sentinel-1/2 imagery into a searchable,
+offline-capable system with a working analyst interface on top.
 
-Only `geoseek.staging.*` is allowed to touch the network — that's the
-one-time step that downloads and verifies model weights and datasets and
-records their provenance. Every other module (`config`, `ingest.*`,
-`search.*`) reads exclusively from `data/` on disk. If you find yourself
-adding a network call outside `staging/`, stop — it belongs in staging
-instead.
+## What it does
 
-## Install
+- **Semantic search** — describe a scene in plain language ("bare dry open
+  ground near a river bend") and get back the matching tiles, ranked by
+  similarity, using a vision-language model pretrained on satellite imagery.
+- **Change detection** — compare two dates of the same area and highlight
+  where land cover actually changed, using a model trained specifically for
+  this task.
+- **False-alarm suppression** — filters out changes caused by seasonal
+  vegetation cycles, cloud shadows, or radiometric drift between scenes
+  rather than real change on the ground.
+- **Discovery** — clusters the whole tile corpus by visual similarity so an
+  analyst can browse what kinds of terrain and change exist without a
+  starting query.
+- **Analyst workflow with audit trail** — a web interface for reviewing
+  candidates, marking decisions, and exporting findings, with every decision
+  logged to an append-only record.
+- **Incremental offline ingestion** — new imagery can be added to the index
+  at any time; every module after the one-time staging step runs with no
+  network access.
 
-Detected environment: **Windows, with conda available.** Per project policy,
-conda-forge / pytorch / nvidia channels are used for the binary-heavy
-packages (torch+CUDA, faiss, rasterio, gdal, pyproj, shapely) since they
-build correctly against Windows CUDA/GDAL without wheel headaches. Pure
-Python packages come from `pyproject.toml` via pip.
+## Key numbers
+
+| | |
+|---|---|
+| Tiles catalogued | 107,168 total (256×256 px each) across both collections — `data/index/tiles.sqlite` |
+| Tiles searchable | 104,089 Sentinel-2 tiles embedded in the FAISS search index (the other 3,079 are Sentinel-1 SAR, catalogued but not embedded for semantic search) — same database, joined against `scenes.collection_id` |
+| Regions covered | 8 diverse regions across India (Himalayan foothills, Thar desert, Sundarbans, Delhi NCR, Kanha, Kerala backwaters, Kutch, Deccan) + the primary Ayodhya AOI |
+| Observation dates | 2019-03-29 to 2026-03-08 (77 Sentinel-1/2 scenes; Ayodhya alone has 5 dates: 2019, 2021, 2024, 2025, 2026) |
+| Search latency (warm) | ~17 ms median / 26 ms p99 per query on the full corpus |
+| Change detection | F1 56.0% on the held-out OSCD test split (vs. 52.8% published for the same architecture) |
+| Tests | 275 passed, 3 skipped (`pytest`, `tests/`) |
+
+## Quick start
 
 ```powershell
-conda env create -f environment.yml
 conda activate geoseek
-pip install -e . --no-deps
-pip install --no-deps open_clip_torch timm ftfy huggingface_hub requests tqdm `
-    hdbscan fastapi "uvicorn[standard]" pydantic sqlalchemy pytest affine pillow
-```
+cd path\to\geoseek
+$env:GDAL_DATA = "$env:CONDA_PREFIX\Library\share\gdal"
+$env:PROJ_LIB  = "$env:CONDA_PREFIX\Library\share\proj"
 
-`--no-deps` is not optional here: `open_clip_torch` (via `timm`) depends on
-`torch`/`torchvision`, and pip's resolver has no idea the conda-installed
-CUDA build satisfies that — left to itself it silently installs its own
-CPU-only wheels over the top and CUDA availability quietly goes to `False`.
-This was hit and confirmed while building this scaffold. If it happens
-anyway:
-
-```powershell
-pip uninstall -y torch torchvision
-conda install -n geoseek -c pytorch -c nvidia -c conda-forge pytorch=2.2.2 pytorch-cuda=12.1 torchvision
-```
-
-### Linux / WSL (plain pip) alternative
-
-```bash
-python -m venv .venv && source .venv/bin/activate
-pip install torch --index-url https://download.pytorch.org/whl/cu121
-pip install -e .
-```
-
-## Staging (one-time, needs network)
-
-Downloads RemoteCLIP ViT-B-32 (OpenCLIP format) weights, verifies them
-against the live Hugging Face repo listing, loads them, runs a smoke encode,
-and writes `data/provenance_manifest.json`.
-
-```powershell
-python -m geoseek.staging.download_models
-```
-
-Expected output includes the startup banner (torch version, CUDA
-availability, GPU name, embedding dim) followed by staging progress, and
-finishes by printing the GPU name and the embedding dimension (512).
-
-Checkpoint provenance (confirmed via Hugging Face at staging-script-authoring
-time, not recalled from memory — see `src/geoseek/staging/download_models.py`
-docstring):
-
-| | |
-|---|---|
-| HF repo | `chendelong/RemoteCLIP` |
-| File | `RemoteCLIP-ViT-B-32.pt` |
-| License | Apache-2.0 (per the [ChenDelong1999/RemoteCLIP](https://github.com/ChenDelong1999/RemoteCLIP) GitHub LICENSE) |
-| Upstream paper | *RemoteCLIP: A Vision-Language Foundation Model for Remote Sensing*, IEEE TGRS 2023 |
-
-Re-running the command after the first successful stage skips the network
-entirely — it detects the already-staged file under `data/models/` and loads
-straight from disk.
-
-### Test data (Sentinel-2 L2A AOI, two dates)
-
-```powershell
-python -m geoseek.staging.download_datasets
-```
-
-Fetches a small AOI (~6.2km x 6.2km, Ayodhya, UP — Saryu river + urban edge +
-open ground) from **Earth Search STAC** (`https://earth-search.aws.element84.com/v1`,
-Element 84, backed by the public AWS Open Data Sentinel-2 COG bucket — no
-login/API key needed), for two dates ~5 years apart:
-
-| | |
-|---|---|
-| Scene A | `S2B_44RPQ_20190330_1_L2A` — 2019-03-30 |
-| Scene B | `S2A_44RPQ_20240308_0_L2A` — 2024-03-08 |
-| Bands | B04 (red), B03 (green), B02 (blue) at 10m; SCL resampled 20m→10m |
-| License | Copernicus Sentinel Data (free & open, EU Copernicus Data Policy) |
-
-Only the AOI window of each COG is transferred, via HTTP range requests —
-never the full ~110x110km tile. Re-running skips the network once a scene's
-bands are already staged under `data/datasets/<scene_id>/`. See
-`src/geoseek/staging/download_datasets.py` for full provenance detail.
-
-## Ingestion pipeline
-
-```powershell
-python -m geoseek.ingest.pipeline ingest "data/datasets/S2B_44RPQ_20190330_1_L2A"
-```
-
-read (`ingest/reader.py`, rasterio) → tile (`ingest/tiler.py`, 256x256,
-partial edge tiles kept, fully-nodata tiles skipped, lon/lat footprint per
-tile) → quality (`ingest/quality.py`, per-tile cloud/shadow/snow/saturated
-fraction from the SCL band) → embed (`ingest/embed.py`: **fixed** Sentinel-2
-true-color stretch of B4/B3/B2 — subtract the per-scene BOA additive offset
-(0 DN for both staged dates, already offset-applied upstream), clip to
-0–0.30 reflectance (~DN 0–3000), scale to 8-bit at a fixed gamma. The bounds
-are identical for every tile and every date, so equal ground reflectance →
-equal 8-bit value (radiometric consistency for retrieval and change
-detection); the exact bounds + offset handling are recorded in
-`data/provenance_manifest.json` under `radiometry`. Then OpenCLIP's own
-preprocessing, then RemoteCLIP — loaded once, reused for
-every tile) → store (`ingest/store.py`: FAISS `IndexFlatIP` over unit-norm
-512-d vectors + a SQLite `tiles` table, both under `data/index/`,
-**incremental** — ingesting a new scene only ever appends, existing
-vectors/rows are never touched or rebuilt).
-
-Each ingest run appends a report (tiles added, build time, index size, mean
-per-tile embed latency) to `data/provenance_manifest.json` under
-`ingest_runs`.
-
-## Tests
-
-```bash
-pytest tests/test_env.py tests/test_ingest.py
-```
-
-`test_env.py` asserts torch imports, CUDA is visible, and RemoteCLIP loads +
-encodes to a 512-d embedding **from the local staged file only** — no
-network calls, so this passes with the network off as long as staging has
-run once.
-
-`test_ingest.py` covers the ingest pipeline end-to-end against the staged
-AOI scenes above: geospatial metadata preservation, tiling (partial edge
-tiles, nodata skipping), SCL-based quality scoring, the fixed-bounds
-reflectance→true-color stretch, single model load/reuse, incremental FAISS+SQLite
-append (byte-identical old vectors after a second scene is added), and a
-full ingest with the network forcibly disabled.
-
-## Phase 2: scale-up + semantic search
-
-### Scaled-up AOI
-
-`python -m geoseek.staging.download_datasets` still stages the small 9-tile
-demo AOI. A second, much larger AOI over the *same* Ayodhya region and same
-two dates is staged via `geoseek.staging.download_datasets.stage_large_aoi()`
-— an 82km x 82km box, fitted (via a live query of the source COG's own
-georeferenced bounds) to stay fully inside the single MGRS tile 44RPQ (no
-cross-tile mosaicking) while still containing the original Ayodhya point.
-Stored under `data/datasets/<scene_id>_scaled/`, ~1000+ tiles/date. Ingest it
-the same way as any scene:
-
-```powershell
-python -m geoseek.ingest.pipeline ingest "data/datasets/S2B_44RPQ_20190330_1_L2A_scaled"
-python -m geoseek.ingest.pipeline ingest "data/datasets/S2A_44RPQ_20240308_0_L2A_scaled"
-```
-
-At this scale, `pipeline.ingest_scene` batches the embedding step
-(`embed.embed_tiles_batch`, default batch size 64) instead of one
-`model.encode_image` call per tile — far fewer GPU launches, and VRAM stays
-bounded regardless of scene size (ViT-B-32 batches are tiny relative to the
-8GB budget).
-
-### Semantic search
-
-```
-src/geoseek/search/
-  engine.py   SearchEngine - RemoteCLIP + FAISS index loaded ONCE, reused for
-              every query. search_text() (RemoteCLIP text tower -> FAISS ->
-              filtered/joined results) and search_image() (by tile_id or a
-              fresh image - "find more like this"). Filters (bbox, date
-              range, sensor, max_cloud_fraction) are a post-filter over the
-              full flat-index brute-force scan - at a few thousand vectors
-              this is sub-millisecond, simpler than pushing filters into
-              FAISS itself, and comfortably meets the <1s interactive budget.
-  api.py      FastAPI: GET /search/text, POST /search/image,
-              GET /tile/{id}/thumbnail (regenerates the stretched true-color
-              PNG on demand - not stored on disk), GET /health. SearchEngine
-              constructed ONCE at app startup (lifespan), reused per request.
-```
-
-Run the API:
-
-```powershell
 uvicorn geoseek.search.api:app --host 127.0.0.1 --port 8000
 ```
 
-```bash
-curl "http://127.0.0.1:8000/search/text?q=a+river+with+sandbars&k=5"
-```
+Linux/WSL: `export GDAL_DATA=$CONDA_PREFIX/share/gdal PROJ_LIB=$CONDA_PREFIX/share/proj`.
 
-### Proving it's really RemoteCLIP
+Then open `http://127.0.0.1:8000` for the analyst UI. This assumes imagery
+and model weights are already staged (see **Data and models** below); for the
+full setup path, environment creation, and every other command, see
+[RUN.md](RUN.md).
 
-```powershell
-python scripts/prove_semantic.py
-```
-
-Runs 4 satellite-specific text queries ("a river with sandbars", "dense
-urban buildings", "agricultural fields", "open bare ground") against the
-real search index and prints the top-5 tile_ids/scores/centroids for each,
-saving a contact-sheet PNG of the top-5 thumbnails under
-`data/prove_semantic/remoteclip_<query>.png`. As a control, it then embeds
-every tile in the scaled AOI with **vanilla OpenCLIP ViT-B-32**
-(`pretrained='openai'`, staged via
-`geoseek.staging.download_models.stage_vanilla_openclip()` /
-`python -m geoseek.staging.download_models --vanilla`) and runs the same 4
-queries, saving `vanilla_<query>.png` sheets. Comparing the two side by side
-is the proof: RemoteCLIP (remote-sensing-tuned) should retrieve tiles that
-visibly match the query on a satellite view, while vanilla CLIP — trained
-only on everyday photos — is visibly less consistent on this vocabulary.
-
-(Two correctness notes on the vanilla control model, both fixed in
-`geoseek.ingest.embed.load_vanilla_clip_once`:
-`open_clip`'s `'openai'` tag needs `force_quick_gelu=True` to match how
-those checkpoints were actually trained — without it, `open_clip` only
-*warns* about a QuickGELU activation mismatch rather than correcting it,
-which would silently cripple the control model for an unrelated reason.
-And even with a fully populated local cache, `open_clip`'s pretrained
-loader (via `huggingface_hub`) still phones home by default to check for a
-newer revision — a real network call from code that is not
-`geoseek.staging`. `HF_HUB_OFFLINE=1` is set before loading so this module
-stays genuinely offline after the vanilla model is staged once, the same
-guarantee the rest of geoseek makes; `tests/test_ingest.py` proves it with
-sockets actually blocked.)
-
-## Phase 3a: making the 2019/2024 pair comparable (change-detection prerequisite)
-
-Before *any* change detection, the two dates have to be genuinely
-comparable — same pixels on the ground, same radiometric scale. Phase 3a
-does that and nothing more (no change detection yet — that's 3b).
-
-### Extra bands (staging, network)
-
-```powershell
-python -m geoseek.staging.download_datasets --extra-bands
-```
-
-Tops up **only the scaled AOI** dirs (`data/datasets/<scene>_scaled/`) with
-`B08` (NIR, native 10m) and `B11` (SWIR-1, native 20m → resampled to the 10m
-grid with **BILINEAR**, since SWIR reflectance is continuous — NEAREST stays
-reserved for the categorical SCL band). Each new band is recorded in the
-provenance manifest with its SHA256. The staging step then confirms B08/B11
-carry the *same* reflectance encoding as the RGB bands — STAC `raster:bands`
-`scale=1e-4 offset=-0.1` identical to red, median DN in a sane reflectance
-range, and no unremoved `BOA_ADD_OFFSET` pedestal (global minimum bottoms
-out at the same low floor as B04, not ~1000 DN above it) — and writes that
-confirmation to the manifest under `extra_bands`. The small demo AOI is left
-RGB+SCL only, so `tests/test_ingest.py` stays valid.
-
-### Pair preparation
-
-```powershell
-python -m geoseek.change.prep
-```
-
-`src/geoseek/change/` — offline, reads only from `data/datasets/`:
+## How it works
 
 ```
-  coregister.py  FFT phase correlation (Hann window + parabolic sub-pixel
-                 peak) between the two dates on a stable band (B08). Reports
-                 the median (dy, dx) shift over a grid of overlapping tiles;
-                 corrects (scipy.ndimage sub-pixel resample) ONLY if the
-                 median shift exceeds 0.5 px. For this pair it's ~0.05 px —
-                 well inside the Sentinel-2 L1C multitemporal registration
-                 spec — so it is measured, reported, and left as-is.
-  normalize.py   Relative radiometric normalization, per band. Pick
-                 pseudo-invariant pixels (valid + SCL-good at both dates, not
-                 water, |NDVI| < 0.25 at both dates = stable bare/built), drop
-                 gross cross-band outliers, then fit an ADDITIVE per-band
-                 correction reference_DN = subject_DN + offset_b(x, y). Over
-                 82 km the haze is not uniform, so offset_b is a SPATIALLY
-                 VARYING surface: the robust median of reference - subject over
-                 the PIF pixels of each ~2.5 km block, sparse blocks filled
-                 from their nearest neighbour, lightly smoothed, bilinearly
-                 upsampled. A band whose scene-wide offset is below ~0.35x the
-                 per-pixel PIF scatter and whose dates are well correlated is
-                 left untouched (offset forced to 0) - the dates already agree
-                 within the noise there, and adding a correction would only
-                 degrade an already-matched band. For this pair that zeroes
-                 red/green/NIR/SWIR and leaves only blue (~700-800 DN of
-                 nearly-uncorrelated haze, inter-date r ~ 0.24). (A free
-                 gain/RMA fit instead *amplifies* the difference on unchanged
-                 tiles; gain stays 1.) 2019 is the subject (adjusted, it is
-                 the hazier date), 2024 the reference. The per-band
-                 offset-surface stats + the block grid go into the manifest;
-                 reconstruct with normalize.expand_offset_grid.
-  indices.py     NDVI=(B08-B04)/(B08+B04), NDWI=(B03-B08)/(B03+B08),
-                 NDBI=(B11-B08)/(B11+B08), computed on the normalized
-                 reflectance.
-  prep.py        Orchestrator + acceptance gate. Steps B-E, prints the
-                 co-registration shift, the per-band offset-surface table, an
-                 unchanged-tile before/after reflectance table, and
-                 NDVI/NDWI/NDBI ranges with cropland/river/town spot-checks.
-                 Writes a per-tile index table to
-                 `data/index/spectral_indices_per_tile.csv`, full-res
-                 `NDVI/NDWI/NDBI.tif` per scene (skip with `--no-rasters`),
-                 and the `coregistration`, `radiometric_normalization`,
-                 `normalization_acceptance_gate` and `spectral_indices`
-                 sections of the manifest.
+   imagery (Sentinel-1/2)
+        │
+        ▼
+   ingest → tile (256x256) → embed (RemoteCLIP)  ──┐
+        │                                          ▼
+        │                                    vector index (FAISS + R*Tree)
+        │                                          │
+        └─► co-register + normalize                ▼
+              same-location date pairs      text query → embed → nearest tiles
+                    │                              (semantic SEARCH)
+                    ▼
+          FC-Siam-diff change model
+                    │
+                    ▼
+      suppress seasonal/radiometric noise
+                    │
+                    ▼
+        ranked candidates → analyst UI
+        (review, decide, export, audit trail)
 ```
 
-Phase correlation is implemented directly on NumPy/SciPy FFTs —
-scikit-image is deliberately not a dependency.
-
-### On the acceptance gate for THIS date pair
-
-The Phase-2 note that the two dates "differ by ~300-450 DN scene-wide
-(atmospheric)" is measured over *all* pixels. Over genuine no-change ground
-the story is different: **March 2019 was a drought** (scene NDVI median
-~0.33) and **March 2024 was green** (~0.68), so most of that scene-wide
-difference is real vegetation phenology, not atmosphere. On stable hard
-surfaces the two dates already agree to within ~70-140 DN in
-red/green/NIR/SWIR; the only large atmospheric term is **blue: ~700-800 DN
-of haze** (inter-date r ~ 0.24), which the normalization removes.
-
-The strict gate ("every band, on 5 clearly-unchanged tiles, well under
-~100 DN after normalization") is therefore **not achievable for this pair
-without erasing real change**: genuinely-static tiles are scarce, and on the
-ones that qualify, red/green still carry ~100-180 DN of *real*
-non-atmospheric surface variability (thin haze + soil-moisture / tillage
-differences between a dry and a wet March). `prep.py` reports the strict
-target explicitly and passes the gate on the substantive requirements for
-Phase 3b: the scene-wide bias and the blue haze are removed, and NIR/SWIR -
-the bands that drive NDVI/NDWI/NDBI - are brought within ~110 DN on
-no-change ground.
-
-## Phase 3.5: load-bearing architecture (before change detection)
-
-Phase 3.5 puts the abstractions the change pipeline will be written against in
-place first — a refactor + extension, not a rewrite. No change detection is
-built here.
-
-### Scene → observation → tile data model
-
-The flat `tiles` table is replaced by a proper hierarchy under
-`src/geoseek/catalog/`:
-
-```
-collections   sensor / platform / bands / native GSD          (sentinel-2-l2a)
-  scenes      source product id, footprint, acquisition, baseline, source URL,
-              license, per-band checksums                      (S2B_44RPQ_20190330_1_L2A, …)
-    observations   a scene ∩ our AOI at one acquisition time: quality summary,
-                   radiometry / normalization params used, co-registration
-                   status                                      (…_L2A_scaled)
-      tiles        256×256, geom_4326, row/col, cloud_fraction, quality flags,
-                   embedding ref, indices ref
-derived       per-tile / per-observation products (NDVI/NDWI/NDBI, masks,
-              thumbnails) — referenced by path, never blobbed
-```
-
-Every tile reaches its source scene by foreign key, and provenance is
-reconstructable upward from any tile (`repo.get_tile_provenance(tile_id)` →
-tile → observation → scene → collection).
-
-Migrate an existing flat catalog in place (non-destructive: the sqlite file is
-backed up to `<db>.pre_phase35.bak`, the legacy `tiles` table is renamed to
-`_migration_legacy_flat_tiles`, rows are copied verbatim — no re-ingest, no
-re-embed):
-
-```powershell
-python -m geoseek.catalog.migrate          # migrate + verify
-python -m geoseek.catalog.migrate --verify # verify only
-```
-
-Verification asserts every legacy tile is present and byte-identical
-(geometry, provenance link, faiss_id mapping), plus a search-result parity
-check against a frozen baseline.
-
-### Repository seams
-
-Nothing outside these modules touches `sqlite3` or `faiss` directly:
-
-```
-catalog/repository.py       MetadataRepository (ABC)        — the geospatial/metadata catalog
-catalog/sqlite_repository.py  SQLiteMetadataRepository       — the only sqlite3; swappable to PostGIS
-vectorindex/base.py         VectorIndex (ABC)               — add/search/get_vector/delete/persist/load/count/validate
-vectorindex/faiss_flat.py     FaissFlatIPIndex              — the only faiss; HNSW impl drops in later
-models/base.py              EmbeddingModel, QualityEstimator, ChangeDetectionModel (interface only)
-models/remoteclip.py          RemoteCLIPEmbeddingModel      — the existing RemoteCLIP behind EmbeddingModel
-models/quality.py             SclQualityEstimator
-```
-
-`SearchEngine`, `TileStore` and `ingest.pipeline` all go through these seams.
-
-### Temporal observation matcher
-
-`src/geoseek/temporal/matcher.py` — given a location, which observations are
-legitimately comparable:
-
-```powershell
-python -m geoseek.temporal.matcher --lon 82.1998 --lat 26.7922 [--all-pairs] [--json]
-```
-
-For each ordered pair it reports `comparable: yes/no` with a per-criterion
-breakdown: spatial overlap (blocking), temporal separation, sensor
-compatibility, collection compatibility (blocking), resolution compatibility
-(blocking), quality (cloud / usable pixels), and co-registration status. The
-output `ObservationSequence` / `ObservationPair` is exactly what a Phase 3b
-`ChangeDetectionModel.predict_change` consumes — no reshaping at the boundary.
-
-### Third acquisition date
-
-```powershell
-python -m geoseek.staging.download_datasets --third-date   # network, staging only
-python -m geoseek.ingest.pipeline ingest "data/datasets/S2A_44RPQ_20210304_1_L2A_scaled"
-python scripts/align_third_date.py                          # offline: co-registration + PIF offset provenance
-```
-
-`S2A_44RPQ_20210304_1_L2A` (2021-03-04) — same 82 km AOI, same MGRS tile
-44RPQ, same six bands (B4/B3/B2/B8/B11/SCL), same fixed radiometry, chosen
-from a live Earth Search query (early-March phenology window, low cloud, near
-the temporal midpoint). Ingested through the catalog as a third observation
-(incremental: existing vectors untouched, no rebuild → 3267 tiles / 3
-observations). `align_third_date.py` computes its co-registration + PIF
-additive offset against the same 2024-03-08 reference the original pair uses
-and records them on the observation + the manifest (`third_date`,
-`third_date_alignment`).
-
-## Phase 3b: a trained change-detection model (FC-Siam-diff on OSCD)
-
-Phase 3b is the project's genuine training contribution: a real
-change-detection CNN, trained from scratch, exposed through the existing
-`geoseek.models.base.ChangeDetectionModel` seam and fed a
-`TemporalObservationMatcher` `ObservationPair` with **zero reshaping**.
-
-### Stage OSCD (network, staging only)
-
-```powershell
-python -m geoseek.staging.download_oscd
-```
-
-Stages the **Onera Satellite Change Detection** dataset — 24 co-registered
-Sentinel-2 image pairs with human-drawn binary change masks, standard **14
-train / 10 test** split — under `data/datasets/oscd/`. Download is the pinned
-Hugging Face mirror `hkristen/oscd` @ `4958d786…` (the mirror the maintained
-`torchgeo` OSCD loader resolves against; canonical home is IEEE DataPort DOI
-`10.21227/asqe-7s69`, now subscription-gated). Each archive's SHA256 is
-verified against the value recorded from the live HF API, and the source URLs,
-SHA256s, licence (**CC-BY-NC-SA-4.0**), the exact split (region lists, read
-from OSCD's own `train.txt`/`test.txt` and cross-checked against the label
-folders), the 13 available bands (native GSD 10/20/60 m, all resampled to the
-10 m grid in `imgs_*_rect`), and the radiometry are written to the manifest
-`oscd` section.
-
-**Radiometry / harmonization.** OSCD is Sentinel-2 **L1C top-of-atmosphere**
-reflectance; geoseek's Ayodhya pipeline is **L2A bottom-of-atmosphere**. Same
-encoding (`uint16`, `reflectance*10000`, offset 0 — asserted at staging),
-different physical quantity. Harmonized by (1) `/1e4` to a common reflectance
-scale, (2) per-band standardization fit on the OSCD *train* split and
-re-applied at inference, (3) FC-Siam-diff's feature **differencing**, which
-cancels an atmospheric term shared by both dates of a pair, and (4) on the
-Ayodhya side, Phase 3a's relative inter-date normalization run first.
-
-### The model — `geoseek.change.models.fc_siam_diff.FCSiamDiff`
-
-Siamese fully-convolutional encoder with **shared weights** across both dates,
-**feature differencing at every skip level** (`|f1 − f2|`, so the network is
-invariant to date order — a change is a change either way), a U-Net
-transposed-conv decoder, and a 1×1 head producing one change logit per pixel.
-Uses the 5 bands geoseek actually stages (**B02, B03, B04, B08, B11** — RGB +
-NIR + SWIR-1), so the trained encoder transfers to Ayodhya with no band
-remapping. `base_channels=24, depth=4` → **1,085,113 parameters** (printed by
-the trainer; `count_parameters(model)`).
-
-### Train it — `scripts/train_change.py`
-
-```powershell
-python scripts/train_change.py                # train (11 regions) + evaluate (10 held-out test regions)
-python scripts/train_change.py --eval-only    # re-evaluate the saved checkpoint
-```
-
-Offline. Gradient updates use **only 11 of the 14 OSCD train regions**; 3 train
-regions (`bordeaux, cupertino, beirut`) are held out for validation (loss curve
-+ threshold selection). The 10 OSCD **test** regions are never read until
-`evaluate()` — `assert` guards make any train/val/test region overlap a hard
-error.
-
-* **Class imbalance** (~3 % change pixels, some regions < 1 %): loss is
-  `0.5·weighted-BCE(pos_weight ≤ 10) + 1.0·soft-Dice`. Dice targets region
-  overlap directly (an F1 surrogate, imbalance-robust); the capped weighted
-  BCE keeps per-pixel gradients well-conditioned. 40 % of sampled patches are
-  forced to contain change.
-* Augmentation: dihedral D4 (flips + 90° rotations), identical for both dates
-  and the mask. Mixed precision (AMP). Patch 96×96, batch 32.
-* Adam + cosine LR, early stop on val loss (patience 15).
-* Per-epoch train/val loss logged; loss curve saved to
-  `data/change_model/loss_curve.png`.
-* Checkpoint (`data/change_model/fc_siam_diff.pt`) + a full **model card**
-  (architecture, param count, bands, training regions, split, hyperparameters,
-  source SHA256s, weights SHA256) → manifest `oscd_change_model`.
-
-Last run: **21 epochs, ~2 min wall-clock, peak VRAM 0.90 GB** on the RTX 4060.
-
-### Honest evaluation — held-out 10-region test split
-
-The precision-favouring operating point (per PS 2.2.3: `argmax F0.5`, recall
-floor 0.15) is chosen on the **validation** regions, then frozen and applied
-**once** to the test regions — never tuned on test.
-
-| operating point | P | R | F1 | IoU | FPR |
-|---|---|---|---|---|---|
-| default 0.50 | 51.7 % | 61.0 % | **56.0 %** | 38.8 % | 3.10 % |
-| precision-favouring 0.80 (val-selected) | **60.3 %** | 51.0 % | 55.3 % | 38.2 % | **1.83 %** |
-
-Published OSCD baselines (change class): FC-EF 48.0 %, FC-Siam-conc 50.2 %,
-FC-Siam-diff **52.8 %** F1. Ours (~56 % F1) sits just above — expected for a
-5-band model with a modern recipe (Dice+BCE, AMP, augmentation, best-val
-checkpointing) and *not* a leakage red flag: per-region test F1 ranges from
-3.8 % (valencia, 0.44 % change) to 74.3 % (lasvegas), the spread of genuine
-generalization. Precision-recall curves for validation and test, and
-`[before | after | ground truth | prediction]` panels for 3 test regions
-(`lasvegas`, `montpellier`, `chongqing`), are saved under `data/change_model/`;
-all metrics + the leakage statement go to manifest `oscd_change_model_eval`.
-
-### Wired into the architecture — `FCSiamDiffChangeModel(ChangeDetectionModel)`
-
-```python
-from geoseek.temporal.matcher import TemporalObservationMatcher
-from geoseek.change.models import FCSiamDiffChangeModel
-
-pair = TemporalObservationMatcher(repo).match(location=(82.1998, 26.7922)).comparable_pairs[0]
-result = FCSiamDiffChangeModel().predict_change(pair)   # -> ChangeResult
-```
-
-`predict_change` takes the matcher's `ObservationPair` directly, runs the
-trained net tile by tile over the later observation's grid, and returns a
-`ChangeResult` with a per-tile change score, a per-tile `change`/`no_change`
-label, a georeferenced full-AOI change-mask GeoTIFF, and a confidence. A
-non-comparable pair is refused (confidence 0, no mask, reason in `notes`). It
-imports only torch / numpy / rasterio + the catalog entities — the sqlite and
-faiss seams are untouched. Phase 3b stops at a smoke test; the full analyst
-pipeline is Phase 4.
-
-## Phase 4: the analyst-grade change pipeline on Ayodhya
-
-```powershell
-python -m geoseek.change.analyze          # pairs 2019->2021, 2021->2024, 2019->2024
-```
-
-Offline. Turns the trained FC-Siam-diff model into a reviewable candidate list
-with a suppression trace, a rule-based change type, a temporal trajectory, and
-one calibrated confidence per candidate. Per-pair probability rasters are
-cached under `data/change_model/prob_*.tif`.
-
-### Step A — false-alarm suppression (`geoseek.change.suppress`, PS 2.2.3)
-
-Five gates, applied **in order**, each recording what it checked; every
-suppressed candidate keeps the full trace.
-
-| # | gate | fires when | effect |
-|---|---|---|---|
-| 1 | quality | cloud/shadow/snow/saturated SCL > 5 % on **either** date, or < 80 % jointly-valid px | **suppress** |
-| 2 | registration | the pair's measured co-registration residual > 0.30 px (→ heavy at ≥ 0.50 px) | down-weight |
-| 3 | radiometric | index-band min inter-date correlation < 0.60, or a normalization surface that was entirely shrunk | down-weight |
-| 4 | phenology | NDVI **and** NDBI **and** NDWI deltas all stay within a band of their *scene-wide seasonal* deltas | **suppress** |
-| 5 | morphology | connected-component area < 10 px (1 000 m² at 10 m GSD) | **suppress** |
-
-Everything is **anomaly-framed**: the 2019 drought → 2024 green shift moves
-NDVI/NDBI/NDWI across the whole AOI (scene ΔNDVI ≈ +0.30, ΔNDBI ≈ −0.23,
-ΔNDWI ≈ −0.23 for 2019→2024), so a *structural* change is one that departs
-from that trend on ≥ 1 axis. Rules 2–3 attach a multiplicative down-weight the
-confidence engine consumes.
-
-### Step B — change typing (`geoseek.change.classify`, PS 2.2.2)
-
-Rule-based on the index **anomalies** (delta − scene seasonal delta) + shape —
-no unlabelled ML. `water_gain` / `water_loss` (NDWI anomaly ≥ 0.15 with real
-movement; loss also requires the change is *not* explained by vegetation
-growth), `construction` (NDBI anomaly ↑, NDVI not greening), `clearance`
-(NDVI anomaly well below the greening trend, NDBI flat), `road` (elongated
-component + NDBI ↑), `other` (explicitly allowed). Every classification carries
-the deltas and anomalies that produced it.
-
-### Step C — temporal persistence + earliest supported change (`geoseek.temporal.persistence`, PS 2.2.2)
-
-Uses all three observations via `TemporalObservationMatcher`. For a location it
-builds the change trajectory across the consecutive pairs and classifies it
-**persistent** (changed early, still present, stable since — high confidence),
-**progressive**, **recent**, **transient** (appeared then reverted — likely a
-false alarm, penalised), or **inconsistent**. Earliest supported change = the
-first consecutive interval that changed, reported *with* its two bounding
-observation ids and the explicit caveat that no change earlier than
-2019-03-30 (our earliest usable observation) can be claimed.
-
-### Step D — confidence engine (`geoseek.change.confidence`)
-
-One score in [0, 1] from six terms — model probability (rescaled, **never**
-exposed raw), temporal persistence, spectral agreement with the assigned type,
-image quality, co-registration residual, radiometric-normalization
-reliability — combined as a **weighted geometric mean** (weights
-2 / 2 / 1.5 / 1.5 / 1 / 1) so any single weak axis collapses the score, then
-multiplied by the Step-A down-weights and a transient-persistence penalty.
-Output includes a human-readable evidence breakdown per candidate.
-
-### Step E — run + honest report
-
-Over the whole 82 km AOI, per pair:
-
-| pair | raw components | suppressed (quality / phenology / morphology) | survived |
-|---|---|---|---|
-| 2019→2021 | 6 271 | 2 / 143 / 3 484 | 2 642 |
-| 2021→2024 | 12 037 | 4 / 2 008 / 6 938 | 3 087 |
-| 2019→2024 | 13 563 | 2 / 936 / 8 467 | 4 158 |
-
-**Honest observation (L1C→L2A domain gap — worse than the 56 % OSCD F1, as
-expected).** The dominant *real* surface change 2019→2024 is **water /
-moisture gain**: 2019 was a severe drought March, 2024 a normal one, so the
-Saryu, its tanks, and soil moisture recovered scene-wide. The span-pair
-survivors split ≈ construction 1 536 / water_gain 1 693 / road 386 /
-clearance 68 / other 469. The top-10 by confidence (0.90–0.92, held below
-saturation by the span pair's radiometric reliability of only 0.50) are
-mostly tanks/ponds refilling — e.g. the highest-confidence candidate is a dry
-tank at (82.253, 26.636) that refilled between 2019 and 2021 and stayed wet
-(persistent; earliest supported 2019-03-30 → 2021-03-04). This is reported as
-observed, not tuned to look like a construction-detection demo. Full report →
-`data/change_model/ayodhya_change_report.json` + manifest
-`ayodhya_change_pipeline`; `[2019 | 2021 | 2024 | overlay]` panels for the
-top-5 → `data/change_model/ayodhya_change_*.png`.
-
-## Phase 5: candidate-queue polish, Sentinel-1 corroboration, fusion, discovery
-
-### Step A — candidate quality
-
-* **Minimum reported change 10 px → 50 px** (0.5 ha). The Phase-4 review found
-  20–30 px blobs cleared every gate on model probability alone; they are now
-  attributed straight to the morphology rule. The real refilling tanks
-  (1 476 / 393 px) survive; the two 23 / 26 px specks do not.
-* **Ranking by `queue_score = confidence^0.65 · significance^0.35`** (weighted
-  geometric mean; `significance = area_term^0.6 · anomaly_term^0.4`, log-area
-  vs 50 px → 3 000 px, max |index anomaly| vs 0.5). A big low-confidence blob
-  and a tiny high-confidence speck both sink; a 30 ha tank outranks a 0.5 ha
-  marginal change of equal confidence, but a 0.55-confidence change never
-  overtakes a 0.90 one.
-* **Diversified headline top-N** — ≤ 3 per `change_type`, same-type picks
-  ≥ 1.5 km apart, so roads and construction surface instead of ten
-  near-identical tanks. Full ranked list → `data/change_model/ayodhya_change_ranked.csv`.
-
-  2019→2024 after the fixes: 13 563 raw → 1 104 survived; diversified top-10 =
-  3 water_gain / 3 road / 3 construction / 1 other, smallest 95 000 m².
-
-### Step B — Sentinel-1 SAR as a second collection
-
-```powershell
-python -m geoseek.staging.download_sentinel1     # network, staging only
-```
-
-Stages **Sentinel-1 IW GRDH 1SDV** (dual-pol VV+VH, S1A, relative orbit 56
-ascending) near each S2 date — 2019-03-29 / 2021-03-06 / 2024-03-02 — from
-Earth Search's `sentinel-1-grd` (same no-login STAC + AWS Open Data bucket as
-the S2 scenes). Geocoded to the **exact S2 10 m UTM grid** via the product's
-~210 GCPs (`gdal.Warp`; rasterio's `WarpedVRT` mishandles `src_gcps` and
-flattens the image — a real gotcha). One 56-track slice covers ~93 % of the
-82 km AOI; the eastern strip is treated as "SAR unavailable" (neutral)
-downstream. Registered as its own collection **`sentinel-1-grd`** (sensor
-`C-SAR`): 3 scenes / 3 observations / 3 079 tiles, `faiss_id = NULL` — SAR is
-**not embedded** (RemoteCLIP is optical; embedding SAR would produce
-meaningless vectors). Source, licence (Copernicus free & open), and per-band
-SHA256 → manifest `sentinel1` + `sentinel1_catalog`. The served GRD is ESA
-Level-1 (detected, multi-looked, ground-range) — **not** calibrated, geocoded,
-terrain-flattened or speckle-filtered; geoseek adds the geocoding at staging
-and the speckle filter + dB change downstream.
-
-`TemporalObservationMatcher.match(collection=…)` was added so the change
-pipeline scopes to `sentinel-2-l2a` and the co-located S1 stack never pollutes
-the S2 temporal sequence.
-
-### Step C — SAR as corroborating evidence (`geoseek.sar`, weight only)
-
-No labelled optical+SAR change set exists, so there is **no fusion model** —
-that would be inventing weights. Instead:
-
-* `backscatter.py`: **adaptive Lee** speckle filter (7×7, ENL 4.4) in the
-  intensity domain, then `dB = 10·log10(I_later / I_earlier)` per polarization
-  — the un-applied absolute calibration cancels because both dates share the
-  beam / relative orbit.
-* `evidence.py`: each optical candidate's footprint is looked up in the
-  co-located dB-change raster and turned into a **confidence factor**
-  (agreement +10 %, clear opposite −20 %, unavailable = exactly ×1.0),
-  scene-detrended just like the optical anomaly. Never an override.
-* **Water is the clean validation case**: open water → strong VV backscatter
-  drop (specular). Over the span pair (scene VV trend +0.7 dB), the `water_gain`
-  survivors show a **median VV anomaly of −1.1 dB** — the expected direction;
-  the per-candidate agreement rate is reported in
-  `ayodhya_change_report.json → sar_corroboration`.
-* **Cloud-penetration**: reported honestly — the three Ayodhya S2 dates are
-  ~cloud-free (bad-SCL ≪ 1 %), so almost nothing is quality-suppressed for
-  cloud and SAR's all-weather value, though real, is not demonstrable on this
-  AOI.
-
-### Step D — one fused analyst queue (`geoseek.fusion.ranker`)
-
-```powershell
-python -m geoseek.change.analyze --query "new construction near a river"
-```
-
-`fusion_score = ( C^3.0 · S^1.5 · Q^2.0 )^(1/6.5)` (weighted geometric mean) —
-change **confidence** C (which already rolls up the detector, persistence,
-quality, spectral agreement and SAR), **significance** S (Step A), and, when a
-text query is active, **RemoteCLIP semantic relevance** Q (cosine of the
-candidate's later-date tile embedding to the query text, rescaled from
-[0.15, 0.32]). Confidence leads (w 3.0); significance only re-orders within a
-band (w 1.5); an active query is nearly as important as confidence (w 2.0) but
-a perfect-match tile with weak change evidence still scores low. Uses the
-existing search seams — no new model, no SAR. Result → `report → fusion`.
-
-### Step E — discovery (PS 2.2.4)
-
-* **KNN "find more like this"** (`geoseek.discovery.knn`): nearest tiles from
-  the FAISS index. `tile_id`-seeded latency **< 1 ms** (3 267-vector IP scan +
-  join); point-seeded ~190 ms, dominated by the linear spatial `query_tiles`
-  scan (a spatial index would remove that).
-* **Offline HDBSCAN** (`scripts/cluster_tiles.py`, batch — not per query) over
-  all 3 267 tile embeddings: **3 clusters, 9 % noise** —
-  c1 (1 958) "rural village / bare dry ground", c2 (982) "trees & dense
-  vegetation", c0 (31) "river with wide sandbars / braided riverbed"
-  (concept similarity 0.36, well above the others' ~0.29). The clustering
-  separates the drought-year land cover (2019/2021, mostly c1) from the
-  green-year cover (2024, mostly c2) and isolates the Saryu channel. Each
-  cluster is labelled by its nearest RemoteCLIP text concepts; spatial map →
-  `data/discovery/cluster_map.png`, assignments → `data/index/tile_clusters.json`,
-  manifest `tile_clustering`.
-
-## Phase 6: the analyst interface
-
-Everything the pipeline computes, made **visible** and **auditable**, running
-with the network off. Full acceptance evidence in [`PHASE6.md`](PHASE6.md).
-
-* **Backend** — routes on the existing `geoseek.search.api` app, all through the
-  repository / search seams: `/candidates` (ranked change queue, filterable by
-  bbox / date / type / min-confidence / sensor / persistence / analyst verdict),
-  `/candidates/{id}` (full evidence breakdown + suppression trace + temporal
-  trajectory + provenance chain tile→observation→scene→collection with COG URL,
-  licence, checksums, weights SHA-256, git commit + SAR corroboration),
-  `/candidates/{id}/imagery` (before / after / change-overlay PNG, per date),
-  `/candidates/{id}/decision`, `/audit`, `/export`, `/stats`, plus discovery
-  pass-throughs. `geoseek.change.analyze` now also writes
-  `ayodhya_change_ranked_detail.json` so every one of the 1104 candidates has
-  full detail offline with no recompute.
-
-* **Audit trail (PS 2.2.5)** — a new `analyst_decisions` table reached **only**
-  through `MetadataRepository`. **Append-only enforced at the storage layer**:
-  `BEFORE UPDATE` / `BEFORE DELETE` triggers `RAISE(ABORT)`. Every row snapshots
-  the decision, note, analyst, timestamp, model version, weights SHA-256, git
-  commit, pipeline version, the confidence **and** the full evidence blob *at
-  the time of the decision*. Re-deciding appends a new row.
-
-* **Frontend** — one static vanilla-JS/CSS bundle served by FastAPI at `/app/`.
-  No build, no CDN, no web-font fetch. Four views: **Search** (NL + image
-  similarity), **Review Queue** (the ranked table + footprints), **Candidate
-  Detail** (BEFORE│AFTER│OVERLAY with a 2019/2021/2024 selector, the trajectory,
-  the evidence + suppression panel, the provenance panel, confirm/reject +
-  history), **Discovery** (KNN + the HDBSCAN cluster map). The **map is a plain
-  `<canvas>` in EPSG:4326** — footprints reprojected server-side, drawn and
-  hit-tested locally; **no web map tiles are ever loaded**.
-
-* **Export (PS 2.2.5)** — `POST /export` → GeoJSON (+CSV) where every feature
-  carries geometry (EPSG:4326), change type, confidence, evidence summary,
-  earliest supported change + caveat, source scene ids, acquisition dates,
-  sensor, model/pipeline versions, weights SHA-256, git commit and the analyst
-  decision if one exists. `scripts/validate_export.py` builds it and **loads it
-  in GDAL/OGR** (GeoJSON driver, SRS = WGS 84, valid Polygons, 1104 features).
-
-* **Offline + latency** — `scripts/verify_offline_perf.py` hard-disables the
-  network in process (any non-loopback `connect` / `getaddrinfo` raises) before
-  building the app; all nine views/functions work and **no call leaves the
-  host**. Per-view p95 with the network down: search 16 ms, queue 48 ms, detail
-  155 ms, imagery 117 ms cold / 2 ms warm, decision 169 ms, audit 18 ms,
-  discovery 4–148 ms — every interactive path well under 1 s.
-
-```bash
-python -m geoseek.change.analyze                 # report + full-detail sidecar
-uvicorn geoseek.search.api:app --port 8000       # -> http://127.0.0.1:8000/app/
-python scripts/demo_audit_trail.py               # audit schema + append-only demo
-python scripts/validate_export.py                # GeoJSON + GDAL/OGR validation
-python scripts/verify_offline_perf.py            # network-off + per-view latency
-node   scripts/shoot_analyst_ui.mjs              # screenshots of the four views
-```
-
-## Phase 7a: spatial index fix + measured retrieval metrics
-
-Fix a known performance defect before it distorts scale benchmarking, then
-produce **measured** retrieval numbers for PS 2.3. Full evidence in
-[`PHASE7.md`](PHASE7.md); every number is from a run on the production catalog.
-
-* **Spatial index (Step A)** — `MetadataRepository.query_tiles(bbox=…)` used to
-  load every tile row and run a shapely `.intersects()` over every footprint in
-  Python (O(N)). Point-seeded KNN (`find_more_like_this(lon,lat)`) paid that on
-  every map click: ~230 ms. Fix: a **SQLite R\*Tree** bbox prefilter, one box
-  per tile keyed by `tiles.rowid`, created + backfilled by
-  `SQLiteMetadataRepository` and kept in lockstep by `add_tiles`, **behind the
-  repository seam** (the R\*Tree DDL is the only SQLite-specific bit; `SCHEMA_SQL`
-  stays standard SQL for the PostGIS port; falls back to the scan if the module
-  is absent). The exact `.intersects()` post-filter still runs, so results are
-  byte-identical. Measured on the same DB (6346 tiles):
-
-  | operation | before median / p95 | after median / p95 | speed-up |
-  |---|--:|--:|--:|
-  | bbox filter `query_tiles(bbox=…)` | 230.9 / 312.6 ms | **0.28 / 0.47 ms** | ≈ 837× |
-  | point-seeded KNN total | 237.7 / 314.6 ms | **1.00 / 2.09 ms** | ≈ 238× |
-  | tile-id-seeded KNN (reference) | 0.0 / 1.0 ms | 1.0 / 1.6 ms | unchanged |
-
-* **Retrieval evaluation (Step B, PS 2.3)** — 16 NL queries (incl. the PS's
-  *"newly built structures near a river"* and *"settlement along a riverbank"*),
-  no vehicle-scale. **Relevance judgements are constructed from an independent
-  signal — never RemoteCLIP or any embedding** (judging with the model under
-  test is circular and guarantees ≈ 100 %): per-tile NDVI/NDWI/NDBI/SCL spectral
-  criteria + an NDWI-derived river mask, applied by fixed per-query rules
-  (grades 0/1/2). The retrieval models embed only true-colour RGB; the judge
-  uses bands they never see. Pool per query = RemoteCLIP top-20 ∪ vanilla top-20
-  ∪ 15 random corpus tiles (both systems pooled symmetrically; 30 relevant tiles
-  were found only via the random draw). Vanilla control built with
-  `force_quick_gelu=True`. Macro-averaged, identical judgements:
-
-  | K | RemoteCLIP R / P / NDCG | vanilla CLIP R / P / NDCG |
-  |--:|--:|--:|
-  | 1  | 0.040 / 0.563 / 0.438 | 0.019 / 0.313 / 0.281 |
-  | 5  | 0.228 / 0.425 / 0.397 | 0.062 / 0.263 / 0.231 |
-  | 10 | 0.365 / 0.381 / 0.419 | 0.115 / 0.238 / 0.223 |
-  | 20 | 0.705 / 0.356 / 0.526 | 0.227 / 0.231 / 0.254 |
-
-  RemoteCLIP wins at every K on every metric (edge is largest on the specific,
-  rarer concepts — new construction, riverside settlement, water body, bare
-  ground; on ~70 %-prevalence cropland the metric is near its ceiling for both).
-  These are constructed judgements, not expert ground truth — limitations
-  (spectral proxies, single-date, weak road/bridge criteria at 10 m) are in
-  `PHASE7.md` and `judgments_rationale.json`.
-
-* **Query latency** — `search_text(k=20)`: **warm** (pre-warmed, as production
-  serves) median **17.4 ms**, p95 21.8, p99 26.3; **cold** (fresh process, no
-  pre-warm, first query) median 235 ms, p99 435 ms. The Phase 6 cold-start fix
-  held — no multi-second cliff, all well under 1 s.
-
-* **Reproducible** — `data/eval_retrieval/{queries,pools,tile_features,judgments,
-  judgments_rationale,report,latency}.json` + contact sheets; methodology
-  recorded in the provenance manifest under `retrieval_evaluation`.
-
-```bash
-python scripts/bench_spatial_index.py --label after && python scripts/bench_spatial_index.py --report
-python scripts/eval_retrieval_prepare.py    # rank + pool + contact sheets + latency
-python scripts/eval_retrieval_features.py   # independent per-tile spectral features
-python scripts/eval_retrieval_judge.py      # constructed graded judgements
-python scripts/eval_retrieval_score.py      # metrics table + manifest record
-```
-
-## Phase 7b: scalability, measured (3,267 → 100,887 tiles)
-
-Does the same pipeline — same RemoteCLIP weights, same `FaissFlatIPIndex`,
-zero retraining — hold up 30x larger, and generalize to terrain it has
-never seen? Full evidence (three tiers, every number measured on this
-machine) in [`PHASE7B.md`](PHASE7B.md).
-
-* **Diverse-AOI staging** (`scripts/stage_diverse_aois.py`) — a *generic*
-  STAC-item-asset-href fetch (any MGRS tile, not `download_datasets.py`'s
-  hardcoded 44RPQ path) across 8 regions: Himalayan foothills, Thar desert,
-  Sundarbans delta, Delhi NCR, Central India forest/plateau, Kerala
-  backwaters, Rann of Kutch, Deccan plateau — 69 scenes, 14 distinct MGRS
-  tiles. Ingested through the **unmodified** `geoseek.ingest` pipeline
-  (`scripts/ingest_diverse_scene.py` calls the exact same functions
-  `ingest.pipeline.ingest_scene` does).
-* **Scale**: 3,267 → 12,418 (Tier 1) → 50,126 (Tier 2) → 100,887 (Tier 3)
-  tiles, each tier's incremental-add proof re-confirming byte-identical
-  pre-existing vectors (no rebuild) up to 100k+.
-* **FlatIP query latency scales close to linearly** in vector count for
-  every FAISS-scan-bound path (image search, both KNN variants), and the
-  R\*Tree bbox filter and every RAM/VRAM/ingest-throughput number stay flat
-  — the expected signature. The HNSW crossover for sub-200 ms interactivity
-  is estimated at ~300k–700k vectors depending on which of two observed
-  trends holds; FlatIP remains comfortably fine at 100k (21.7 ms image
-  search median).
-* **Retrieval quality under scale, measured not asserted**: recall of the
-  original Phase 7a relevant tile set for the same 16 queries drops to
-  10.6% @K=20 once ~30x more genuinely diverse content competes for the
-  same slots — the "more distractors" effect, quantified.
-* **Two honest degradations, reported plainly**: ingestion throughput
-  step-changed ~2x worse partway through the unattended ~4-hour Tier 3 run
-  (**follow-up root cause: the laptop was unplugged from AC** — a
-  measurement-environment artifact, not scalability); FAISS's
-  whole-file-rewrite persist cost scales super-linearly (18.6 ms → 1.36 s
-  across the three tiers).
-* **HDBSCAN re-clustering did not hold up unmodified at 100k/512-d** —
-  49+ minutes single-threaded, 60m50s even after adding multi-core support,
-  both abandoned without a result: a genuine, disclosed scalability wall,
-  distinct from (and unrelated to) the search-latency scaling above. The
-  Tier 1 result (12,418 tiles) stands as this phase's clustering evidence:
-  HDBSCAN's `leaf` mode surfaces clusters that are >96% single-region with
-  *zero* location metadata — the generalization claim, made concrete.
-
-### Phase 7b follow-up ([`PHASE7B_FOLLOWUP.md`](PHASE7B_FOLLOWUP.md))
-
-Four Tier-3 threads run down:
-
-* **The precision drop is ~78% a judgement artifact.** The frozen Phase 7a
-  judge only scores Ayodhya tiles (NDVI/NDWI/NDBI + an Ayodhya river mask); at
-  100k the top-K is 90% tiles from 8 other regions it *cannot* score. Visual
-  inspection: **81% of those un-scoreable high-ranked tiles are on-target** for
-  their query. Restricting the eval to the Ayodhya sub-corpus **reproduces the
-  Phase 7a metrics exactly** (P@20 0.356, NDCG@20 0.526) — retrieval quality
-  inside the judgeable domain is unchanged after a 31× corpus growth.
-* **Region metadata pre-filter recovers full precision** (P@20 0.028 → 0.356);
-  near-duplicate suppression is a marginal positive; score-thresholding is a
-  no-op at K ≤ 20 on a corpus this large. Measured each alone and combined
-  (`scripts/eval_precision_at_scale.py`).
-* **The ingestion slowdown was the laptop unplugged from AC** at 2026-09-06
-  11:10:29 UTC (Windows power logs), landing exactly between ledger rows 47 and
-  48 — a measurement-environment artifact, not thermal and not corpus-size
-  (throughput was flat at 210 tiles/s ±6% across an 11× index growth on AC).
-* **HDBSCAN now completes at 100k in 3.6 min** — stratified 20k sample +
-  nearest-centroid assignment (`scripts/cluster_at_scale.py`), recovering the
-  Tier-1 cluster structure (non-noise ARI 0.96).
-
-```bash
-python scripts/run_diverse_ingest.py --target 100000 --regions dehradun jaisalmer sundarbans delhi_ncr kanha kerala_backwaters kutch deccan
-python scripts/measure_tier.py --tier tier3 --incremental-region kanha --ledger-since-index 31
-python scripts/cluster_tiles.py --min-cluster-size 40 --n-jobs -1
-python scripts/eval_retrieval_at_scale.py --tier tier3
-python scripts/plot_scale.py
-
-# follow-up
-python scripts/eval_precision_at_scale.py
-python scripts/diagnose_judge_transfer.py --top-n 12
-python scripts/cluster_at_scale.py --sample-size 20000 --n-jobs -1
-```
-
-## Tests
-
-```bash
-pytest
-```
-
-`test_env.py` — torch + CUDA visible, RemoteCLIP loads + encodes to 512-d
-**from the local staged file only**. `test_ingest.py` — the ingest pipeline
-end-to-end on the staged AOI (metadata, tiling, SCL quality, fixed-bounds
-true-color stretch, single model load, incremental FAISS+catalog append,
-network forcibly disabled). `test_search.py` — the Phase 2 semantic search
-module. `test_change.py` — Phase 3a: phase-correlation recovers known
-sub-pixel shifts, PIF selection excludes water/vegetation, the linear fit
-recovers a known gain/offset and rejects injected change, normalization
-shrinks the inter-date bias, index formulas and ranges; plus light
-integration checks against the real staged pair (skipped if B08/B11 aren't
-staged). `test_catalog.py` — entities, `SQLiteMetadataRepository` round-trips
-+ queries, the migration (synthetic + idempotent + rollback), and integration
-checks against the migrated production catalog. `test_vectorindex.py` /
-`test_models.py` — the VectorIndex and model seams. `test_temporal.py` — the
-matcher's sequencing and per-criterion verdicts. `test_search_parity.py` —
-the seams changed no search result vs the frozen baseline. `test_change_align.py`
-— the third-date alignment summary. `test_change_model.py` — Phase 3b:
-`FCSiamDiff` architecture (param count in the 1-2 M target, forward shapes,
-order-invariance, shared Siamese encoder) and the `FCSiamDiffChangeModel` seam
-(consumes a matcher `ObservationPair` unchanged, returns a `ChangeResult` with
-a written mask, refuses a non-comparable pair, runs offline) — all hermetic
-(tiny synthetic checkpoint + rasters), plus a skip-if-absent check against the
-real trained weights. `test_change_pipeline.py` — Phase 4/5: the five
-suppression gates + ordering + down-weight combination, anomaly-framed change
-typing for every type, the persistence analyzer's trajectory verdicts +
-earliest-supported-change caveat (against a tiny in-memory catalog), the
-confidence engine (geometric-mean collapse on a single weak term, raw model
-probability never surfaced, weights documented), and Phase 5 Step A
-(`queue_score`, `significance`, `diversify`). `test_phase5.py` — Sentinel-1
-backscatter (Lee filter smooths speckle / preserves an edge; dB change is 0 for
-identical, +6 dB for 2× amplitude, NaN at nodata), the SAR corroboration factor
-(scene-detrended, direction-aware, neutral when unavailable), the confidence
-engine folding it in and clamping, the fusion score (geometric, query-optional,
-confidence-led) and `FusionRanker`, and offline HDBSCAN clustering on synthetic
-blobs. `test_phase6.py` — Phase 6: the append-only `analyst_decisions` seam
-(round-trip, ordered history, the `BEFORE UPDATE`/`BEFORE DELETE` triggers
-firing), every analyst endpoint (queue filters/sort, full evidence + suppression
-trace + provenance, imagery PNGs, decision → audit, export), the export loading
-in GDAL/OGR, and the light-vs-full audit views. `test_phase7.py` — Phase 7a:
-the R\*Tree bbox prefilter returns byte-identical result sets to the
-brute-force shapely scan (production catalog, boxes from sliver to whole-AOI,
-combined with a collection filter, prefilter on vs forced-off), the index
-backfills when wiped + reopened and `add_tiles` keeps it in lockstep; and the
-retrieval-evaluation artifacts are internally consistent with a declared
-non-RemoteCLIP judgement provenance. 211 tests total (0 skipped).
-
-## Layout
-
-```
-geoseek/
-  pyproject.toml          pip-installable deps (torch, open_clip, faiss-cpu, rasterio, fastapi, ...)
-  environment.yml         conda-forge/pytorch/nvidia env for the binary-heavy packages (Windows path)
-  scripts/
-    prove_semantic.py        Step C: RemoteCLIP vs vanilla CLIP contact-sheet proof
-    radiometry_check.py      Phase 2 follow-up: S2 baseline / BOA-offset + harmonization sanity check
-    capture_search_baseline.py  freeze the production search results into a regression fixture
-    align_third_date.py      Phase 3.5 Step 4: co-registration + PIF offset provenance for the 3rd date
-    train_change.py          Phase 3b: train FC-Siam-diff on OSCD + honest held-out evaluation
-    cluster_tiles.py         Phase 5 Step E: batch HDBSCAN over tile embeddings + KNN demo
-    (Phase 4/5 change pipeline runs as `python -m geoseek.change.analyze [--query ...]`)
-  src/geoseek/
-    config.py              paths, device auto-select, startup banner
-    staging/
-      download_models.py    network entrypoint: stage RemoteCLIP weights + (--vanilla) control CLIP
-      download_datasets.py  network entrypoint: demo AOI + scaled AOI (--large) + B08/B11 (--extra-bands) + 3rd date (--third-date)
-      download_oscd.py      network entrypoint: stage the OSCD change-detection dataset (Phase 3b training data)
-      download_sentinel1.py network entrypoint: stage Sentinel-1 GRD SAR (Phase 5) as its own collection
-      manifest.py            provenance manifest (sha256, license, timestamp, ingest runs, analysis sections) writer
-    catalog/                 Phase 3.5: the scene -> observation -> tile metadata catalog
-      entities.py             storage-agnostic dataclasses (Collection/Scene/Observation/Tile/DerivedProduct/…)
-      repository.py           MetadataRepository ABC (swappable to PostGIS)
-      sqlite_repository.py    SQLiteMetadataRepository — the only sqlite3 in geoseek
-      schema.py / naming.py   DDL; observation<->scene id helpers + provenance constants
-      migrate.py              CLI: flat `tiles` -> the hierarchy, non-destructive + verified
-    vectorindex/             Phase 3.5: the embedding-search seam
-      base.py                VectorIndex ABC
-      faiss_flat.py          FaissFlatIPIndex — the only faiss in geoseek
-    models/                  Phase 3.5: model interfaces
-      base.py                EmbeddingModel, QualityEstimator, ChangeDetectionModel (interface only)
-      remoteclip.py          RemoteCLIPEmbeddingModel (wraps ingest.embed)
-      quality.py             SclQualityEstimator
-    temporal/                Phase 3.5: temporal reasoning
-      contract.py            ObservationSequence / ObservationPair / PairComparability (matcher <-> change-detection contract)
-      matcher.py             CLI: TemporalObservationMatcher — comparable/not-comparable + reasons per pair
-      persistence.py         Phase 4 Step C: change trajectory + persistence verdict + earliest supported change
-    ingest/
-      reader.py              rasterio: read bands, preserve CRS/transform/nodata
-      tiler.py                256x256 tiling + lon/lat footprint per tile; single-tile window reads
-      quality.py              SCL-based per-tile cloud/shadow/snow/saturated fraction
-      embed.py                reflectance -> fixed-bounds true-color 8-bit RGB -> RemoteCLIP (loaded once, batched)
-      store.py                TileStore: thin coordinator over the MetadataRepository + VectorIndex seams
-      pipeline.py              CLI: read -> tile -> quality -> embed (batched) -> store
-    search/
-      engine.py               SearchEngine: text-to-image + image-to-image, filters, thumbnails (via the seams)
-      api.py                  FastAPI: search + Phase 6 analyst routes; mounts the /app/ frontend
-    analyst/                 Phase 6: the analyst interface (PS 2.2.5)
-      service.py               AnalystService: queue, full evidence + provenance, decisions, export (via the seams)
-      imagery.py               before / after / change-overlay PNG crops from the cached prob raster (LRU, offline)
-      geo.py                   candidate pixel-bbox -> EPSG:4326 polygon for the map + export
-      web/                     the offline SPA: index.html + style.css + app.js (no build, no CDN, canvas map)
-    change/                   Phase 3a: pair prep · 3b: trained model · 4: analyst pipeline
-      coregister.py            FFT phase-correlation sub-pixel co-registration check + correction
-      normalize.py             pseudo-invariant-feature per-band linear radiometric normalization
-      indices.py               NDVI / NDWI / NDBI
-      align.py                 Phase 3.5: windowed co-registration + PIF offset summary for one pair
-      prep.py                  CLI: steps B-E + acceptance gate; writes the manifest analysis sections
-      models/                  Phase 3b: the trained change-detection model
-        fc_siam_diff.py         FCSiamDiff nn.Module (shared Siamese encoder, |f1-f2| skips, U-Net decoder)
-        fc_siam_diff_model.py   FCSiamDiffChangeModel(ChangeDetectionModel) - ObservationPair -> ChangeResult
-      suppress.py              Phase 4 Step A: 5 ordered false-alarm gates + per-candidate trace
-      classify.py              Phase 4 Step B: rule-based change typing on index anomalies
-      confidence.py            Phase 4 Step D + Phase 5 Step C: weighted-geometric-mean confidence + SAR factor
-      analyze.py               Phase 4/5 CLI orchestrator: candidates -> queue -> report + panels (--query)
-  sar/                       Phase 5 Step C: Sentinel-1 as corroborating evidence
-    backscatter.py             adaptive Lee speckle filter + dB backscatter change
-    evidence.py                per-candidate co-located dB lookup -> confidence factor (weight, not override)
-  fusion/ranker.py           Phase 5 Step D: fused analyst queue (change evidence + RemoteCLIP relevance)
-  discovery/                 Phase 5 Step E: PS 2.2.4
-    knn.py                     "find more like this" over FAISS (latency-reported)
-    cluster.py                 offline HDBSCAN over all tile embeddings + concept labels + cluster map
-  data/
-    models/ datasets/ tiles/ index/     gitignored, populated by staging + ingest
-    datasets/oscd/                      gitignored, OSCD change-detection dataset (download_oscd.py)
-    datasets/S1A_*_grd/                 gitignored, geocoded Sentinel-1 VV/VH (download_sentinel1.py)
-    change_model/                       gitignored, fc_siam_diff.pt + prob_*.tif + reports + ranked_detail sidecar + exports/ + ui_screens/
-    discovery/cluster_map.png           gitignored, HDBSCAN spatial cluster map
-    index/tile_clusters.json            gitignored, per-tile HDBSCAN assignments + concept labels
-    index/tiles.sqlite                  the catalog (collections/scenes/observations/tiles/derived)
-    index/tiles.faiss                   the FaissFlatIPIndex vectors
-    provenance_manifest.json            gitignored; staging + ingest + change.prep + Step 4 + Phase 3b (oscd*, oscd_change_model*)
-    sample_tile_true_color.png          gitignored, written by the ingest pipeline
-    prove_semantic/                     gitignored, RemoteCLIP vs vanilla CLIP contact sheets
-    index/spectral_indices_per_tile.csv gitignored, per-tile NDVI/NDWI/NDBI per date (change.prep)
-  tests/
-    test_env.py  test_ingest.py  test_search.py  test_change.py  test_change_model.py
-    test_change_pipeline.py  test_phase5.py  test_phase6.py  test_phase7.py  test_catalog.py
-    test_vectorindex.py  test_models.py  test_temporal.py  test_search_parity.py
-    test_change_align.py
-    fixtures/search_baseline.json  fixtures/pre_migration_tiles.json
-  scripts/
-    demo_audit_trail.py       Phase 6 Step B: analyst_decisions schema + append-only demo
-    validate_export.py        Phase 6 Step D: build the GeoJSON export + validate it in GDAL/OGR
-    verify_offline_perf.py    Phase 6 Step E: network-disabled run + per-view latency
-    shoot_analyst_ui.mjs      Phase 6: Playwright screenshots of the four views (off-origin aborted)
-    bench_spatial_index.py    Phase 7a Step A: R*Tree bbox/KNN latency before/after
-    eval_retrieval_{prepare,features,judge,score}.py   Phase 7a Step B: PS 2.3 retrieval evaluation
-    stage_diverse_aois.py     Phase 7b: generic diverse-AOI staging (any MGRS tile)
-    ingest_diverse_scene.py   Phase 7b: the unmodified ingest pipeline, correct per-region provenance
-    run_diverse_ingest.py     Phase 7b: stage+ingest driver until a target vector count is reached
-    measure_tier.py           Phase 7b: storage/latency/RAM-VRAM/incremental-proof per tier
-    eval_retrieval_at_scale.py  Phase 7b Tier 3: retrieval recall/distractor-rate at scale
-    plot_scale.py             Phase 7b Tier 3: latency-vs-scale + storage-vs-scale plots
-    eval_precision_at_scale.py  Phase 7b follow-up: corrected precision + region-filter/threshold/dedup deltas
-    diagnose_judge_transfer.py  Phase 7b follow-up: contact sheets of un-scoreable high-ranked tiles
-    cluster_at_scale.py       Phase 7b follow-up: HDBSCAN on a stratified sample + nearest-centroid assignment
-```
+Two different models do two different jobs. **RemoteCLIP** is a pretrained
+vision-language model (never fine-tuned here) that turns a tile or a text
+query into a vector — nearby vectors mean visually/semantically similar
+scenes, which is what powers search. **FC-Siam-diff** is a small
+change-detection network trained from scratch on the OSCD dataset to compare
+two co-registered images of the same location and predict which pixels
+changed — this is what powers change detection. The two are independent and
+serve different queries: one finds *what looks like X*, the other finds
+*what's different here now*.
+
+## Tech stack
+
+| Technology | What it does | Why chosen |
+|---|---|---|
+| RemoteCLIP (OpenCLIP ViT-B/32) | Embeds imagery and text into a shared vector space | Pretrained specifically on remote-sensing imagery; no fine-tuning needed for search to work well |
+| FC-Siam-diff (PyTorch) | Pixel-level change detection between two dates | Small (1.09M params), fast on a laptop GPU, standard architecture with a public benchmark to compare against |
+| FAISS + R*Tree | Nearest-neighbor and spatial (bbox/point) indexing | Sub-20ms warm search over 100k+ vectors; R*Tree gives ~837x speedup on bounding-box queries over a linear scan |
+| rasterio / GDAL / pyproj | Reading, reprojecting, and co-registering satellite imagery | Standard geospatial stack with correct CRS/warp handling |
+| FastAPI + SQLite | Analyst API and audit-trail storage | Lightweight, offline-capable, no external database server needed |
+| Vanilla JS (no framework, no CDN) | Analyst web UI | Runs fully offline with zero build step or external script dependency |
+
+## Data and models
+
+- **Imagery**: Sentinel-2 L2A (10m, optical) and Sentinel-1 GRD (SAR), fetched
+  once via Earth Search STAC (Element 84, backed by the public AWS Open Data
+  Sentinel-2 bucket) under the Copernicus Sentinel Data license (free and
+  open, EU Copernicus Data Policy).
+- **Search model**: RemoteCLIP ViT-B-32 weights from Hugging Face
+  (`chendelong/RemoteCLIP`), Apache-2.0 licensed, used as published with no
+  fine-tuning.
+- **Change model**: FC-Siam-diff, trained from scratch here on OSCD
+  (Onera Satellite Change Detection dataset). The architecture and training
+  code are Apache-2.0; the trained weights are a derivative of OSCD, which is
+  CC-BY-NC-SA-4.0 (non-commercial, share-alike) — the weights inherit that
+  restriction.
+- Every download, checksum, and derivation is recorded in
+  `data/provenance_manifest.json`, generated automatically by the staging
+  scripts — see that file for the authoritative, machine-checked record.
+
+## Limitations
+
+- **Resolution**: Sentinel-2's 10m pixels cannot resolve individual vehicles
+  or small structures — this system finds land-cover-scale change, not
+  object-level detail.
+- **Domain gap**: OSCD (the change-detection training/eval set) is Sentinel-2
+  L1C imagery over mostly urban European scenes; our imagery is L2A over
+  semi-rural and mixed Indian terrain. The reported F1 is measured on OSCD's
+  own held-out split, not on our target domain, and should be read with that
+  gap in mind.
+- **Relevance judgements**: search-quality metrics are built from
+  constructed/synthetic relevance judgements, not expert-annotated ground
+  truth.
+- **SAR corroboration**: Sentinel-1 change signal is used as a confidence
+  weight on optical change candidates, not as an independently validated
+  detector — it hasn't been checked against ground-truth SAR change labels.
+- **Deployment**: designed and tested as a single-node, single-machine
+  system; no distributed or multi-user concurrency story.
+
+## Documentation
+
+- [docs/EVALUATION_REPORT.md](docs/EVALUATION_REPORT.md) — full evaluation
+  methodology and results, including honest negative results.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) — system design and the
+  seams the codebase is built around.
+- [RUN.md](RUN.md) — complete setup and run instructions.
+- `PHASE*.md` files — detailed engineering notes from each stage of
+  development, kept for historical/technical reference.
