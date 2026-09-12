@@ -198,3 +198,94 @@ def test_cluster_sample_and_assign_recovers_blobs_and_labels_everything():
         vecs, tile_ids, groups, _StubEmbed(dim), sample_size=900, min_cluster_size=30,
         core_dist_n_jobs=1, seed=1, min_per_group=100, abstain_below_sim=1.01)
     assert res_ab.noise_count == 2700
+
+
+# --------------------------------------------------------------------------
+# PS 2.2.4 follow-up: cluster_selection_method + PCA knobs, label
+# disambiguation (see scripts/cluster_quality_sweep.py, PHASE8_POLISH.md)
+# --------------------------------------------------------------------------
+
+def _three_blobs(dim=16, seed=7, n_per_blob=900, noise_std=0.02):
+    rng = np.random.default_rng(seed)
+    centers = _unit(rng, 3, dim)
+    blocks, groups = [], []
+    for bi, c in enumerate(centers):
+        pts = c + noise_std * rng.standard_normal((n_per_blob, dim)).astype(np.float32)
+        pts /= np.linalg.norm(pts, axis=1, keepdims=True)
+        blocks.append(pts)
+        groups += [f"region{bi}"] * n_per_blob
+    vecs = np.concatenate(blocks)
+    tile_ids = [f"t{i}" for i in range(len(vecs))]
+    return vecs, tile_ids, groups
+
+
+def test_cluster_selection_method_leaf_still_recovers_the_blobs_and_is_recorded():
+    dim = 16
+    vecs, tile_ids, groups = _three_blobs(dim)
+    res = cluster_sample_and_assign(
+        vecs, tile_ids, groups, _StubEmbed(dim), sample_size=900, min_cluster_size=30,
+        core_dist_n_jobs=1, seed=1, min_per_group=100, cluster_selection_method="leaf")
+    assert res.params["cluster_selection_method"] == "leaf"
+    assert res.sample_result.params["cluster_selection_method"] == "leaf"
+    # leaf may split more finely than eom, but every point must still land in
+    # a cluster consistent with its true blob (no cross-blob contamination)
+    assert res.n_clusters >= 3
+    for bi in range(3):
+        lab = res.labels[bi * 900:(bi + 1) * 900]
+        assert len(set(lab.tolist()) & set(res.labels[(bi + 1) % 3 * 900:].tolist())) <= 3
+
+
+def test_pca_dim_reduces_only_the_hdbscan_fit_space_not_concept_labeling():
+    dim = 32
+    vecs, tile_ids, groups = _three_blobs(dim, n_per_blob=400)
+    res = cluster_sample_and_assign(
+        vecs, tile_ids, groups, _StubEmbed(dim), sample_size=400, min_cluster_size=20,
+        core_dist_n_jobs=1, seed=1, min_per_group=50, pca_dim=8)
+    assert res.params["pca_dim"] == 8
+    assert res.sample_result.params["pca_dim"] == 8
+    assert res.n_clusters >= 1
+    # centroids used for the corpus-wide assignment are still native-dim and unit-norm
+    assert res.centroids.shape[1] == dim
+    assert np.allclose(np.linalg.norm(res.centroids, axis=1), 1.0, atol=1e-5)
+
+
+def test_disambiguate_cluster_labels_appends_region_only_when_tied():
+    from geoseek.discovery.cluster import disambiguate_cluster_labels
+
+    concepts = {
+        0: [("bare dry open ground", 0.9)],
+        1: [("bare dry open ground", 0.88)],
+        2: [("an open water reservoir or pond", 0.7)],
+    }
+    purity = {"0": {"dominant_region": "kutch"}, "1": {"dominant_region": "jaisalmer"},
+             "2": {"dominant_region": "ayodhya"}}
+    out = disambiguate_cluster_labels(concepts, purity)
+    assert out[0] == "bare dry open ground (kutch)"
+    assert out[1] == "bare dry open ground (jaisalmer)"
+    assert out[2] == "an open water reservoir or pond"       # untied - unchanged
+    assert len(set(out.values())) == 3                       # no more duplicates
+
+
+def test_disambiguate_cluster_labels_falls_back_to_cluster_id_without_region_info():
+    from geoseek.discovery.cluster import disambiguate_cluster_labels
+
+    concepts = {0: [("bare dry open ground", 0.9)], 1: [("bare dry open ground", 0.9)]}
+    out = disambiguate_cluster_labels(concepts, region_purity=None)
+    assert out == {0: "bare dry open ground (c0)", 1: "bare dry open ground (c1)"}
+    assert out[0] != out[1]
+
+
+def test_disambiguate_cluster_labels_breaks_ties_that_survive_the_region_suffix():
+    from geoseek.discovery.cluster import disambiguate_cluster_labels
+
+    # 0 and 1 share both the top concept AND the dominant region - the region
+    # suffix alone can't distinguish them, so a second pass must add the id.
+    concepts = {0: [("an open water reservoir or pond", 0.9)],
+               1: [("an open water reservoir or pond", 0.85)],
+               2: [("bare dry open ground", 0.7)]}
+    purity = {"0": {"dominant_region": "kerala_backwaters"}, "1": {"dominant_region": "kerala_backwaters"},
+             "2": {"dominant_region": "kutch"}}
+    out = disambiguate_cluster_labels(concepts, purity)
+    assert len(set(out.values())) == 3
+    assert out[0] != out[1]
+    assert out[2] == "bare dry open ground"

@@ -3,8 +3,25 @@
 Phase 7b Tier 3 established that full single-pass HDBSCAN over 101,911 raw
 512-d embeddings does not finish in practical batch time (>60 min, killed).
 This is the standard, disclosed fix: cluster a REPRESENTATIVE STRATIFIED
-SAMPLE (default 20k, stratified across regions), then assign every remaining
+SAMPLE (default 40k, stratified across regions), then assign every remaining
 tile to its nearest sample-cluster centroid (one dense cosine matmul).
+
+**Quality-sweep update (PHASE8_POLISH.md)**: the library-default 'eom'
+cluster-selection rule collapses this corpus into one or two mega-clusters
+(86-99% of tiles in a single "bare dry open ground" cluster, unhelpful for
+discovery) and is very sample-size sensitive (2 clusters at a 10k sample, 6
+at 20k, for the identical config). Default is now 'leaf' selection + a
+50-dim PCA before HDBSCAN, which is both far more balanced (largest cluster
+~17-30% across every sample size tried, vs 51-99% for eom) AND ~15-20x
+faster (PCA collapses the curse-of-dimensionality wall that made raw 512-d
+core-distance computation the bottleneck) - see
+``scripts/cluster_quality_sweep.py`` for the full comparison table this
+default is based on. Duplicate top-concept labels across distinct clusters
+(inevitable with only 15 fixed concept phrases once one mega-cluster splits
+into several still-similar-looking pieces) are resolved by
+:func:`geoseek.discovery.cluster.disambiguate_cluster_labels`, which appends
+each cluster's dominant region where two clusters would otherwise show the
+identical label.
 
 Reports:
   * runtime (sample HDBSCAN + assignment), separately
@@ -42,7 +59,13 @@ from collections import Counter
 import numpy as np
 
 from geoseek.config import get_settings
-from geoseek.discovery.cluster import CONCEPTS, cluster_sample_and_assign, load_all_vectors, save_cluster_map
+from geoseek.discovery.cluster import (
+    CONCEPTS,
+    cluster_sample_and_assign,
+    disambiguate_cluster_labels,
+    load_all_vectors,
+    save_geographic_cluster_map,
+)
 from geoseek.search.engine import SearchEngine
 from geoseek.search.rerank import region_key
 
@@ -59,6 +82,19 @@ def _region_map(engine: SearchEngine) -> dict[str, str]:
     for rec in engine.repo.iter_tile_records():
         if rec.faiss_id is not None:
             out[rec.tile_id] = aoi_by_obs.get(rec.observation_id, "unknown")
+    return out
+
+
+def _lonlat_map(engine: SearchEngine) -> dict[str, tuple[float, float]]:
+    """tile_id -> (lon, lat) tile centroid, for the geographic cluster map."""
+    from shapely import wkt as shapely_wkt
+
+    out: dict[str, tuple[float, float]] = {}
+    for rec in engine.repo.iter_tile_records():
+        if rec.faiss_id is None:
+            continue
+        c = shapely_wkt.loads(rec.geom_wkt_4326).centroid
+        out[rec.tile_id] = (c.x, c.y)
     return out
 
 
@@ -153,18 +189,21 @@ def _region_heatmap(tile_ids, labels, region_map, centroid_ids, concepts, out_pa
     return str(out_path)
 
 
-def _write_canonical_discovery_file(res, recs) -> tuple:
-    """Write ``<index_dir>/tile_clusters.json`` (+ its spatial ``cluster_map.png``)
-    in exactly the schema ``scripts/cluster_tiles.py`` used, so the app's
-    Discovery view and every KNN "similar" result's ``cluster`` field reflect
-    THIS (at-scale, full-corpus) result rather than whatever the last full
-    single-pass HDBSCAN run happened to leave behind."""
-    map_path = save_cluster_map(res, recs, OUT_DIR / "cluster_map.png")
+def _write_canonical_discovery_file(res, lonlat_map, region_purity, display_labels) -> tuple:
+    """Write ``<index_dir>/tile_clusters.json`` (+ its geographic
+    ``cluster_map.png``) so the app's Discovery view and every KNN "similar"
+    result's ``cluster`` field reflect THIS (at-scale, full-corpus) result
+    rather than whatever the last clustering run happened to leave behind."""
+    map_path = save_geographic_cluster_map(
+        res.tile_ids, res.labels, lonlat_map, res.cluster_concepts, res.sizes,
+        OUT_DIR / "cluster_map.png", display_labels=display_labels, noise_count=res.noise_count)
     payload = {
         "n_clusters": res.n_clusters, "noise_count": res.noise_count,
         "n_tiles": int(len(res.labels)), "sizes": res.sizes,
         "cluster_concepts": {str(k): [[c, round(float(s), 4)] for c, s in v]
                              for k, v in res.cluster_concepts.items()},
+        "display_labels": {str(k): v for k, v in display_labels.items()},
+        "region_purity": region_purity,
         "params": res.params,
         "tile_cluster": {tid: int(lab) for tid, lab in zip(res.tile_ids, res.labels.tolist())},
         "cluster_map_png": str(map_path),
@@ -176,13 +215,21 @@ def _write_canonical_discovery_file(res, recs) -> tuple:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--sample-size", type=int, default=20_000)
+    ap.add_argument("--sample-size", type=int, default=40_000)
     ap.add_argument("--min-cluster-size", type=int, default=40)
     ap.add_argument("--min-samples", type=int, default=None)
     ap.add_argument("--n-jobs", type=int, default=-1)
     ap.add_argument("--seed", type=int, default=20260907)
     ap.add_argument("--abstain-below-sim", type=float, default=None,
                     help="optional: label tiles with best-centroid cosine below this as noise (-1)")
+    ap.add_argument("--cluster-selection-method", choices=["eom", "leaf"], default="leaf",
+                    help="HDBSCAN's cluster extraction rule. 'eom' (the library default) tends to pick one "
+                         "or two large, stable clusters here; 'leaf' selects further down the condensed "
+                         "tree and gives a much more balanced split - see PHASE8_POLISH.md's quality sweep "
+                         "(largest cluster 86-99%% with eom vs ~20-35%% with leaf on this corpus).")
+    ap.add_argument("--pca-dim", type=int, default=50,
+                    help="reduce to this many dims (PCA on the sample) before HDBSCAN - also ~15-20x faster "
+                         "than raw 512-d at this sample size (PHASE8_POLISH.md); pass 0 to disable")
     args = ap.parse_args()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -209,7 +256,9 @@ def main() -> None:
             vectors, tile_ids, groups, eng.embedding_model,
             sample_size=args.sample_size, min_cluster_size=args.min_cluster_size,
             min_samples=args.min_samples, core_dist_n_jobs=args.n_jobs, seed=args.seed,
-            abstain_below_sim=args.abstain_below_sim)
+            abstain_below_sim=args.abstain_below_sim,
+            cluster_selection_method=args.cluster_selection_method,
+            pca_dim=args.pca_dim or None)
         total_s = time.time() - t0
 
         labels = res.labels
@@ -265,6 +314,13 @@ def main() -> None:
                                res.cluster_concepts, OUT_DIR / "cluster_at_scale_region_heatmap.png")
         print(f"  region heatmap -> {heat}")
 
+        display_labels = disambiguate_cluster_labels(res.cluster_concepts, purity)
+        dup = {c: lbl for c, lbl in display_labels.items()
+              if lbl != res.cluster_concepts[c][0][0]}
+        if dup:
+            print(f"\n  disambiguated {len(dup)} cluster label(s) sharing a top concept: "
+                  f"{json.dumps(dup, indent=2)}")
+
         payload = res.as_dict()
         payload.update({
             "runtime_seconds": {"vector_load": round(load_s, 1),
@@ -283,7 +339,8 @@ def main() -> None:
         print(f"\n  -> {OUT_DIR / 'cluster_at_scale_100k.json'}")
         print(f"  -> {OUT_DIR / 'tile_clusters_at_scale_100k.json'}")
 
-        canon_json, canon_map = _write_canonical_discovery_file(res, recs)
+        lonlat_map = _lonlat_map(eng)
+        canon_json, canon_map = _write_canonical_discovery_file(res, lonlat_map, purity, display_labels)
         print(f"  -> {canon_json}  (canonical - read by the running app's Discovery view)")
         print(f"  -> {canon_map}")
     finally:

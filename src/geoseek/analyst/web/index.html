@@ -71,8 +71,11 @@
       <label class="grow">natural-language query
         <input id="q" placeholder="e.g. a river with wide sandbars near cropland" value="an open water reservoir or pond">
       </label>
+      <label>region
+        <select id="s_region"><option value="">any</option></select>
+      </label>
       <label>AOI bbox (w,s,e,n)
-        <input id="s_bbox" placeholder="optional">
+        <input id="s_bbox" placeholder="optional - or pick a region">
       </label>
       <label>from<input id="s_from" type="date"></label>
       <label>to<input id="s_to" type="date"></label>
@@ -123,8 +126,11 @@
         <select id="f_dec"><option value="">any</option>
           <option>undecided</option><option>confirm</option><option>reject</option></select>
       </label>
+      <label>region
+        <select id="f_region"><option value="">any</option></select>
+      </label>
       <label>AOI bbox
-        <input id="f_bbox" placeholder="w,s,e,n (optional)">
+        <input id="f_bbox" placeholder="optional - or pick a region">
       </label>
       <button class="primary" id="f_go">Apply</button>
       <button class="ghost" id="f_export">Export filtered &darr;</button>
@@ -263,18 +269,24 @@
             <label class="grow">name
               <input id="w_name" placeholder="e.g. Ayodhya township construction watch">
             </label>
-            <label class="grow">AOI bbox (west,south,east,north)
-              <input id="w_bbox" placeholder="82.01237,26.36132,82.84594,27.10975">
+            <label class="grow">region (one click fills the AOI below)
+              <select id="w_region"><option value="">custom / unrestricted</option></select>
+            </label>
+            <div class="mapwrap"><canvas class="map" id="w_map" style="height:280px"></canvas></div>
+            <div class="maplegend" id="w_legend"></div>
+            <div class="mapnote">Click-drag a rectangle to set the AOI, click a coloured region, or pick one above. Leave empty for a global (unrestricted) watch.</div>
+            <label class="grow">AOI bbox (west,south,east,north) &mdash; editable
+              <input id="w_bbox" placeholder="optional - draw on the map or pick a region above">
             </label>
             <label class="grow">text query (optional; keyword match, not semantic search)
-              <input id="w_query" placeholder="e.g. new construction near the river">
+              <input id="w_query" placeholder="optional - e.g. construction near the river">
             </label>
             <div>
               <div class="small muted" style="margin-bottom:4px">change types (none checked = any)</div>
               <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:10px" id="w_types"></div>
             </div>
             <label>min confidence
-              <input id="w_conf" type="number" min="0" max="1" step="0.05" style="min-width:100px">
+              <input id="w_conf" type="number" min="0" max="1" step="0.05" value="0.5" style="min-width:100px">
             </label>
             <div class="actions">
               <button class="primary" id="w_save">Create watch area</button>

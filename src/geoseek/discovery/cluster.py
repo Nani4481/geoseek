@@ -63,8 +63,22 @@ def load_all_vectors(vector_index) -> np.ndarray:
 def cluster_embeddings(vectors: np.ndarray, tile_ids: list[str], embedding_model, *,
                        min_cluster_size: int = DEFAULT_MIN_CLUSTER_SIZE,
                        min_samples: int | None = None,
-                       core_dist_n_jobs: int = 1) -> ClusterResult:
+                       core_dist_n_jobs: int = 1,
+                       cluster_selection_method: str = "eom",
+                       cluster_vectors: np.ndarray | None = None,
+                       n_concepts_per_cluster: int = 3) -> ClusterResult:
+    """``cluster_vectors`` (optional): a separate, e.g. PCA-reduced, array used
+    ONLY for the HDBSCAN distance computation (same row order/count as
+    ``vectors``). Concept labeling always uses the original ``vectors`` - PCA
+    axes are not meaningful in RemoteCLIP's text-embedding space, so cluster
+    centroids for concept similarity must stay in the native 512-d space.
+    ``cluster_selection_method``: HDBSCAN's 'eom' (default; tends toward a few
+    large, stable clusters) or 'leaf' (selects further down the condensed
+    tree - more, smaller, finer-grained clusters; see PS 2.2.4 quality sweep
+    in PHASE8_POLISH.md for a comparison on this corpus)."""
     from hdbscan import HDBSCAN
+
+    fit_vectors = cluster_vectors if cluster_vectors is not None else vectors
 
     # core_dist_n_jobs: parallelism for the core-distance computation only - a
     # pure performance knob (sklearn's KNN backend), not part of the HDBSCAN
@@ -74,8 +88,9 @@ def cluster_embeddings(vectors: np.ndarray, tile_ids: list[str], embedding_model
     # dimensionality is impractical (>45 min, still not finished) - see
     # PHASE7B.md.
     clf = HDBSCAN(min_cluster_size=min_cluster_size, min_samples=min_samples,
-                  metric="euclidean", core_dist_n_jobs=core_dist_n_jobs)
-    labels = clf.fit_predict(vectors.astype(np.float64))
+                  metric="euclidean", core_dist_n_jobs=core_dist_n_jobs,
+                  cluster_selection_method=cluster_selection_method)
+    labels = clf.fit_predict(fit_vectors.astype(np.float64))
     uniq = sorted(int(x) for x in set(labels) if x >= 0)
     sizes = {int(c): int((labels == c).sum()) for c in uniq}
     noise = int((labels == -1).sum())
@@ -87,7 +102,7 @@ def cluster_embeddings(vectors: np.ndarray, tile_ids: list[str], embedding_model
         centroid = vectors[labels == c].mean(axis=0)
         centroid /= np.linalg.norm(centroid) + 1e-9
         sims = concept_vecs @ centroid
-        top = np.argsort(sims)[::-1][:3]
+        top = np.argsort(sims)[::-1][:n_concepts_per_cluster]
         cluster_concepts[int(c)] = [(CONCEPTS[i], float(sims[i])) for i in top]
 
     return ClusterResult(
@@ -95,6 +110,8 @@ def cluster_embeddings(vectors: np.ndarray, tile_ids: list[str], embedding_model
         cluster_concepts=cluster_concepts,
         params={"algorithm": "HDBSCAN", "metric": "euclidean (unit-norm -> cosine)",
                 "min_cluster_size": min_cluster_size, "min_samples": min_samples,
+                "cluster_selection_method": cluster_selection_method,
+                "pca_dim": int(cluster_vectors.shape[1]) if cluster_vectors is not None else None,
                 "n_concepts": len(CONCEPTS)},
         tile_ids=list(tile_ids))
 
@@ -192,13 +209,20 @@ def cluster_sample_and_assign(vectors: np.ndarray, tile_ids: list[str], groups: 
                               min_cluster_size: int = DEFAULT_MIN_CLUSTER_SIZE,
                               min_samples: int | None = None, core_dist_n_jobs: int = -1,
                               seed: int = 0, min_per_group: int = 200,
-                              abstain_below_sim: float | None = None) -> SampleAssignResult:
+                              abstain_below_sim: float | None = None,
+                              cluster_selection_method: str = "eom",
+                              pca_dim: int | None = None) -> SampleAssignResult:
     """Cluster a stratified sample with HDBSCAN, assign the rest by nearest centroid.
 
     ``vectors`` must be unit-norm (they are, coming out of the embedding model /
     FAISS). ``groups`` is the stratification key per tile (here: region).
     ``abstain_below_sim`` (optional): tiles whose best centroid cosine is below
-    this are labelled -1 instead of force-assigned.
+    this are labelled -1 instead of force-assigned. ``pca_dim`` (optional):
+    fit PCA on the sample and run HDBSCAN in that reduced space (mitigates the
+    curse of dimensionality at 512-d) - concept labeling and the final
+    nearest-centroid assignment both still happen in the native unit-norm
+    512-d space (PCA axes carry no meaning for RemoteCLIP's text tower, and
+    centroids need to be comparable to the full corpus's own 512-d vectors).
     """
     vectors = np.ascontiguousarray(vectors, dtype=np.float32)
     n = len(vectors)
@@ -206,9 +230,17 @@ def cluster_sample_and_assign(vectors: np.ndarray, tile_ids: list[str], groups: 
     s_vecs = vectors[sample_idx]
     s_ids = [tile_ids[i] for i in sample_idx]
 
+    s_fit_vecs = None
+    if pca_dim is not None:
+        from sklearn.decomposition import PCA
+
+        s_fit_vecs = PCA(n_components=pca_dim, random_state=seed).fit_transform(s_vecs)
+
     sample_result = cluster_embeddings(s_vecs, s_ids, embedding_model,
                                        min_cluster_size=min_cluster_size, min_samples=min_samples,
-                                       core_dist_n_jobs=core_dist_n_jobs)
+                                       core_dist_n_jobs=core_dist_n_jobs,
+                                       cluster_selection_method=cluster_selection_method,
+                                       cluster_vectors=s_fit_vecs)
 
     centroid_ids = sorted(sample_result.sizes)
     if not centroid_ids:
@@ -239,6 +271,7 @@ def cluster_sample_and_assign(vectors: np.ndarray, tile_ids: list[str], groups: 
         "min_cluster_size": min_cluster_size, "min_samples": min_samples,
         "core_dist_n_jobs": core_dist_n_jobs, "seed": seed, "min_per_group": min_per_group,
         "abstain_below_sim": abstain_below_sim,
+        "cluster_selection_method": cluster_selection_method, "pca_dim": pca_dim,
         "metric": "euclidean on unit-norm (== cosine); assignment by cosine to centroid",
     }
     return SampleAssignResult(
@@ -249,8 +282,49 @@ def cluster_sample_and_assign(vectors: np.ndarray, tile_ids: list[str], groups: 
 
 
 # --------------------------------------------------------------------------
-# cluster map (spatial, one panel per observation)
+# geographic cluster map (one true lon/lat scatter, all regions at once) -
+# this is what the app actually serves at /discovery/cluster-map.png.
 # --------------------------------------------------------------------------
+
+
+def disambiguate_cluster_labels(cluster_concepts: dict, region_purity: dict | None = None) -> dict:
+    """When two clusters share the same top-1 concept (common once a mega-
+    cluster is split into several still-similar-looking sub-clusters - they
+    all score highest on the same one of only 15 fixed concept phrases), make
+    the DISPLAYED label distinct by appending each cluster's dominant region
+    (already computed for the region-purity report) - e.g. "bare dry open
+    ground (kutch)" vs "bare dry open ground (jaisalmer)" - genuinely more
+    informative than the bare concept string, not just a tie-breaker.
+    Two clusters can still collide after the region suffix (e.g. two small
+    open-water clusters both dominated by the same region) - a second pass
+    appends the cluster id to any label still shared by more than one
+    cluster, so the result is always fully distinct.
+    Returns {cluster_id: display_label}; falls back to "<concept> (c<id>)"
+    if no region info is available for a tied cluster."""
+    top = {cid: concepts[0][0] for cid, concepts in cluster_concepts.items()}
+    counts: dict[str, int] = {}
+    for lbl in top.values():
+        counts[lbl] = counts.get(lbl, 0) + 1
+    out = {}
+    for cid, lbl in top.items():
+        if counts[lbl] <= 1:
+            out[cid] = lbl
+            continue
+        region = None
+        if region_purity is not None:
+            info = region_purity.get(str(cid)) or region_purity.get(cid)
+            if info:
+                region = info.get("dominant_region")
+        out[cid] = f"{lbl} ({region})" if region else f"{lbl} (c{cid})"
+
+    final_counts: dict[str, int] = {}
+    for lbl in out.values():
+        final_counts[lbl] = final_counts.get(lbl, 0) + 1
+    for cid, lbl in list(out.items()):
+        if final_counts[lbl] > 1 and not lbl.endswith(f"(c{cid})"):
+            out[cid] = f"{lbl} (c{cid})"
+    return out
+
 
 _PALETTE = [
     (31, 119, 180), (255, 127, 14), (44, 160, 44), (214, 39, 40), (148, 103, 189),
@@ -261,7 +335,15 @@ _NOISE_RGB = (235, 235, 235)
 
 
 def save_cluster_map(result: ClusterResult, tile_records: list, out_path, *, cell: int = 9) -> "object":
-    """One grid panel per observation: cell (row, col) coloured by the tile's cluster."""
+    """One grid panel per observation: cell (row, col) coloured by the tile's cluster.
+
+    NOTE: this lays panels out side by side, so it does not scale past a
+    handful of observations - at 77 (Phase 8) it produces a ~29000x500px
+    strip that renders as an unreadable sliver at any normal display width.
+    Kept for small/QA runs (``scripts/cluster_tiles.py``); the live app's
+    Discovery view is served by :func:`save_geographic_cluster_map` instead,
+    which plots every tile at its real lon/lat and scales with region count,
+    not observation count."""
     from PIL import Image, ImageDraw, ImageFont
 
     by_obs: dict[str, list] = {}
@@ -323,3 +405,54 @@ def save_cluster_map(result: ClusterResult, tile_records: list, out_path, *, cel
     out_path = str(out_path)
     canvas.save(out_path)
     return out_path
+
+
+_MPL_PALETTE = [f"#{r:02x}{g:02x}{b:02x}" for r, g, b in _PALETTE]
+
+
+def save_geographic_cluster_map(tile_ids: list[str], labels, lonlat: dict[str, tuple[float, float]],
+                                cluster_concepts: dict, sizes: dict, out_path, *,
+                                display_labels: dict | None = None, noise_count: int = 0,
+                                figsize=(11, 9), dpi: int = 130) -> str:
+    """A single true lon/lat scatter over every tile, coloured by cluster -
+    legible at any corpus/observation count (unlike :func:`save_cluster_map`'s
+    per-observation strip). One point per tile; regions that are geographically
+    far apart (this project spans 9 AOIs across India) naturally separate into
+    distinct clusters of points, with a legend naming each cluster id, its
+    size/share, and its label (``display_labels`` - see
+    :func:`disambiguate_cluster_labels` - or the bare top concept)."""
+    import matplotlib
+
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    labels_arr = np.asarray(labels)
+    total = len(labels_arr)
+    lons = np.array([lonlat.get(t, (np.nan, np.nan))[0] for t in tile_ids])
+    lats = np.array([lonlat.get(t, (np.nan, np.nan))[1] for t in tile_ids])
+    valid = ~(np.isnan(lons) | np.isnan(lats))
+
+    fig, ax = plt.subplots(figsize=figsize, dpi=dpi)
+    uniq = sorted(int(c) for c in sizes)
+    noise_mask = valid & (labels_arr < 0)
+    if noise_mask.any():
+        ax.scatter(lons[noise_mask], lats[noise_mask], s=2, c="#d9dde3", label=None, linewidths=0)
+    for cid in uniq:
+        m = valid & (labels_arr == cid)
+        if not m.any():
+            continue
+        lbl = (display_labels or {}).get(cid) or cluster_concepts.get(cid, [["?"]])[0][0]
+        pct = 100 * sizes[cid] / total if total else 0.0
+        ax.scatter(lons[m], lats[m], s=3, c=_MPL_PALETTE[cid % len(_MPL_PALETTE)], linewidths=0,
+                  label=f"c{cid} n={sizes[cid]} ({pct:.1f}%): {lbl}")
+
+    ax.set_xlabel("longitude"); ax.set_ylabel("latitude")
+    ax.set_title(f"Discovery clusters — {total:,} tiles, {len(uniq)} clusters"
+                + (f", {noise_count:,} noise" if noise_count else ""))
+    ax.set_aspect("equal", adjustable="datalim")
+    leg = ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.08), ncol=2, fontsize=8.5,
+                    markerscale=4, frameon=True, title="cluster (n, share of corpus): label")
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=dpi, bbox_extra_artists=(leg,), bbox_inches="tight")
+    plt.close(fig)
+    return str(out_path)

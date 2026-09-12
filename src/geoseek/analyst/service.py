@@ -551,6 +551,36 @@ class AnalystService:
                 picked.append(c); used.add(c["candidate_id"])
         return [self._featured_card(c) for c in picked]
 
+    def list_regions(self) -> list[dict]:
+        """The AOI regions already in the catalog (Ayodhya, Kutch, ...) with
+        a bbox spanning every observation footprint in that region - used to
+        populate a one-click region picker on the watch-area form, the Review
+        Queue's AOI filter, and the Search view's AOI filter, instead of
+        making an analyst type a raw bbox string."""
+        from shapely import wkt as shapely_wkt
+
+        try:
+            observations = self.repo.list_observations()
+        except Exception:
+            return []
+        by_region: dict[str, list] = {}
+        for o in observations:
+            by_region.setdefault(_region_of(o.aoi_name), []).append(o)
+        out = []
+        for name, obs_list in sorted(by_region.items()):
+            w, s, e, n = 180.0, 90.0, -180.0, -90.0
+            for o in obs_list:
+                try:
+                    bx0, by0, bx1, by1 = shapely_wkt.loads(o.footprint_wkt_4326).bounds
+                except Exception:
+                    continue
+                w, s, e, n = min(w, bx0), min(s, by0), max(e, bx1), max(n, by1)
+            if not (e > w):
+                continue
+            out.append({"name": name, "bbox": [round(w, 5), round(s, 5), round(e, 5), round(n, 5)],
+                       "n_observations": len(obs_list)})
+        return out
+
     def presentation_summary(self) -> dict:
         try:
             observations = self.repo.list_observations()
@@ -610,7 +640,7 @@ class AnalystService:
     def discovery_clusters(self) -> dict:
         p = self.settings.index_dir / "tile_clusters.json"
         if not p.is_file():
-            return {"available": False, "note": "run scripts/cluster_tiles.py"}
+            return {"available": False, "note": "run scripts/cluster_at_scale.py"}
         d = json.loads(p.read_text(encoding="utf-8"))
         by_obs: dict[str, dict[str, int]] = {}
         for tile_id, lab in d.get("tile_cluster", {}).items():
@@ -621,7 +651,9 @@ class AnalystService:
             "available": True,
             "n_clusters": d.get("n_clusters"), "noise_count": d.get("noise_count"),
             "n_tiles": d.get("n_tiles"), "sizes": d.get("sizes"),
-            "cluster_concepts": d.get("cluster_concepts"), "params": d.get("params"),
+            "cluster_concepts": d.get("cluster_concepts"),
+            "display_labels": d.get("display_labels"),
+            "params": d.get("params"),
             "per_observation_counts": by_obs,
             "cluster_map_png": d.get("cluster_map_png"),
         }

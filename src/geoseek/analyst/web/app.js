@@ -16,6 +16,9 @@ const CTYPE_HUMAN = {
 };
 let PRES = null;          // /presentation/summary, fetched once at boot
 let OBS_DATES = [];        // e.g. ["2019-03-30","2021-03-04","2024-03-08"]
+let REGIONS = null;       // /regions, fetched once and cached: [{name, bbox, n_observations}]
+const REGION_PALETTE = ["#1f6feb", "#7b3fbf", "#d98324", "#b5850b", "#3f9e6b", "#6b7280",
+  "#c93c37", "#0aa1a3", "#8a5a2b"];
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -45,11 +48,39 @@ function toast(t) {
 
 /* ---------------------------------------------------------------- map */
 class CoordMap {
-  constructor(canvas, onPick) {
+  constructor(canvas, onPick, opts) {
     this.c = canvas; this.ctx = canvas.getContext("2d");
     this.items = []; this.bbox = AOI_FALLBACK; this.onPick = onPick; this.sel = null;
+    this.opts = opts || {};
     canvas.addEventListener("click", (e) => this._click(e));
+    if (this.opts.onDrawRect) {
+      canvas.style.cursor = "crosshair";
+      canvas.addEventListener("mousedown", (e) => this._dragStart(e));
+      canvas.addEventListener("mousemove", (e) => this._dragMove(e));
+      window.addEventListener("mouseup", (e) => this._dragEnd(e));
+    }
     new ResizeObserver(() => this.draw()).observe(canvas);
+  }
+  _dragStart(e) {
+    const r = this.c.getBoundingClientRect();
+    this._drag = { x0: e.clientX - r.left, y0: e.clientY - r.top, x1: null, y1: null };
+  }
+  _dragMove(e) {
+    if (!this._drag) return;
+    const r = this.c.getBoundingClientRect();
+    this._drag.x1 = e.clientX - r.left; this._drag.y1 = e.clientY - r.top;
+    this.draw();
+  }
+  _dragEnd() {
+    if (!this._drag) return;
+    const d = this._drag; this._drag = null;
+    const moved = d.x1 != null && (Math.abs(d.x1 - d.x0) > 4 || Math.abs(d.y1 - d.y0) > 4);
+    this.draw();
+    if (!moved) return;
+    const p = this._proj();
+    const lon0 = p.lon(Math.min(d.x0, d.x1)), lon1 = p.lon(Math.max(d.x0, d.x1));
+    const lat0 = p.lat(Math.max(d.y0, d.y1)), lat1 = p.lat(Math.min(d.y0, d.y1));
+    this.opts.onDrawRect([lon0, lat0, lon1, lat1]);
   }
   setData(items, bbox) {
     this.items = items || [];
@@ -80,6 +111,8 @@ class CoordMap {
       W, H,
       x: (lon) => ox + (lon - w) * k,
       y: (lat) => H - oy - (lat - s) * k,
+      lon: (x) => w + (x - ox) / k,
+      lat: (y) => s + (H - oy - y) / k,
     };
   }
   draw() {
@@ -125,6 +158,16 @@ class CoordMap {
         if (selected) { ctx.strokeStyle = css.getPropertyValue("--ink"); ctx.lineWidth = 2; ctx.stroke(); }
       }
     }
+    if (this._drag && this._drag.x1 != null) {
+      const x0 = Math.min(this._drag.x0, this._drag.x1), x1 = Math.max(this._drag.x0, this._drag.x1);
+      const y0 = Math.min(this._drag.y0, this._drag.y1), y1 = Math.max(this._drag.y0, this._drag.y1);
+      const accent = css.getPropertyValue("--accent").trim();
+      ctx.fillStyle = hexA(accent, 0.15);
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.strokeStyle = accent; ctx.lineWidth = 1.5; ctx.setLineDash([5, 3]);
+      ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+      ctx.setLineDash([]);
+    }
   }
   _click(e) {
     if (!this._screen) return;
@@ -164,6 +207,24 @@ function pointInPoly(x, y, poly) {
   }
   return inside;
 }
+/* ---------------------------------------------------------------- regions
+   /regions once, cached; backs the region picker on the watch-area form and
+   the Queue/Search AOI filters so nobody has to type a raw bbox string. */
+function bboxStr(bbox) { return bbox.map(x => Number(x.toFixed(5))).join(","); }
+async function loadRegions() {
+  if (REGIONS) return REGIONS;
+  try { REGIONS = (await api("/regions")).regions || []; }
+  catch (e) { REGIONS = []; }
+  return REGIONS;
+}
+function fillRegionSelect(selectEl, { includeBbox = true } = {}) {
+  loadRegions().then(regions => {
+    const extra = regions.map(r =>
+      `<option value="${esc(r.name)}">${esc(r.name)} (${r.n_observations} obs)</option>`).join("");
+    selectEl.insertAdjacentHTML("beforeend", extra);
+  });
+}
+function regionByName(name) { return (REGIONS || []).find(r => r.name === name); }
 function legend(elId, types) {
   $(elId).innerHTML = types.map(t => `<span><i style="background:${CTYPE_COLOR[t] || "#888"}"></i>${t}</span>`).join("");
 }
@@ -335,6 +396,12 @@ function ensureSearch() {
   $("#q").addEventListener("keydown", e => { if (e.key === "Enter") runSearch(); });
   $("#s_upload").addEventListener("click", () => $("#s_file").click());
   $("#s_file").addEventListener("change", runImageSearch);
+  fillRegionSelect($("#s_region"));
+  $("#s_region").addEventListener("change", (e) => {
+    const r = regionByName(e.target.value);
+    $("#s_bbox").value = r ? bboxStr(r.bbox) : "";
+    runSearch();
+  });
   runSearch();
 }
 function searchFilterQS() {
@@ -399,6 +466,12 @@ function ensureQueue() {
   $("#f_go").addEventListener("click", loadQueue);
   $("#f_export").addEventListener("click", exportFiltered);
   $("#f_clear_ids").addEventListener("click", () => { queueIdsOverride = null; loadQueue(); });
+  fillRegionSelect($("#f_region"));
+  $("#f_region").addEventListener("change", (e) => {
+    const r = regionByName(e.target.value);
+    $("#f_bbox").value = r ? bboxStr(r.bbox) : "";
+    loadQueue();
+  });
   $$("#q_table th").forEach(th => th.addEventListener("click", () => {
     const k = th.dataset.k === "earliest" ? "rank" : th.dataset.k;
     queueSort = (queueSort === k) ? "-" + k : k;
@@ -675,10 +748,11 @@ function ensureDiscovery() {
   $("#disc_go").addEventListener("click", runDiscovery);
   api("/discovery/clusters").then(d => {
     if (!d.available) { $("#disc_clusters").textContent = "no cluster job run"; return; }
+    const dl = d.display_labels || {};
     $("#disc_clusters").innerHTML =
       `<b>${d.n_clusters}</b> clusters over ${d.n_tiles} tiles (${d.noise_count} noise) — ` +
       Object.entries(d.cluster_concepts || {}).map(([k, v]) =>
-        `c${k} (n=${d.sizes[k]}): <i>${esc(v[0][0])}</i>`).join(" &nbsp;·&nbsp; ") +
+        `c${k} (n=${d.sizes[k]}): <i>${esc(dl[k] || v[0][0])}</i>`).join(" &nbsp;·&nbsp; ") +
       `<div class="muted small">${esc((d.params || {}).algorithm)} · ${esc((d.params || {}).metric)}</div>`;
     $("#disc_map").src = "/discovery/cluster-map.png";
   }).catch(e => $("#disc_clusters").textContent = e.message);
@@ -713,21 +787,59 @@ async function runDiscovery() {
    field (consistent with the Review Queue's own "AOI bbox" filter). */
 let watchInit = false, watchEditingId = null;
 
+let watchMap;
+function bboxRing([w, s, e, n]) { return [[w, s], [e, s], [e, n], [w, n]]; }
+function wRegionItems() {
+  return (REGIONS || []).map((r, i) => ({
+    id: "region:" + r.name, ring: bboxRing(r.bbox),
+    color: REGION_PALETTE[i % REGION_PALETTE.length], regionName: r.name,
+  }));
+}
+function refreshWatchMap() {
+  if (!watchMap) return;
+  const regionItems = wRegionItems();
+  const items = regionItems.slice();
+  const bbox = parseBboxInput($("#w_bbox").value);
+  if (bbox) items.push({ id: "__selection__", ring: bboxRing(bbox), color: "#17191c" });
+  watchMap.setData(items, null);
+  watchMap.select(bbox ? "__selection__" : null);
+  $("#w_legend").innerHTML = regionItems.map(it =>
+    `<span><i style="background:${it.color}"></i>${esc(it.regionName)}</span>`).join("");
+}
+
 function ensureWatch() {
   if (watchInit) return; watchInit = true;
   $("#w_types").innerHTML = TYPES.map(t =>
     `<label style="width:auto"><input type="checkbox" value="${t}" style="width:auto;margin-right:4px">${esc(CTYPE_HUMAN[t] || t)}</label>`).join("");
   $("#w_save").addEventListener("click", saveWatchArea);
   $("#w_cancel").addEventListener("click", resetWatchForm);
+  watchMap = new CoordMap($("#w_map"), (it) => {
+    if (it.regionName) { $("#w_region").value = it.regionName; $("#w_bbox").value = bboxStr(regionByName(it.regionName).bbox); refreshWatchMap(); }
+  }, { onDrawRect: (bbox) => { $("#w_region").value = ""; $("#w_bbox").value = bboxStr(bbox); refreshWatchMap(); } });
+  fillRegionSelect($("#w_region"));
+  loadRegions().then(refreshWatchMap);
+  $("#w_region").addEventListener("change", (e) => {
+    const r = regionByName(e.target.value);
+    $("#w_bbox").value = r ? bboxStr(r.bbox) : "";
+    refreshWatchMap();
+  });
+  $("#w_bbox").addEventListener("input", () => {
+    if ($("#w_region").value && $("#w_bbox").value.trim() !== bboxStr(regionByName($("#w_region").value).bbox)) {
+      $("#w_region").value = "";   // hand-edited away from the picked region's exact bbox
+    }
+    refreshWatchMap();
+  });
   loadWatch();
 }
 
 function resetWatchForm() {
   watchEditingId = null;
-  $("#w_name").value = ""; $("#w_bbox").value = ""; $("#w_query").value = ""; $("#w_conf").value = "";
+  $("#w_name").value = ""; $("#w_bbox").value = ""; $("#w_query").value = ""; $("#w_conf").value = "0.5";
+  $("#w_region").value = "";
   $$("#w_types input").forEach(cb => cb.checked = false);
   $("#w_save").textContent = "Create watch area";
   $("#w_cancel").classList.add("hidden");
+  refreshWatchMap();
 }
 
 function parseBboxInput(s) {
@@ -764,8 +876,11 @@ function editWatchArea(w) {
   $("#w_query").value = w.text_query || "";
   $("#w_conf").value = w.min_confidence == null ? "" : w.min_confidence;
   $$("#w_types input").forEach(cb => cb.checked = (w.change_types || []).includes(cb.value));
+  const match = w.bbox ? (REGIONS || []).find(r => bboxStr(r.bbox) === bboxStr(w.bbox)) : null;
+  $("#w_region").value = match ? match.name : "";
   $("#w_save").textContent = "Save changes";
   $("#w_cancel").classList.remove("hidden");
+  refreshWatchMap();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 

@@ -185,6 +185,14 @@ def stats():
     return _get_analyst().stats()
 
 
+@app.get("/regions")
+def list_regions():
+    """AOI regions already in the catalog, each with a bbox spanning its
+    observation footprints - backs the region picker on the watch-area form
+    and the Queue/Search AOI filters (so nobody has to type a raw bbox)."""
+    return {"regions": _get_analyst().list_regions()}
+
+
 @app.get("/presentation/summary")
 def presentation_summary():
     """Headline counters + plain-language featured findings for the demo /
@@ -444,7 +452,7 @@ def _root():
     return {"service": "geoseek analyst interface", "ui": "/app/", "docs": "/docs",
             "endpoints": ["/search/text", "/search/image", "/candidates", "/candidates/{id}",
                           "/candidates/{id}/imagery", "/candidates/{id}/decision", "/audit",
-                          "/export", "/health", "/stats", "/presentation/summary",
+                          "/export", "/health", "/stats", "/presentation/summary", "/regions",
                           "/discovery/clusters", "/discovery/similar", "/candidates/{id}/similar",
                           "/watch-areas", "/watch-areas/{id}", "/notifications",
                           "/notifications/{id}/seen", "/sector-brief"]}
