@@ -13,6 +13,7 @@ implementation would push these into SQL instead.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 import sqlite3
 import threading
@@ -33,6 +34,8 @@ from geoseek.catalog.entities import (
     Tile,
     TileProvenance,
     TileRecord,
+    WatchArea,
+    WatchNotification,
 )
 from geoseek.catalog.repository import MetadataRepository
 from geoseek.catalog.schema import CATALOG_TABLES, SCHEMA_SQL, TILE_RTREE_SQL
@@ -579,6 +582,126 @@ class SQLiteMetadataRepository(MetadataRepository):
             d = self._analyst_decision(r)
             latest[d.candidate_id] = d
         return latest
+
+    # -- standing watch areas (Phase 8 Step C) -------------------------------
+
+    _WATCH_COLS = ("watch_id, name, bbox_json, polygon_wkt_4326, text_query, change_types_json, "
+                   "min_confidence, active, created_at, created_by, updated_at")
+
+    @staticmethod
+    def _watch_area(r: tuple) -> WatchArea:
+        return WatchArea(
+            watch_id=r[0], name=r[1], bbox=tuple(json.loads(r[2])) if r[2] else None,
+            polygon_wkt_4326=r[3], text_query=r[4] or "", change_types=tuple(json.loads(r[5]) if r[5] else []),
+            min_confidence=r[6], active=bool(r[7]), created_at=r[8], created_by=r[9] or "", updated_at=r[10] or "",
+        )
+
+    def _watch_params(self, w: WatchArea) -> tuple:
+        return (w.watch_id, w.name, json.dumps(list(w.bbox)) if w.bbox else None, w.polygon_wkt_4326,
+                w.text_query, json.dumps(list(w.change_types)), w.min_confidence, int(w.active),
+                w.created_at, w.created_by, w.updated_at)
+
+    def create_watch_area(self, watch: WatchArea) -> WatchArea:
+        stored = dataclasses.replace(
+            watch,
+            watch_id=watch.watch_id or f"watch_{uuid.uuid4().hex}",
+            created_at=watch.created_at or datetime.now(timezone.utc).isoformat(),
+        )
+        stored = dataclasses.replace(stored, updated_at=stored.created_at)
+        with self._lock:
+            self._conn.execute(
+                f"INSERT INTO watch_areas ({self._WATCH_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                self._watch_params(stored),
+            )
+            self._conn.commit()
+        return stored
+
+    def update_watch_area(self, watch: WatchArea) -> WatchArea:
+        stored = dataclasses.replace(watch, updated_at=datetime.now(timezone.utc).isoformat())
+        with self._lock:
+            cur = self._conn.execute(
+                "UPDATE watch_areas SET name=?, bbox_json=?, polygon_wkt_4326=?, text_query=?, "
+                "change_types_json=?, min_confidence=?, active=?, updated_at=? WHERE watch_id=?",
+                (stored.name, json.dumps(list(stored.bbox)) if stored.bbox else None, stored.polygon_wkt_4326,
+                 stored.text_query, json.dumps(list(stored.change_types)), stored.min_confidence,
+                 int(stored.active), stored.updated_at, stored.watch_id),
+            )
+            if cur.rowcount == 0:
+                raise CatalogError(f"watch area {stored.watch_id!r} not found")
+            self._conn.commit()
+        return self.get_watch_area(stored.watch_id)
+
+    def delete_watch_area(self, watch_id: str) -> None:
+        with self._lock:
+            self._conn.execute("DELETE FROM watch_notifications WHERE watch_id=?", (watch_id,))
+            self._conn.execute("DELETE FROM watch_areas WHERE watch_id=?", (watch_id,))
+            self._conn.commit()
+
+    def get_watch_area(self, watch_id: str) -> WatchArea | None:
+        with self._lock:
+            r = self._conn.execute(
+                f"SELECT {self._WATCH_COLS} FROM watch_areas WHERE watch_id=?", (watch_id,)
+            ).fetchone()
+        return self._watch_area(r) if r else None
+
+    def list_watch_areas(self, *, active_only: bool = False) -> list[WatchArea]:
+        sql = f"SELECT {self._WATCH_COLS} FROM watch_areas"
+        if active_only:
+            sql += " WHERE active=1"
+        sql += " ORDER BY created_at"
+        with self._lock:
+            rows = self._conn.execute(sql).fetchall()
+        return [self._watch_area(r) for r in rows]
+
+    _NOTIF_COLS = "notification_id, watch_id, observation_id, candidate_ids_json, created_at, seen"
+
+    @staticmethod
+    def _notification(r: tuple) -> WatchNotification:
+        return WatchNotification(
+            notification_id=r[0], watch_id=r[1], observation_id=r[2],
+            candidate_ids=tuple(json.loads(r[3]) if r[3] else []), created_at=r[4], seen=bool(r[5]),
+        )
+
+    def record_notification(self, notification: WatchNotification) -> WatchNotification:
+        stored = WatchNotification(
+            notification_id=notification.notification_id or f"notif_{uuid.uuid4().hex}",
+            watch_id=notification.watch_id, observation_id=notification.observation_id,
+            candidate_ids=tuple(notification.candidate_ids),
+            created_at=notification.created_at or datetime.now(timezone.utc).isoformat(),
+            seen=notification.seen,
+        )
+        with self._lock:
+            self._conn.execute(
+                f"INSERT INTO watch_notifications ({self._NOTIF_COLS}) VALUES (?,?,?,?,?,?)",
+                (stored.notification_id, stored.watch_id, stored.observation_id,
+                 json.dumps(list(stored.candidate_ids)), stored.created_at, int(stored.seen)),
+            )
+            self._conn.commit()
+        return stored
+
+    def list_notifications(
+        self, *, watch_id: str | None = None, unseen_only: bool = False
+    ) -> list[WatchNotification]:
+        sql = f"SELECT {self._NOTIF_COLS} FROM watch_notifications"
+        clauses, params = [], []
+        if watch_id is not None:
+            clauses.append("watch_id = ?")
+            params.append(watch_id)
+        if unseen_only:
+            clauses.append("seen = 0")
+        if clauses:
+            sql += " WHERE " + " AND ".join(clauses)
+        sql += " ORDER BY created_at DESC"
+        with self._lock:
+            rows = self._conn.execute(sql, params).fetchall()
+        return [self._notification(r) for r in rows]
+
+    def mark_notification_seen(self, notification_id: str) -> None:
+        with self._lock:
+            self._conn.execute(
+                "UPDATE watch_notifications SET seen=1 WHERE notification_id=?", (notification_id,)
+            )
+            self._conn.commit()
 
     def table_counts(self) -> dict[str, int]:
         with self._lock:

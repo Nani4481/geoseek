@@ -23,6 +23,8 @@ from geoseek.catalog.entities import (
     Tile,
     TileProvenance,
     TileRecord,
+    WatchArea,
+    WatchNotification,
 )
 
 
@@ -148,6 +150,40 @@ class MetadataRepository(abc.ABC):
     @abc.abstractmethod
     def latest_decision_by_candidate(self) -> dict[str, AnalystDecision]:
         """``{candidate_id: most-recent AnalystDecision}`` - the current verdict per candidate."""
+
+    # -- standing watch areas (Phase 8 Step C) -----------------------------
+    # Unlike the audit trail above, watch areas ARE editable/deletable - an
+    # analyst-maintained operational definition, not a log.
+
+    @abc.abstractmethod
+    def create_watch_area(self, watch: WatchArea) -> WatchArea:
+        """Insert a new watch area. Raises if ``watch.watch_id`` already exists."""
+
+    @abc.abstractmethod
+    def update_watch_area(self, watch: WatchArea) -> WatchArea:
+        """Replace an existing watch area's definition (by ``watch_id``)."""
+
+    @abc.abstractmethod
+    def delete_watch_area(self, watch_id: str) -> None: ...
+
+    @abc.abstractmethod
+    def get_watch_area(self, watch_id: str) -> WatchArea | None: ...
+
+    @abc.abstractmethod
+    def list_watch_areas(self, *, active_only: bool = False) -> list[WatchArea]: ...
+
+    @abc.abstractmethod
+    def record_notification(self, notification: WatchNotification) -> WatchNotification:
+        """Append one watch-area firing (a set of newly-matched candidates)."""
+
+    @abc.abstractmethod
+    def list_notifications(
+        self, *, watch_id: str | None = None, unseen_only: bool = False
+    ) -> list[WatchNotification]:
+        """Notifications newest-first, optionally for one watch area / unseen only."""
+
+    @abc.abstractmethod
+    def mark_notification_seen(self, notification_id: str) -> None: ...
 
     @abc.abstractmethod
     def close(self) -> None: ...

@@ -166,6 +166,60 @@ class AnalystDecision:
 
 
 @dataclass(frozen=True)
+class WatchArea:
+    """A standing watch: an analyst-defined AOI + filters, evaluated against
+    every new observation's change candidates (Phase 8 Step C).
+
+    Unlike :class:`AnalystDecision` this is a normal, editable/deletable
+    record - an operational definition, not an audit log entry - so the
+    repository exposes update/delete for it (see
+    :meth:`geoseek.catalog.repository.MetadataRepository.update_watch_area`).
+    """
+
+    watch_id: str
+    name: str
+    bbox: tuple[float, float, float, float] | None = None   # (west, south, east, north), EPSG:4326
+    polygon_wkt_4326: str | None = None                      # optional finer AOI; bbox is always set too
+    text_query: str = ""                                     # optional; simple keyword match, not semantic search
+    change_types: tuple[str, ...] = ()                       # empty = any change type
+    min_confidence: float | None = None
+    active: bool = True
+    created_at: str = ""
+    created_by: str = ""
+    updated_at: str = ""
+
+    def as_dict(self) -> dict:
+        return {
+            "watch_id": self.watch_id, "name": self.name, "bbox": list(self.bbox) if self.bbox else None,
+            "polygon_wkt_4326": self.polygon_wkt_4326, "text_query": self.text_query,
+            "change_types": list(self.change_types), "min_confidence": self.min_confidence,
+            "active": self.active, "created_at": self.created_at, "created_by": self.created_by,
+            "updated_at": self.updated_at,
+        }
+
+
+@dataclass(frozen=True)
+class WatchNotification:
+    """One firing of a :class:`WatchArea`: the new candidates it matched the
+    first time each was seen, produced when the change pipeline is re-run
+    after a new observation is ingested (see ``geoseek.watch.evaluator``)."""
+
+    notification_id: str
+    watch_id: str
+    observation_id: str                       # the newest observation in the run that produced this
+    candidate_ids: tuple[str, ...] = field(default_factory=tuple)
+    created_at: str = ""
+    seen: bool = False
+
+    def as_dict(self) -> dict:
+        return {
+            "notification_id": self.notification_id, "watch_id": self.watch_id,
+            "observation_id": self.observation_id, "candidate_ids": list(self.candidate_ids),
+            "created_at": self.created_at, "seen": self.seen,
+        }
+
+
+@dataclass(frozen=True)
 class TileRecord:
     """Flat tile + provenance projection returned by catalog queries.
 

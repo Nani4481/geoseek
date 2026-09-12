@@ -91,6 +91,40 @@ CREATE TABLE IF NOT EXISTS analyst_decisions (
     evidence_snapshot_json TEXT NOT NULL DEFAULT '{}'
 );
 
+-- Phase 8 Step C: standing watch areas. A normal (editable/deletable)
+-- operational table - NOT append-only like analyst_decisions, since a watch
+-- area's definition is meant to be edited and a stale one deleted.
+CREATE TABLE IF NOT EXISTS watch_areas (
+    watch_id            TEXT PRIMARY KEY,
+    name                TEXT NOT NULL,
+    bbox_json           TEXT,                              -- [west,south,east,north] or NULL
+    polygon_wkt_4326    TEXT,
+    text_query          TEXT NOT NULL DEFAULT '',
+    change_types_json   TEXT NOT NULL DEFAULT '[]',
+    min_confidence      REAL,
+    active              INTEGER NOT NULL DEFAULT 1,
+    created_at          TEXT NOT NULL,
+    created_by          TEXT NOT NULL DEFAULT '',
+    updated_at          TEXT NOT NULL DEFAULT ''
+);
+
+-- One row per watch area per evaluation run that found a NEW match (new
+-- relative to that watch area's own notification history - see
+-- geoseek.watch.evaluator). `seen` is the one mutable field (an analyst
+-- dismissing a notification), toggled via a dedicated method, not a general
+-- UPDATE surface.
+CREATE TABLE IF NOT EXISTS watch_notifications (
+    notification_id     TEXT PRIMARY KEY,
+    watch_id             TEXT NOT NULL REFERENCES watch_areas(watch_id),
+    observation_id       TEXT NOT NULL,
+    candidate_ids_json   TEXT NOT NULL DEFAULT '[]',
+    created_at           TEXT NOT NULL,
+    seen                 INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS ix_watch_notifications_watch ON watch_notifications(watch_id);
+CREATE INDEX IF NOT EXISTS ix_watch_notifications_time  ON watch_notifications(created_at);
+
 CREATE INDEX IF NOT EXISTS ix_scenes_collection      ON scenes(collection_id);
 CREATE INDEX IF NOT EXISTS ix_observations_scene     ON observations(scene_id);
 CREATE INDEX IF NOT EXISTS ix_observations_acquired  ON observations(acquired_at);
@@ -141,3 +175,6 @@ CATALOG_TABLES = ("collections", "scenes", "observations", "tiles", "derived")
 # scene->tile lineage the Phase 3.5 migration verifies, it is an independent
 # append-only log written by the analyst UI.
 AUDIT_TABLES = ("analyst_decisions",)
+
+# Phase 8 Step C: also independent of the scene->tile lineage.
+WATCH_TABLES = ("watch_areas", "watch_notifications")
