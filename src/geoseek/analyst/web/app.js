@@ -150,7 +150,7 @@ function legend(elId, types) {
 }
 
 /* ---------------------------------------------------------------- routing */
-const views = ["overview", "search", "queue", "detail", "discovery"];
+const views = ["overview", "search", "queue", "detail", "discovery", "watch"];
 function go(route) { location.hash = "#/" + route; }
 function router() {
   const parts = (location.hash || "#/overview").slice(2).split("/");
@@ -161,6 +161,7 @@ function router() {
   if (route === "search") ensureSearch();
   if (route === "queue") ensureQueue();
   if (route === "discovery") ensureDiscovery();
+  if (route === "watch") ensureWatch();
   if (route === "detail" && parts[1]) openDetail(decodeURIComponent(parts[1]));
 }
 window.addEventListener("hashchange", router);
@@ -494,6 +495,12 @@ function renderDetail(d) {
     ["SAR corroboration", sar ? `${num(sar.vv_median_db, 1)} dB VV · ×${num(sar.confidence_factor)}` : "neutral / unavailable",
       sar ? `${sar.verdict || ""} — speckle: ${sar.speckle_filter || ""}` : "no C-band expectation or outside the S1 swath — weight ×1.0"],
   ];
+  const terrain = d.terrain || {};
+  if (terrain.elevation_m != null) {
+    cards.push(["terrain context", terrain.plain_language || "–",
+      "elevation/slope/aspect measured (Copernicus DEM GLO-30); distance to water/built-up derived from the 2024-03-08 reference scene — see full breakdown below"]);
+  }
+  renderTerrainTable(terrain);
   $("#d_ev").innerHTML = cards.map(([l, v, s]) => `
     <div class="ev"><div class="lbl">${esc(l)}</div><div class="val">${esc(v)}</div><div class="sub">${esc(s)}</div></div>`).join("");
 
@@ -542,6 +549,20 @@ function paintImages() {
   $("#d_imgs").innerHTML = cfg.map(([cap, view, date]) => `
     <figure><figcaption><span>${cap}</span><span>${date}</span></figcaption>
       <img loading="lazy" src="/candidates/${encodeURIComponent(id)}/imagery?date=${date}&view=${view}&scale=2" alt="${cap} ${date}"></figure>`).join("");
+}
+function renderTerrainTable(t) {
+  const wrap = $("#d_terrainwrap");
+  if (!t || t.elevation_m == null) { wrap.classList.add("hidden"); return; }
+  wrap.classList.remove("hidden");
+  const prov = t.provenance || {};
+  const rows = [
+    ["elevation", `${num(t.elevation_m, 0)} m`, prov.elevation_m],
+    ["slope", t.aspect_compass ? `${num(t.slope_deg, 0)}° (facing ${t.aspect_compass})` : `${num(t.slope_deg, 0)}° (flat)`, prov.slope_deg],
+    ["distance to water channel", `${num(t.distance_to_water_m, 0)} m`, prov.distance_to_water_m],
+    ["distance to built-up area", `${num(t.distance_to_built_up_m, 0)} m`, prov.distance_to_built_up_m],
+  ];
+  $("#d_terrain").innerHTML = rows.map(([f, v, basis]) =>
+    `<tr><td>${esc(f)}</td><td>${esc(v)}</td><td class="small">${esc(basis || "")}</td></tr>`).join("");
 }
 function ndeltas(ev) {
   return `NDVI ${sgn(ev.ndvi_anomaly)} · NDBI ${sgn(ev.ndbi_anomaly)} · NDWI ${sgn(ev.ndwi_anomaly)}`;
@@ -630,6 +651,123 @@ async function runDiscovery() {
         </div></div>`).join("") || `<span class="muted">no neighbours</span>`;
     $$("#disc_results .card").forEach(c => c.addEventListener("click", () => { $("#disc_seed").value = c.dataset.tile; runDiscovery(); }));
   } catch (e) { $("#disc_results").innerHTML = `<span class="muted">${esc(e.message)}</span>`; }
+}
+
+/* ---------------------------------------------------------------- WATCH AREAS
+   Phase 8 Step C: define a named AOI + filters once; every change-pipeline
+   re-run evaluates it and records newly-matching candidates as notifications.
+   Plain CRUD over /watch-areas + /notifications - no map widget, a bbox text
+   field (consistent with the Review Queue's own "AOI bbox" filter). */
+let watchInit = false, watchEditingId = null;
+
+function ensureWatch() {
+  if (watchInit) return; watchInit = true;
+  $("#w_types").innerHTML = TYPES.map(t =>
+    `<label style="width:auto"><input type="checkbox" value="${t}" style="width:auto;margin-right:4px">${esc(CTYPE_HUMAN[t] || t)}</label>`).join("");
+  $("#w_save").addEventListener("click", saveWatchArea);
+  $("#w_cancel").addEventListener("click", resetWatchForm);
+  loadWatch();
+}
+
+function resetWatchForm() {
+  watchEditingId = null;
+  $("#w_name").value = ""; $("#w_bbox").value = ""; $("#w_query").value = ""; $("#w_conf").value = "";
+  $$("#w_types input").forEach(cb => cb.checked = false);
+  $("#w_save").textContent = "Create watch area";
+  $("#w_cancel").classList.add("hidden");
+}
+
+function parseBboxInput(s) {
+  const parts = (s || "").split(",").map(x => parseFloat(x.trim()));
+  return (parts.length === 4 && parts.every(x => !isNaN(x))) ? parts : null;
+}
+
+async function saveWatchArea() {
+  const name = $("#w_name").value.trim();
+  if (!name) { toast("a watch area needs a name"); return; }
+  const bbox = parseBboxInput($("#w_bbox").value);
+  if ($("#w_bbox").value.trim() && !bbox) { toast("bbox must be west,south,east,north"); return; }
+  const change_types = $$("#w_types input:checked").map(cb => cb.value);
+  const min_confidence = $("#w_conf").value === "" ? null : Number($("#w_conf").value);
+  const body = { name, bbox, text_query: $("#w_query").value.trim(), change_types, min_confidence, created_by: "analyst_ui" };
+  try {
+    if (watchEditingId) {
+      await api(`/watch-areas/${encodeURIComponent(watchEditingId)}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      toast("watch area updated");
+    } else {
+      await api("/watch-areas", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      toast("watch area created");
+    }
+    resetWatchForm();
+    loadWatch();
+  } catch (e) { toast(e.message); }
+}
+
+function editWatchArea(w) {
+  watchEditingId = w.watch_id;
+  $("#w_name").value = w.name || "";
+  $("#w_bbox").value = (w.bbox || []).join(",");
+  $("#w_query").value = w.text_query || "";
+  $("#w_conf").value = w.min_confidence == null ? "" : w.min_confidence;
+  $$("#w_types input").forEach(cb => cb.checked = (w.change_types || []).includes(cb.value));
+  $("#w_save").textContent = "Save changes";
+  $("#w_cancel").classList.remove("hidden");
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+async function deleteWatchArea(id) {
+  await api(`/watch-areas/${encodeURIComponent(id)}`, { method: "DELETE" });
+  toast("watch area deleted");
+  loadWatch();
+}
+
+async function loadWatch() {
+  try {
+    const [wd, nd] = await Promise.all([api("/watch-areas"), api("/notifications")]);
+    renderWatchTable(wd.watch_areas || []);
+    renderNotifications(nd.notifications || []);
+  } catch (e) { toast(e.message); }
+}
+
+function renderWatchTable(areas) {
+  $("#w_count").textContent = `(${areas.length})`;
+  $("#w_table tbody").innerHTML = areas.map(w => `
+    <tr>
+      <td>${esc(w.name)}</td>
+      <td class="small">${w.bbox ? w.bbox.map(x => x.toFixed(3)).join(", ") : "unrestricted"}</td>
+      <td class="small">${(w.change_types || []).length ? esc(w.change_types.join(", ")) : "any"}</td>
+      <td>${w.min_confidence == null ? "–" : w.min_confidence}</td>
+      <td>${w.active ? "yes" : "no"}</td>
+      <td class="small">${esc((w.created_at || "").slice(0, 10))}</td>
+      <td><button class="ghost small" data-edit="${esc(w.watch_id)}">Edit</button>
+          <button class="ghost small" data-del="${esc(w.watch_id)}">Delete</button></td>
+    </tr>`).join("") || `<tr><td colspan="7" class="muted">no watch areas defined yet</td></tr>`;
+  $$("#w_table [data-edit]").forEach(b => b.addEventListener("click", () =>
+    editWatchArea(areas.find(w => w.watch_id === b.dataset.edit))));
+  $$("#w_table [data-del]").forEach(b => b.addEventListener("click", () => {
+    if (confirm("Delete this watch area? Its notification history is deleted too.")) deleteWatchArea(b.dataset.del);
+  }));
+}
+
+function renderNotifications(list) {
+  $("#n_count").textContent = `(${list.filter(n => !n.seen).length} unseen of ${list.length})`;
+  $("#n_list").innerHTML = list.map(n => `
+    <div class="panel pad" style="${n.seen ? "opacity:.6" : ""}">
+      <div class="row"><b>${esc(n.watch_name || n.watch_id)}</b>
+        <span class="small muted">${esc((n.created_at || "").replace("T", " ").slice(0, 19))}</span></div>
+      <div class="small muted">${n.candidates.length} new matching candidate(s) from observation ${esc(n.observation_id)}</div>
+      <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:6px;margin-top:6px">
+        ${n.candidates.slice(0, 20).map(c => `<a href="#/detail/${encodeURIComponent(c.candidate_id)}" class="chip"
+             style="text-decoration:none">${esc(c.candidate_id)} · ${esc(c.change_type || "?")}</a>`).join("")}
+        ${n.candidates.length > 20 ? `<span class="small muted" style="align-self:center">+${n.candidates.length - 20} more — see the Review Queue</span>` : ""}
+      </div>
+      ${n.seen ? "" : `<button class="ghost small" style="margin-top:6px" data-seen="${esc(n.notification_id)}">Mark seen</button>`}
+    </div>`).join("") || `<span class="muted">no notifications yet — new observations fire these once the change pipeline is re-run</span>`;
+  $$("#n_list [data-seen]").forEach(b => b.addEventListener("click", async () => {
+    await api(`/notifications/${encodeURIComponent(b.dataset.seen)}/seen`, { method: "POST" });
+    loadWatch();
+  }));
 }
 
 /* ---------------------------------------------------------------- GUIDED DEMO

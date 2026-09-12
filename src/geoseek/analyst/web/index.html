@@ -15,6 +15,7 @@
     <button data-route="queue">Review Queue</button>
     <button data-route="detail">Candidate Detail</button>
     <button data-route="discovery">Discovery</button>
+    <button data-route="watch">Watch Areas</button>
   </nav>
   <div class="spacer"></div>
   <button class="demo-launch" id="demoBtn" title="Run the scripted 4-step walkthrough">&#9654;&nbsp;Demo</button>
@@ -174,6 +175,13 @@
         <summary>Why did the system flag this?</summary>
         <div class="body stack">
           <div class="evgrid" id="d_ev"></div>
+          <div id="d_terrainwrap" class="hidden">
+            <div class="small muted" style="margin-bottom:6px">Terrain context — measured vs. derived</div>
+            <div class="tablewrap" style="max-height:none">
+              <table><thead><tr><th>field</th><th>value</th><th>basis</th></tr></thead>
+              <tbody id="d_terrain"></tbody></table>
+            </div>
+          </div>
           <div>
             <div class="small muted" style="margin-bottom:6px">Suppression trace &mdash; every gate that was checked before this candidate entered the queue</div>
             <div class="tablewrap" style="max-height:none">
@@ -219,7 +227,7 @@
   <section class="view" id="view-discovery">
     <div class="filters">
       <label>seed tile id or candidate id
-        <input id="disc_seed" placeholder="e.g. 2019_2024_011912  or  S2A_..._r012_c034" style="min-width:320px">
+        <input id="disc_seed" placeholder="e.g. 2019_2026_004510  or  S2A_..._r012_c034" style="min-width:320px">
       </label>
       <label>or lon<input id="disc_lon" type="number" step="0.0001" style="min-width:110px"></label>
       <label>lat<input id="disc_lat" type="number" step="0.0001" style="min-width:110px"></label>
@@ -235,6 +243,48 @@
           <div id="disc_clusters" class="small"></div>
           <img id="disc_map" alt="cluster map" style="width:100%;border:1px solid var(--line);border-radius:8px">
         </div>
+      </div>
+    </div>
+    </section>
+
+  <!-- ============ WATCH AREAS (Phase 8 Step C) ============ -->
+  <section class="view" id="view-watch">
+    <div class="split">
+      <div>
+        <div class="panel"><h3>Define a watch area</h3>
+          <div class="body stack">
+            <label class="grow">name
+              <input id="w_name" placeholder="e.g. Ayodhya township construction watch">
+            </label>
+            <label class="grow">AOI bbox (west,south,east,north)
+              <input id="w_bbox" placeholder="82.01237,26.36132,82.84594,27.10975">
+            </label>
+            <label class="grow">text query (optional; keyword match, not semantic search)
+              <input id="w_query" placeholder="e.g. new construction near the river">
+            </label>
+            <div>
+              <div class="small muted" style="margin-bottom:4px">change types (none checked = any)</div>
+              <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:10px" id="w_types"></div>
+            </div>
+            <label>min confidence
+              <input id="w_conf" type="number" min="0" max="1" step="0.05" style="min-width:100px">
+            </label>
+            <div class="actions">
+              <button class="primary" id="w_save">Create watch area</button>
+              <button class="ghost hidden" id="w_cancel">Cancel edit</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel"><h3>Standing watch areas <span id="w_count" class="muted small"></span></h3>
+          <div class="body"><div class="tablewrap"><table id="w_table">
+            <thead><tr><th>name</th><th>AOI</th><th>types</th><th>min conf</th>
+              <th>active</th><th>created</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table></div></div>
+        </div>
+      </div>
+      <div class="panel"><h3>Notifications <span id="n_count" class="muted small"></span></h3>
+        <div class="body"><div id="n_list" class="stack"></div></div>
       </div>
     </div>
   </section>

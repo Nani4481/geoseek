@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from geoseek.analyst.geo import polygon_geojson, ring_bounds
-from geoseek.catalog.entities import AnalystDecision
+from geoseek.catalog.entities import AnalystDecision, WatchArea
 from geoseek.catalog.naming import base_scene_id
 from geoseek.change.analyze import DATE_TO_OBS, OUT_DIR
 from geoseek.config import get_settings
@@ -116,7 +116,8 @@ class AnalystService:
                 f"no change report at {self.report_path} - run `python -m geoseek.change.analyze` first")
         self.report = json.loads(self.report_path.read_text(encoding="utf-8"))
         self.model_info = self.report.get("model", {})
-        self.span_pair_name = self.report.get("span_pair", "2019-2024")
+        self.span_pair_name = self.report.get(
+            "span_pair", f"{list(DATE_TO_OBS)[0]}-{list(DATE_TO_OBS)[-1]}" if DATE_TO_OBS else "")
         self.prob_raster_path = self._resolve_prob_raster()
 
         detail_p = Path(self.report.get("full_ranked_detail_json")
@@ -768,6 +769,184 @@ class AnalystService:
                 cf.write_text(out["csv"], encoding="utf-8")
                 out["csv_path"] = str(cf)
         return out
+
+    # -- standing watch areas (Phase 8 Step C) -----------------------------
+    # Thin wrappers over the MetadataRepository seam - see geoseek.watch.evaluator
+    # for the matching logic run after each change-pipeline re-run.
+
+    def list_watch_areas(self, *, active_only: bool = False) -> list[dict]:
+        return [w.as_dict() for w in self.repo.list_watch_areas(active_only=active_only)]
+
+    def get_watch_area(self, watch_id: str) -> dict | None:
+        w = self.repo.get_watch_area(watch_id)
+        return w.as_dict() if w else None
+
+    def create_watch_area(
+        self, *, name: str, bbox=None, polygon_wkt_4326: str | None = None, text_query: str = "",
+        change_types: tuple[str, ...] = (), min_confidence: float | None = None, created_by: str = "",
+    ) -> dict:
+        w = WatchArea(
+            watch_id="", name=name, bbox=tuple(bbox) if bbox else None, polygon_wkt_4326=polygon_wkt_4326,
+            text_query=text_query, change_types=tuple(change_types), min_confidence=min_confidence,
+            created_by=created_by,
+        )
+        return self.repo.create_watch_area(w).as_dict()
+
+    def update_watch_area(self, watch_id: str, **fields) -> dict:
+        """Partial update: an omitted keyword leaves that field unchanged. For
+        ``bbox``/``polygon_wkt_4326``/``min_confidence`` (all optional-by-design
+        on a watch area), passing the key with value ``None`` explicitly CLEARS
+        it; every other field's ``None`` is treated as "not supplied"."""
+        existing = self.repo.get_watch_area(watch_id)
+        if existing is None:
+            raise KeyError(watch_id)
+        if "bbox" in fields and fields["bbox"] is not None:
+            fields["bbox"] = tuple(fields["bbox"])
+        if "change_types" in fields:
+            fields["change_types"] = tuple(fields["change_types"])
+        import dataclasses as _dc
+
+        updated = _dc.replace(existing, **{k: v for k, v in fields.items() if v is not None or k in
+                                           ("bbox", "polygon_wkt_4326", "min_confidence")})
+        return self.repo.update_watch_area(updated).as_dict()
+
+    def delete_watch_area(self, watch_id: str) -> None:
+        self.repo.delete_watch_area(watch_id)
+
+    def list_notifications(self, *, watch_id: str | None = None, unseen_only: bool = False) -> list[dict]:
+        rows = []
+        for n in self.repo.list_notifications(watch_id=watch_id, unseen_only=unseen_only):
+            d = n.as_dict()
+            watch = self.repo.get_watch_area(n.watch_id)
+            d["watch_name"] = watch.name if watch else None
+            d["candidates"] = [
+                {"candidate_id": cid, "change_type": (self._by_id.get(cid) or {}).get("change_type"),
+                 "confidence": (self._by_id.get(cid) or {}).get("confidence"),
+                 "link": f"/candidates/{cid}"}
+                for cid in n.candidate_ids
+            ]
+            rows.append(d)
+        return rows
+
+    def mark_notification_seen(self, notification_id: str) -> None:
+        self.repo.mark_notification_seen(notification_id)
+
+    # -- sector summary brief (Phase 8 Step D) -----------------------------
+
+    def sector_brief(
+        self, *, bbox: tuple[float, float, float, float] | None = None,
+        date_start: str | None = None, date_end: str | None = None,
+    ) -> dict:
+        """Plain-language + structured summary for a chosen AOI/date range:
+        counts + total area per change type, the most significant candidates,
+        the time window covered, and imagery/quality caveats - carrying the
+        same provenance (model/weights/git/pipeline) as the GeoJSON export."""
+        listing = self.list_candidates(bbox=bbox, date_start=date_start, date_end=date_end, limit=100000)
+        rows = listing["candidates"]
+
+        by_type: dict[str, dict] = {}
+        for r in rows:
+            t = r.get("change_type") or "other"
+            d = by_type.setdefault(t, {"change_type": t, "count": 0, "area_m2": 0.0})
+            d["count"] += 1
+            d["area_m2"] += float(r.get("area_m2") or 0.0)
+        for d in by_type.values():
+            d["area_m2"] = round(d["area_m2"], 1)
+            d["area_ha"] = round(d["area_m2"] / 10_000.0, 2)
+        by_type_list = sorted(by_type.values(), key=lambda d: d["area_m2"], reverse=True)
+
+        top = sorted(rows, key=lambda r: r.get("queue_score") or 0.0, reverse=True)[:10]
+
+        obs_dates = sorted(self._observation_dates())
+        window = [date_start or (obs_dates[0] if obs_dates else None),
+                  date_end or (obs_dates[-1] if obs_dates else None)]
+
+        span = self.report.get("pairs", {}).get(self.span_pair_name, {})
+        caveats = [self.report.get("domain_gap_statement", "")]
+        radio = span.get("context", {}).get("radiometric_reliability")
+        if radio is not None and radio < 0.7:
+            caveats.append(f"radiometric reliability for the span pair is {radio:.2f} (of 1.0) - "
+                           "some spectral-anomaly evidence should be read with that in mind.")
+        if not (self.report.get("sar_corroboration") or {}).get("available"):
+            caveats.append("no Sentinel-1 SAR staged for part of this window - SAR corroboration was "
+                           "neutral (no effect) for candidates outside SAR coverage.")
+        n_no_terrain = sum(1 for r in rows if not (self._by_id.get(r["candidate_id"], {}).get("terrain")))
+        if n_no_terrain:
+            caveats.append(f"{n_no_terrain} of {len(rows)} candidates have no terrain evidence "
+                           "(DEM not staged when the pipeline last ran for them).")
+
+        struct = {
+            "aoi": {"bbox": list(bbox) if bbox else None, "name": self.report.get("aoi")},
+            "window": window,
+            "total_candidates": len(rows),
+            "by_change_type": by_type_list,
+            "total_area_m2": round(sum(d["area_m2"] for d in by_type_list), 1),
+            "most_significant": [
+                {"candidate_id": r["candidate_id"], "change_type": r.get("change_type"),
+                 "confidence": r.get("confidence"), "area_m2": r.get("area_m2"),
+                 "centroid_lonlat": r.get("centroid_lonlat"), "queue_score": r.get("queue_score")}
+                for r in top
+            ],
+            "imagery_and_quality_caveats": caveats,
+            "generated_at": datetime.now(timezone.utc).isoformat(),
+            "provenance": {
+                "model_version": f"{self.model_info.get('name')}@{self.model_info.get('threshold')}",
+                "weights_sha256": self.model_info.get("weights_sha256"),
+                "git_commit": self.git_commit,
+                "pipeline_version": self.pipeline_version,
+                "report_generated_at": self.report_mtime,
+            },
+        }
+        struct["text"] = self._sector_brief_text(struct)
+        return struct
+
+    @staticmethod
+    def _sector_brief_text(s: dict) -> str:
+        lines = []
+        aoi_label = s["aoi"]["name"] or (f"bbox {s['aoi']['bbox']}" if s["aoi"]["bbox"] else "the full AOI")
+        lines.append(f"SECTOR SUMMARY BRIEF - {aoi_label}")
+        lines.append(f"Window covered: {s['window'][0]} to {s['window'][1]}")
+        lines.append(f"Generated: {s['generated_at']}")
+        lines.append("")
+        lines.append(f"{s['total_candidates']} change candidate(s), {s['total_area_m2']:,.0f} m^2 total.")
+        lines.append("")
+        lines.append("By change type:")
+        for d in s["by_change_type"]:
+            lines.append(f"  - {d['change_type']:<14s} {d['count']:>4d} candidate(s), "
+                         f"{d['area_m2']:>10,.0f} m^2 ({d['area_ha']:.1f} ha)")
+        lines.append("")
+        lines.append("Most significant candidates:")
+        for i, r in enumerate(s["most_significant"], 1):
+            lon, lat = r["centroid_lonlat"] or (None, None)
+            lines.append(f"  {i:>2d}. {r['candidate_id']}  [{r['change_type']}]  "
+                         f"confidence {r['confidence']:.2f}  {r['area_m2']:,.0f} m^2  "
+                         f"({lon:.5f}, {lat:.5f})" if lon is not None else
+                         f"  {i:>2d}. {r['candidate_id']}  [{r['change_type']}]")
+        lines.append("")
+        lines.append("Imagery / quality caveats:")
+        for c in s["imagery_and_quality_caveats"]:
+            if c:
+                lines.append(f"  - {c}")
+        lines.append("")
+        p = s["provenance"]
+        lines.append(f"Model {p['model_version']}  weights_sha256={p['weights_sha256']}  "
+                     f"git_commit={p['git_commit']}  pipeline_version={p['pipeline_version']}")
+        return "\n".join(lines)
+
+    def export_sector_brief(self, **kwargs) -> dict:
+        """sector_brief() + write both the human-readable .txt and the
+        structured .json to disk (same directory pattern as export())."""
+        brief = self.sector_brief(**kwargs)
+        ts = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+        out_dir = self.out_dir / "sector_briefs"
+        out_dir.mkdir(parents=True, exist_ok=True)
+        txt_path = out_dir / f"sector_brief_{ts}.txt"
+        json_path = out_dir / f"sector_brief_{ts}.json"
+        txt_path.write_text(brief["text"], encoding="utf-8")
+        json_path.write_text(json.dumps(brief, indent=2), encoding="utf-8")
+        brief["text_path"] = str(txt_path)
+        brief["json_path"] = str(json_path)
+        return brief
 
     def close(self) -> None:
         if self._owns_repo:

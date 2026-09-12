@@ -304,6 +304,84 @@ def export(req: ExportRequest = Body(...)):
         candidate_ids=req.candidate_ids, filters=filters or None, fmt=req.format)
 
 
+class WatchAreaRequest(BaseModel):
+    name: str
+    bbox: Optional[list[float]] = None            # [west, south, east, north]
+    polygon_wkt_4326: Optional[str] = None
+    text_query: str = ""
+    change_types: list[str] = []
+    min_confidence: Optional[float] = None
+    created_by: str = ""
+
+
+class WatchAreaUpdateRequest(BaseModel):
+    name: Optional[str] = None
+    bbox: Optional[list[float]] = None
+    polygon_wkt_4326: Optional[str] = None
+    text_query: Optional[str] = None
+    change_types: Optional[list[str]] = None
+    min_confidence: Optional[float] = None
+    active: Optional[bool] = None
+
+
+@app.get("/watch-areas")
+def list_watch_areas(active_only: bool = Query(False)):
+    return {"watch_areas": _get_analyst().list_watch_areas(active_only=active_only)}
+
+
+@app.post("/watch-areas")
+def create_watch_area(req: WatchAreaRequest):
+    return _get_analyst().create_watch_area(
+        name=req.name, bbox=req.bbox, polygon_wkt_4326=req.polygon_wkt_4326, text_query=req.text_query,
+        change_types=tuple(req.change_types), min_confidence=req.min_confidence, created_by=req.created_by,
+    )
+
+
+@app.get("/watch-areas/{watch_id}")
+def get_watch_area(watch_id: str):
+    w = _get_analyst().get_watch_area(watch_id)
+    if w is None:
+        raise HTTPException(status_code=404, detail=f"no watch area {watch_id!r}")
+    return w
+
+
+@app.put("/watch-areas/{watch_id}")
+def update_watch_area(watch_id: str, req: WatchAreaUpdateRequest):
+    fields = req.model_dump(exclude_unset=True)
+    try:
+        return _get_analyst().update_watch_area(watch_id, **fields)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"no watch area {watch_id!r}")
+
+
+@app.delete("/watch-areas/{watch_id}")
+def delete_watch_area(watch_id: str):
+    _get_analyst().delete_watch_area(watch_id)
+    return {"deleted": watch_id}
+
+
+@app.get("/notifications")
+def list_notifications(watch_id: Optional[str] = Query(None), unseen_only: bool = Query(False)):
+    return {"notifications": _get_analyst().list_notifications(watch_id=watch_id, unseen_only=unseen_only)}
+
+
+@app.post("/notifications/{notification_id}/seen")
+def mark_notification_seen(notification_id: str):
+    _get_analyst().mark_notification_seen(notification_id)
+    return {"seen": notification_id}
+
+
+@app.get("/sector-brief")
+def sector_brief(
+    bbox: Optional[str] = Query(None, description="west,south,east,north (EPSG:4326)"),
+    date_start: Optional[str] = Query(None), date_end: Optional[str] = Query(None),
+    write: bool = Query(False, description="also write .txt + .json to data/change_model/sector_briefs/"),
+):
+    svc = _get_analyst()
+    kwargs = dict(bbox=_parse_bbox(bbox), date_start=date_start, date_end=date_end)
+    return svc.export_sector_brief(**kwargs) if write else svc.sector_brief(**kwargs)
+
+
 @app.get("/discovery/clusters")
 def discovery_clusters():
     return _get_analyst().discovery_clusters()
@@ -361,4 +439,6 @@ def _root():
             "endpoints": ["/search/text", "/search/image", "/candidates", "/candidates/{id}",
                           "/candidates/{id}/imagery", "/candidates/{id}/decision", "/audit",
                           "/export", "/health", "/stats", "/presentation/summary",
-                          "/discovery/clusters", "/discovery/similar", "/candidates/{id}/similar"]}
+                          "/discovery/clusters", "/discovery/similar", "/candidates/{id}/similar",
+                          "/watch-areas", "/watch-areas/{id}", "/notifications",
+                          "/notifications/{id}/seen", "/sector-brief"]}

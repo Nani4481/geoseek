@@ -283,3 +283,9 @@ body.demo-on { scroll-behavior: smooth; }
   0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--ok) 45%, transparent); }
   50% { box-shadow: 0 0 0 10px transparent; }
 }
+
+/* Watch areas (Phase 8 Step C) */
+.row { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+button.small, button.ghost.small { padding: 4px 9px; font-size: 12px; }
+a.chip { display: inline-block; color: var(--ink); }
+a.chip:hover { border-color: var(--accent); }
