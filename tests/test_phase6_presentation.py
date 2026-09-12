@@ -83,7 +83,9 @@ def test_summary_counters_are_present_and_sane(client):
     c = s["counters"]
     for k in ("tiles_indexed", "regions", "scenes", "change_candidates", "high_confidence"):
         assert isinstance(c[k], int) and c[k] >= 0
-    assert c["change_candidates"] >= 1000
+    # was >=1000 at 1104 candidates (3-date, 2019-2024 span); Phase 8 extended the
+    # stack to 5 dates and the span pair to 2019-2026, giving 841.
+    assert c["change_candidates"] >= 500
     assert c["tiles_indexed"] > c["scenes"] > 0
     assert c["regions"] >= 1
     # counters agree with the analyst /stats + /candidates views they summarise
@@ -139,7 +141,7 @@ def test_persistence_phrasing_matches_the_trajectory(client):
     acquisitions at/after the earliest supported change window."""
     s = client.get("/presentation/summary").json()
     obs_dates = s["observation_dates"]
-    assert len(obs_dates) == 3
+    assert len(obs_dates) == 5   # Phase 8 Step A: 2019/2021/2024/2025/2026
     for f in s["featured"]:
         d = client.get(f"/candidates/{f['candidate_id']}").json()
         win = d["temporal_trajectory"]["earliest_supported_change"]["window"]
@@ -171,12 +173,13 @@ def test_imagery_scale_param_upsamples_and_default_is_unchanged(client):
 def test_existing_analyst_endpoints_unaffected(client):
     """The presentation layer must not have perturbed the analyst API surface."""
     q = client.get("/candidates", params={"limit": 5}).json()
-    assert q["total"] > 1000 and len(q["candidates"]) == 5
+    assert q["total"] > 500 and len(q["candidates"]) == 5
     top = q["candidates"][0]["candidate_id"]
     d = client.get(f"/candidates/{top}").json()
     assert d["confidence_breakdown"] and len(d["suppression"]["trace"]) == 5
     assert d["provenance"]["observations"][0]["scene"]["source_url"].startswith("https://")
-    assert d["imagery"]["before_dates"] == ["2019", "2021"]
+    assert d["imagery"]["after_date"] not in d["imagery"]["before_dates"]
+    assert len(d["imagery"]["before_dates"]) >= 2
     assert client.get("/app/").status_code == 200
     # the SPA bundle is still self-contained: no external origins / hosts referenced
     for asset in ("/app/app.js", "/app/style.css", "/app/index.html"):

@@ -47,9 +47,10 @@ from geoseek.staging.manifest import append_ingest_run, load_manifest
 RGB_BANDS = ("B04", "B03", "B02")
 SCL_BAND = "SCL"
 ALL_BANDS = (*RGB_BANDS, SCL_BAND)
-SCENE_ID_RE = re.compile(r"^(S2[AB])_\w+_(\d{8})_")
+SCENE_ID_RE = re.compile(r"^(S2[A-Z])_\w+_(\d{8})_")   # S2A/S2B/S2C/S2D
 DEFAULT_EMBED_BATCH_SIZE = 64
 MANIFEST_KEY = "diverse_aois"
+_SENSOR_NAMES = {"S2A": "Sentinel-2A", "S2B": "Sentinel-2B", "S2C": "Sentinel-2C", "S2D": "Sentinel-2D"}
 
 
 def _sensor_and_date(scene_id: str) -> tuple[str, str]:
@@ -57,7 +58,7 @@ def _sensor_and_date(scene_id: str) -> tuple[str, str]:
     if not m:
         return "unknown", "unknown"
     sat, date_token = m.groups()
-    sensor = "Sentinel-2A" if sat == "S2A" else "Sentinel-2B"
+    sensor = _SENSOR_NAMES.get(sat, sat)
     acq_date = f"{date_token[:4]}-{date_token[4:6]}-{date_token[6:]}"
     return sensor, acq_date
 

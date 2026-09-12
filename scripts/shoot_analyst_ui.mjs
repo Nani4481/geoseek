@@ -132,7 +132,7 @@ await shot("06_search");
 
 // 4. DISCOVERY
 await page.goto(`${BASE}/app/#/discovery`, { waitUntil: "networkidle" });
-await page.fill("#disc_seed", "2019_2024_011912");
+await page.fill("#disc_seed", "2019_2026_004510");   // Phase 8: 5-date candidate id scheme (was 2019_2024_*)
 await page.click("#disc_go");
 await page.waitForSelector("#disc_results .card img");
 await page.waitForFunction(() => {

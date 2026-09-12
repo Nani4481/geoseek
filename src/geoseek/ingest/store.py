@@ -43,6 +43,8 @@ DB_FILENAME = "tiles.sqlite"
 _SENSOR_TO_COLLECTION = {
     "Sentinel-2A": "sentinel-2-l2a",
     "Sentinel-2B": "sentinel-2-l2a",
+    "Sentinel-2C": "sentinel-2-l2a",   # launched 2024-09; Phase 8 stages a 2026 scene from it
+    "Sentinel-2D": "sentinel-2-l2a",
 }
 _DEFAULT_BANDS = ("B04", "B03", "B02", "SCL")
 

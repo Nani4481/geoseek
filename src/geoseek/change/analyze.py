@@ -8,14 +8,21 @@ Ties the trained FC-Siam-diff model to the four Phase 4 stages:
       -> Step B  geoseek.change.classify     (rule-based typing)
       -> Step C  geoseek.temporal.persistence (trajectory + earliest supported change)
       -> Step D  geoseek.change.confidence   (one calibrated score + evidence)
-      -> report + [2019 | 2021 | 2024 | overlay] panels
+      -> report + [<every staged date> | overlay] panels
 
-    python -m geoseek.change.analyze [--pairs 2019-2021,2021-2024,2019-2024]
+    python -m geoseek.change.analyze [--pairs <comma list, default: every
+                                     consecutive pair across every ingested
+                                     date + the full span>]
                                      [--top 10] [--panels 5] [--refresh] [--no-panels]
 
 Offline. Reads only from ``data/datasets/`` + the staged model. The heavy
 per-pair probability rasters are cached under ``data/change_model/`` and reused
-unless ``--refresh``.
+unless ``--refresh``. Originally 3 dates (2019-03-30 / 2021-03-04 / 2024-03-08);
+Phase 8 Step A extended the stack to 5 (added 2025-03-08 / 2026-03-08) - every
+date/pair-dependent piece of this module (:func:`discover_date_to_obs`,
+:func:`build_pair_keys`, :func:`pair_context`) discovers the current stack from
+the catalog + manifest rather than hardcoding it, so a 6th date needs no code
+change here, only staging + ingest + an alignment run.
 """
 
 from __future__ import annotations
@@ -60,26 +67,96 @@ OUT_DIR = get_settings().data_dir / "change_model"
 AOI_POINT = (82.1998, 26.7922)   # Ayodhya (Ram Janmabhoomi) - the AOI anchor
 INDEX_BANDS = ("B04", "B03", "B02", "B08", "B11")
 SCL_WATER = 6
+S2_COLLECTION = "sentinel-2-l2a"   # the change pipeline works one collection at a time
 
-DATE_TO_OBS = {
+# The original Phase 3.5/4 stack, kept as a fallback so this module stays
+# importable (and every unit test that only needs light symbols like
+# ``Candidate``/``diversify`` keeps working) without a live catalog - e.g. a
+# fresh checkout before staging has run. Once the catalog has observations at
+# the AOI, :func:`discover_date_to_obs` supersedes this with whatever dates
+# are actually ingested (3, 5, or more - Phase 8 Step A added 2025 + 2026).
+_STATIC_DATE_TO_OBS = {
     "2019": "S2B_44RPQ_20190330_1_L2A_scaled",
     "2021": "S2A_44RPQ_20210304_1_L2A_scaled",
     "2024": "S2A_44RPQ_20240308_0_L2A_scaled",
 }
-S2_COLLECTION = "sentinel-2-l2a"   # the change pipeline works one collection at a time
+
+
+def discover_date_to_obs(repo=None) -> dict[str, str]:
+    """``{year_label: observation_id}`` for every Sentinel-2 observation at the
+    Ayodhya AOI, live from the catalog, ordered by acquisition date (dict
+    insertion order == time order, relied on by :func:`build_pair_keys`).
+
+    Falls back to :data:`_STATIC_DATE_TO_OBS` if the catalog is unavailable or
+    has fewer than 3 AOI observations - keeps this module safely importable
+    without a live DB (unit tests importing light symbols) and gives an
+    unambiguous answer when a scene has been staged but not yet ingested.
+    """
+    owns_repo = repo is None
+    try:
+        if owns_repo:
+            from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository
+            repo = SQLiteMetadataRepository(get_settings().index_dir / "tiles.sqlite")
+        obs = repo.list_observations(location=AOI_POINT, collection=S2_COLLECTION)
+        obs.sort(key=lambda o: o.acquired_at)
+        if len(obs) < 3:
+            return dict(_STATIC_DATE_TO_OBS)
+        out: dict[str, str] = {}
+        for o in obs:
+            year = o.acquired_at[:4]
+            key = year if year not in out else o.acquired_at[:7]  # guard a same-year collision
+            out[key] = o.observation_id
+        return out
+    except Exception:
+        return dict(_STATIC_DATE_TO_OBS)
+    finally:
+        if owns_repo and repo is not None:
+            repo.close()
+
+
+DATE_TO_OBS = discover_date_to_obs()
 MAX_COMPONENTS = 20000            # process the largest N; the rest fold into the morphology count
 _HUGE_BBOX_PX = 4_000_000         # subsample bbox reads / geometry above this area (memory guard)
 BAD_SCL_ARR = np.array(sorted(BAD_SCL_CLASSES))
 
 
 # ==========================================================================
-# normalized spectral indices per observation (2021 has none from Phase 3a)
+# normalized spectral indices per observation (only 2019/2024 have Phase 3a
+# indices on disk natively; every other date is normalized onto the 2024
+# reference from its own alignment record before indices are computed)
 # ==========================================================================
 
 
-def _norm_for_2021() -> RadiometricNormalization:
-    """Scene-wide additive offsets recorded for the 3rd date in `third_date_alignment`."""
-    rn = load_manifest()["third_date_alignment"]["radiometric_normalization"]
+def _reference_obs() -> str | None:
+    return DATE_TO_OBS.get("2024")
+
+
+def _alignment_record_for(obs_id: str, m: dict) -> dict | None:
+    """``{"coregistration", "radiometric_normalization"}`` for ``obs_id`` vs the
+    fixed 2024 reference, wherever it was written - the original Phase 3a
+    top-level sections for 2019, ``third_date_alignment`` for 2021, or Phase
+    8's ``additional_dates_alignment`` (keyed by observation id) for any later
+    date. ``None`` for the reference observation itself (2024) or an
+    observation with no recorded alignment."""
+    if obs_id == _reference_obs():
+        return None
+    if obs_id == DATE_TO_OBS.get("2019"):
+        return {"coregistration": m.get("coregistration", {}),
+                "radiometric_normalization": m.get("radiometric_normalization", {})}
+    if obs_id == DATE_TO_OBS.get("2021"):
+        return m.get("third_date_alignment")
+    return (m.get("additional_dates_alignment") or {}).get(obs_id)
+
+
+def _norm_for_obs(obs_id: str) -> RadiometricNormalization:
+    """Scene-wide additive offsets for ``obs_id`` from its recorded alignment-vs-reference."""
+    rec = _alignment_record_for(obs_id, load_manifest())
+    if rec is None:
+        raise RuntimeError(
+            f"no alignment record for {obs_id} - stage + align it first "
+            f"(scripts/align_third_date.py or scripts/align_additional_dates.py)"
+        )
+    rn = rec["radiometric_normalization"]
     per_band = {b: {"gain": 1.0, "offset": float(c["offset_dn"]), "corr": c.get("inter_date_corr"),
                     "n": c.get("n", 0), "rmse_dn": c.get("rmse_dn", 0.0), "method": "additive"}
                 for b, c in rn["per_band_dn"].items()}
@@ -92,14 +169,14 @@ def _norm_for_2021() -> RadiometricNormalization:
 
 
 def ensure_indices(obs_id: str) -> dict[str, Path]:
-    """Return {NDVI,NDWI,NDBI: path}. 2019/2024 already written by Phase 3a; compute 2021 if missing."""
+    """Return {NDVI,NDWI,NDBI: path}. 2019/2024 already written by Phase 3a; compute any other date if missing."""
     d = get_settings().datasets_dir / obs_id
     paths = {k: d / f"{k}.tif" for k in ("NDVI", "NDWI", "NDBI")}
     if all(p.is_file() for p in paths.values()):
         return paths
 
     print(f"  [indices] computing normalized NDVI/NDWI/NDBI for {obs_id} (not staged by Phase 3a) ...")
-    norm = _norm_for_2021() if obs_id == DATE_TO_OBS["2021"] else None
+    norm = None if obs_id in (DATE_TO_OBS.get("2019"), _reference_obs()) else _norm_for_obs(obs_id)
     bands = {}
     with rasterio.open(d / "B04.tif") as ref:
         prof = {"driver": "GTiff", "height": ref.height, "width": ref.width, "count": 1,
@@ -117,14 +194,20 @@ def ensure_indices(obs_id: str) -> dict[str, Path]:
     for k, arr in idx.items():
         with rasterio.open(paths[k], "w", **prof) as dst:
             dst.write(arr.astype(np.float32), 1)
-    record_analysis_section("third_date_indices", {
+    key = "third_date_indices" if obs_id == DATE_TO_OBS.get("2021") else "additional_date_indices"
+    section = {
         "observation_id": obs_id,
-        "note": ("NDVI/NDWI/NDBI on 2021 reflectance mapped into the 2024 reference frame with the "
-                 "scene-wide PIF additive offsets from third_date_alignment (Phase 3a only wrote the "
-                 "2019/2024 pair). Same formulas as spectral_indices."),
-        "normalization": "scene-wide additive per-band offset (2021 -> 2024)",
+        "note": (f"NDVI/NDWI/NDBI on {obs_id} reflectance mapped into the 2024 reference frame with its "
+                 "recorded scene-wide PIF additive offsets. Same formulas as spectral_indices."),
+        "normalization": f"scene-wide additive per-band offset ({obs_id} -> 2024)",
         "paths": {k: str(v) for k, v in paths.items()},
-    })
+    }
+    if key == "additional_date_indices":
+        existing = dict(load_manifest().get(key, {}))
+        existing[obs_id] = section
+        record_analysis_section(key, existing)
+    else:
+        record_analysis_section(key, section)
     return paths
 
 
@@ -190,6 +273,7 @@ class Candidate:
     significance: float = 0.0
     queue_score: float = 0.0
     sar: dict = field(default_factory=dict)
+    terrain: dict = field(default_factory=dict)
 
 
 def _elongation_fill(mask_local: np.ndarray) -> tuple[float, float]:
@@ -323,26 +407,30 @@ def scene_seasonal_deltas(e_idx: dict, l_idx: dict, *, n_windows: int = 600,
     return out[0], out[1], out[2]
 
 
+def _radiometric_corrs_for(obs_id: str, m: dict) -> list[float]:
+    """Inter-date correlation of the index-driving bands for ``obs_id`` vs the 2024
+    reference - [1.0] (perfect self-agreement) for the reference itself."""
+    if obs_id == _reference_obs():
+        return [1.0]
+    rec = _alignment_record_for(obs_id, m)
+    rn = (rec or {}).get("radiometric_normalization", {}).get("per_band_dn", {})
+    corrs = [rn[b]["inter_date_corr"] for b in ("B03", "B04", "B08", "B11")
+             if rn.get(b, {}).get("inter_date_corr") is not None]
+    return corrs or [1.0]
+
+
 def pair_context(pair, seq, e_idx, l_idx) -> PairSuppressionContext:
     m = load_manifest()
     earlier, later = pair.earlier.observation_id, pair.later.observation_id
-    is_2021_pair = DATE_TO_OBS["2021"] in (earlier, later)
     # co-registration residual for this pair
     resid, corrected = _coreg_residual(m, earlier, later)
-    # radiometric: min inter-date correlation among the index-driving bands + low-confidence flag
-    if DATE_TO_OBS["2019"] == earlier and DATE_TO_OBS["2024"] == later:
-        rn = m["radiometric_normalization"]["per_band_dn"]
-        corrs = [rn[b]["inter_date_corr"] for b in ("B03", "B04", "B08", "B11")
-                 if rn.get(b, {}).get("inter_date_corr") is not None]
-        # all index-band offset surfaces were zeroed/deadbanded => dates already agree there => reliable
-        low = False
-    else:
-        rn = m["third_date_alignment"]["radiometric_normalization"]["per_band_dn"]
-        corrs = [rn[b]["inter_date_corr"] for b in ("B03", "B04", "B08", "B11")
-                 if rn.get(b, {}).get("inter_date_corr") is not None]
-        low = False
-    if not corrs:
-        corrs = [1.0]
+    # radiometric: min inter-date correlation among the index-driving bands, over
+    # whichever endpoint(s) are not themselves the 2024 reference (both, for a pair
+    # like 2019-2021 that doesn't touch the reference at all - the worse of the two
+    # own normalization-vs-reference records governs a transitive comparison).
+    non_ref = [o for o in (earlier, later) if o != _reference_obs()] or [earlier]
+    corrs = min((_radiometric_corrs_for(o, m) for o in non_ref), key=lambda c: min(c))
+    low = False
     sd_ndvi, sd_ndbi, sd_ndwi = scene_seasonal_deltas(e_idx, l_idx)
     return PairSuppressionContext(
         pair_id=f"{earlier}->{later}",
@@ -368,23 +456,31 @@ def _spectra_for(c: "Candidate", ctx: PairSuppressionContext) -> CandidateSpectr
         area_px=c.area_px, elongation=c.elongation, fill_ratio=c.fill_ratio)
 
 
+def _coreg_vs_reference(obs_id: str, m: dict) -> dict:
+    """The recorded ``coregistration`` dict for ``obs_id`` vs the fixed 2024 reference."""
+    if obs_id == _reference_obs():
+        return {}
+    return (_alignment_record_for(obs_id, m) or {}).get("coregistration", {})
+
+
 def _coreg_residual(m: dict, earlier: str, later: str) -> tuple[float, bool]:
     """Residual px + corrected flag for a pair, from the recorded co-registration sections.
 
-    2019/2024 -> `coregistration`; any 2021 pair -> `third_date_alignment.coregistration`
-    (2021 was registered to the 2024 reference; a 2019<->2021 pair is transitive: the two
-    residuals to the common 2024 reference add)."""
-    d1924 = m.get("coregistration", {})
-    d21 = m.get("third_date_alignment", {}).get("coregistration", {})
-    o19, o21, o24 = DATE_TO_OBS["2019"], DATE_TO_OBS["2021"], DATE_TO_OBS["2024"]
-    if {earlier, later} == {o19, o24}:
-        return float(d1924.get("median_magnitude_px", 0.0)), bool(d1924.get("correction_applied", False))
-    if {earlier, later} == {o21, o24}:
-        return float(d21.get("median_magnitude_px", 0.0)), bool(d21.get("correction_applied", False))
-    if {earlier, later} == {o19, o21}:
-        return (float(d1924.get("median_magnitude_px", 0.0)) + float(d21.get("median_magnitude_px", 0.0)),
-                False)
-    return 0.0, False
+    Every date is registered against the SAME fixed 2024 reference, so a pair
+    where one end IS the reference reads that one record directly; a pair
+    where NEITHER end is the reference (e.g. 2019-2021, or Phase 8's
+    2025-2026) is transitive - the two residuals to the common reference add.
+    With exactly the original 3 dates this reproduces the Phase 3.5/4 logic
+    byte-for-byte."""
+    ref = _reference_obs()
+    if earlier == ref and later == ref:
+        return 0.0, False
+    if earlier == ref or later == ref:
+        other = later if earlier == ref else earlier
+        c = _coreg_vs_reference(other, m)
+        return float(c.get("median_magnitude_px", 0.0)), bool(c.get("correction_applied", False))
+    ce, cl = _coreg_vs_reference(earlier, m), _coreg_vs_reference(later, m)
+    return (float(ce.get("median_magnitude_px", 0.0)) + float(cl.get("median_magnitude_px", 0.0))), False
 
 
 # ==========================================================================
@@ -444,10 +540,12 @@ def _crop_true_color(obs_id: str, bbox, margin_frac: float, min_px: int) -> tupl
     return rgb, (R0, C0, R1, C1)
 
 
-def save_panel(cand: Candidate, span_prob_path: str, threshold: float, out: Path) -> Path:
+def save_panel(cand: Candidate, span_prob_path: str, threshold: float, out: Path,
+               dates: tuple[str, ...] | None = None) -> Path:
+    dates = dates or tuple(DATE_TO_OBS)   # every staged date, in acquisition order (3 originally, 5+ from Phase 8)
     tiles = []
     win = None
-    for date in ("2019", "2021", "2024"):
+    for date in dates:
         rgb, win = _crop_true_color(DATE_TO_OBS[date], cand.bbox, margin_frac=1.5, min_px=280)
         tiles.append((date, rgb))
     R0, C0, R1, C1 = win
@@ -466,11 +564,11 @@ def save_panel(cand: Candidate, span_prob_path: str, threshold: float, out: Path
     overlay = np.clip(ov, 0, 255).astype(np.uint8)
     edge = comp ^ ndi.binary_erosion(comp)
     overlay[edge] = (230, 30, 30)
-    tiles.append(("change overlay (red=this candidate, yellow=other change 2019->2024)", overlay))
+    tiles.append((f"change overlay (red=this candidate, yellow=other change {dates[0]}->{dates[-1]})", overlay))
 
     h, w = tiles[0][1].shape[:2]
     pad, top, bot = 8, 24, 20
-    W = w * 4 + pad * 5
+    W = w * len(tiles) + pad * (len(tiles) + 1)
     Hh = h + top + bot
     canvas = Image.new("RGB", (W, Hh), "white")
     dr = ImageDraw.Draw(canvas)
@@ -674,7 +772,29 @@ def _fuse_with_query(span_survivors: list[Candidate], span_pair, query: str, top
             "worked_example": ranked[0].as_dict()}
 
 
-PAIR_KEYS = {"2019-2021": ("2019", "2021"), "2021-2024": ("2021", "2024"), "2019-2024": ("2019", "2024")}
+def build_pair_keys(date_to_obs: dict[str, str]) -> dict[str, tuple[str, str]]:
+    """``{"<a>-<b>": (a, b)}`` for every consecutive pair (in acquisition order,
+    per :func:`discover_date_to_obs`'s dict-insertion-order guarantee) plus the
+    full first->last span. With exactly the original 3 dates this reproduces
+    the Phase 3.5/4 pair set byte-for-byte: ``{"2019-2021", "2021-2024",
+    "2019-2024"}``. Phase 8's 5 dates add ``2024-2025``, ``2025-2026`` and
+    ``2019-2026`` (the new full span) automatically; ``2024-2026`` (skipping
+    2025) is added explicitly below so the newest interval can be isolated
+    from the 2024-2025 / 2025-2026 consecutive pairs."""
+    years = list(date_to_obs)
+    pairs: dict[str, tuple[str, str]] = {}
+    for a, b in zip(years, years[1:]):
+        pairs[f"{a}-{b}"] = (a, b)
+    if len(years) >= 2:
+        pairs[f"{years[0]}-{years[-1]}"] = (years[0], years[-1])
+    return pairs
+
+
+PAIR_KEYS = build_pair_keys(DATE_TO_OBS)
+if "2024" in DATE_TO_OBS and "2026" in DATE_TO_OBS:
+    # Phase 8 Step A: isolate changes unique to the newest interval from those
+    # already visible in the 2024-2025 / 2025-2026 consecutive steps.
+    PAIR_KEYS.setdefault("2024-2026", ("2024", "2026"))
 
 
 def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: bool = False,
@@ -789,7 +909,9 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
         all_candidates[name] = cands
 
     # -------- Step C: trajectories + Step D: confidence, on the span pair --------
-    span_name = "2019-2024" if "2019-2024" in pairs else pair_names[-1]
+    _years = list(DATE_TO_OBS)
+    full_span_name = f"{_years[0]}-{_years[-1]}"
+    span_name = full_span_name if full_span_name in pairs else pair_names[-1]
     span_pair = pairs[span_name]
     span_survivors = [c for c in all_candidates[span_name]
                       if not c.suppression.get("suppressed", True)]
@@ -811,6 +933,18 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
               f"{sar_pair.notes[1]}")
     else:
         print("  SAR: no Sentinel-1 staged for this pair - corroboration term neutral for all candidates")
+
+    # Step B: terrain context (elevation/slope/aspect/distance-to-water/distance-
+    # to-built-up), sampled at each candidate's centroid - additive evidence, no
+    # effect on confidence/ranking. Unavailable = an empty terrain dict, not a
+    # pipeline failure (mirrors the SAR "unstaged is fine" degradation above).
+    from geoseek.terrain.dem import terrain_staged
+    from geoseek.terrain.features import TerrainSampler
+
+    terrain_sampler = TerrainSampler() if terrain_staged() else None
+    if terrain_sampler is None:
+        print("  terrain: DEM not staged - run `python -m geoseek.staging.download_dem` "
+              "+ `python -m geoseek.terrain.build` - terrain fields left empty")
 
     print(f"\n--- Step C/D on {span_name}: {len(span_survivors)} survivors ---")
     for c in span_survivors:
@@ -848,6 +982,11 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
         c.confidence_breakdown = rep.breakdown
         c.significance = round(significance(c), 4)
         c.queue_score = round(rank_score(c), 4)
+        if terrain_sampler is not None:
+            c.terrain = terrain_sampler.sample_rc(*c.centroid_rc).as_dict()
+
+    if terrain_sampler is not None:
+        terrain_sampler.close()
 
     # full ranked queue (confidence AND significance), then a diversified headline top-N
     span_survivors.sort(key=lambda c: c.queue_score, reverse=True)
@@ -878,7 +1017,6 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
             print(f"  {p.name}")
 
     lookup.close()
-    repo.close()
 
     report = _assemble_report(pair_names, per_pair, span_name, span_survivors, diverse_top, top,
                               panels, model)
@@ -890,13 +1028,26 @@ def run(pair_names: list[str], *, top: int = 10, n_panels: int = 5, refresh: boo
     # full ranked queue -> CSV (JSON keeps only the head) + a full-detail sidecar
     # (every survivor's evidence/suppression/trajectory/sar) for the analyst UI:
     # the change report itself stays slim, the UI reads the sidecar for detail.
+    detail_rows = [_candidate_row(c, i, full=True) for i, c in enumerate(span_survivors, 1)]
     detail_path = OUT_DIR / "ayodhya_change_ranked_detail.json"
-    detail_path.write_text(json.dumps(
-        [_candidate_row(c, i, full=True) for i, c in enumerate(span_survivors, 1)], indent=1),
-        encoding="utf-8")
+    detail_path.write_text(json.dumps(detail_rows, indent=1), encoding="utf-8")
     report["full_ranked_detail_json"] = str(detail_path)
     record_analysis_section("ayodhya_change_pipeline", report)
     print(f"  full-detail sidecar -> {detail_path.name} ({len(span_survivors)} candidates)")
+
+    # Step C: evaluate every standing watch area against the freshly-computed
+    # candidate set (the earliest point at which "new candidates" from this run
+    # exist at all) and record any newly-matching one as a notification.
+    from geoseek.watch.evaluator import evaluate_and_notify
+
+    fired = evaluate_and_notify(repo, detail_rows, observation_id=span_pair.later.observation_id)
+    if fired:
+        print(f"\n--- Step C: watch areas ---")
+        for n in fired:
+            print(f"  watch {n.watch_id}: {len(n.candidate_ids)} new matching candidate(s) "
+                  f"-> notification {n.notification_id}")
+    report["watch_notifications_fired"] = [n.as_dict() for n in fired]
+    repo.close()
 
     import csv as _csv
     with open(OUT_DIR / "ayodhya_change_ranked.csv", "w", newline="", encoding="utf-8") as fh:
@@ -975,7 +1126,7 @@ def _candidate_row(c, i=None, full=False):
                     "classification": c.classification,
                     "confidence_breakdown": c.confidence_breakdown,
                     "suppression": c.suppression, "trajectory": c.trajectory,
-                    "sar": c.sar})
+                    "sar": c.sar, "terrain": c.terrain})
     return row
 
 
@@ -1017,8 +1168,9 @@ def _assemble_report(pair_names, per_pair, span_name, span_survivors, diverse_to
 
 def main(argv: list[str] | None = None) -> None:
     p = argparse.ArgumentParser(prog="geoseek-change-analyze", description=__doc__)
-    p.add_argument("--pairs", default="2019-2021,2021-2024,2019-2024",
-                   help="comma list from {2019-2021,2021-2024,2019-2024}")
+    p.add_argument("--pairs", default=",".join(PAIR_KEYS),
+                   help=f"comma list from {list(PAIR_KEYS)} (default: every consecutive pair "
+                        "across every ingested date + the full span)")
     p.add_argument("--top", type=int, default=10)
     p.add_argument("--panels", type=int, default=5)
     p.add_argument("--refresh", action="store_true", help="recompute probability rasters")

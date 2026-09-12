@@ -29,7 +29,7 @@ from geoseek.ingest.embed import (
 
 RGB_BANDS = ("B04", "B03", "B02")
 CHANGE_THRESHOLD = 0.80
-VALID_DATES = tuple(DATE_TO_OBS)          # ("2019", "2021", "2024")
+VALID_DATES = tuple(DATE_TO_OBS)          # every ingested date, e.g. ("2019","2021","2024","2025","2026")
 VALID_VIEWS = ("rgb", "overlay")
 
 

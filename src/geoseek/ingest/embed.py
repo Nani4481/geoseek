@@ -145,6 +145,10 @@ PER_OBS_TRUE_COLOR_DN_BOUNDS = {
     "S2B_44RPQ_20190330_1_L2A": {"B04": (724.0, 1830.0), "B03": (787.0, 1594.0), "B02": (656.0, 1312.0)},
     "S2A_44RPQ_20210304_1_L2A": {"B04": (227.0, 1908.0), "B03": (355.0, 1608.0), "B02": (73.0, 1194.0)},
     "S2A_44RPQ_20240308_0_L2A": {"B04": (257.0, 2122.0), "B03": (435.0, 1838.0), "B02": (227.0, 1346.0)},
+    # Phase 8 Step A: 2025-03-08 / 2026-03-08. Same method (one-time decimated
+    # AOI sample, 2nd/98th percentile over an SCL non-bad-quality mask).
+    "S2B_44RPQ_20250308_0_L2A": {"B04": (168.0, 2178.0), "B03": (315.0, 1842.0), "B02": (103.0, 1454.0)},
+    "S2C_44RPQ_20260308_0_L2A": {"B04": (521.0, 1749.0), "B03": (556.0, 1600.0), "B02": (156.0, 1370.0)},
 }
 # Kept OUT of RADIOMETRY_CONFIG on purpose: RADIOMETRY_CONFIG is the analysis
 # radiometry entry (embeddings + change model + spectral indices), recorded to

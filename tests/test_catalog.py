@@ -326,27 +326,39 @@ def test_production_catalog_provenance_chain_for_every_observation():
     repo.close()
 
 
-def test_production_catalog_has_the_third_date_with_alignment_provenance():
+def _assert_alignment_provenance(obs) -> None:
+    """Shared check for any date normalized onto the 2024-03-08 reference
+    (2021 via align_third_date.py, 2025/2026 via align_additional_dates.py -
+    same coregistration/radiometry shape either way)."""
+    assert obs.coregistration.get("reference_scene") == "S2A_44RPQ_20240308_0_L2A_scaled"
+    assert obs.coregistration["median_magnitude_px"] < 0.5
+    assert "reference" in obs.radiometry.get("role", "")
+    assert set(obs.radiometry["relative_normalization"]["per_band_dn"]) == \
+        {"B04", "B03", "B02", "B08", "B11"}
+
+
+def test_production_catalog_has_five_dates_with_alignment_provenance():
     db = _production_db()
     repo = SQLiteMetadataRepository(db)
-    # Scoped to the original 3-date Ayodhya stack (aoi_name tags every Ayodhya
-    # observation "ayodhya_..."): Phase 7b adds many more sentinel-2-l2a
-    # observations over other AOIs, so an unscoped list_observations(collection=)
-    # would no longer sum to the fixed Ayodhya tile count below.
+    # Scoped to the Ayodhya stack (aoi_name tags every Ayodhya observation
+    # "ayodhya_..."): Phase 7b adds many more sentinel-2-l2a observations over
+    # other AOIs, so an unscoped list_observations(collection=) would no
+    # longer sum to the fixed Ayodhya tile count below.
     s2_obs = [o for o in repo.list_observations(collection="sentinel-2-l2a")
               if (o.aoi_name or "").startswith("ayodhya")]
     obs_by_date = {o.acquired_at: o for o in s2_obs}
     if "2021-03-04" not in obs_by_date:
         pytest.skip("third date not staged/ingested yet")
-    # 3 Sentinel-2 observations, time-ordered, ~1089 tiles each
-    assert sorted(obs_by_date) == ["2019-03-30", "2021-03-04", "2024-03-08"]
+    if "2026-03-08" not in obs_by_date:
+        pytest.skip("Phase 8 Step A dates (2025/2026) not staged/ingested yet")
+    # 5 Sentinel-2 observations, time-ordered, ~1089 tiles each
+    assert sorted(obs_by_date) == ["2019-03-30", "2021-03-04", "2024-03-08", "2025-03-08", "2026-03-08"]
     s2_tiles = sum(len(repo.list_tiles(observation_id=o.observation_id)) for o in s2_obs)
-    assert s2_tiles == 3267
-    third = obs_by_date["2021-03-04"]
-    # normalized against the SAME reference date as the original pair
-    assert third.coregistration.get("reference_scene") == "S2A_44RPQ_20240308_0_L2A_scaled"
-    assert third.coregistration["median_magnitude_px"] < 0.5
-    assert "reference" in third.radiometry.get("role", "")
-    assert set(third.radiometry["relative_normalization"]["per_band_dn"]) == \
-        {"B04", "B03", "B02", "B08", "B11"}
+    assert s2_tiles == 3267 + 1089 + 1089
+    for date in ("2021-03-04", "2025-03-08", "2026-03-08"):
+        _assert_alignment_provenance(obs_by_date[date])
+    # the newest date is a Sentinel-2C acquisition - confirms the S2[A-Z] sensor
+    # regex fix (S2A/S2B-only would have left platform/acquired_at "unknown")
+    scene_2026 = repo.get_scene(obs_by_date["2026-03-08"].scene_id)
+    assert scene_2026.platform == "Sentinel-2C"
     repo.close()

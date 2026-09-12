@@ -144,12 +144,15 @@ def test_health_and_stats(client):
     assert s["index"]["tiles"] > 0
     assert s["model"]["weights_sha256"]
     assert s["build"]["git_commit"]
-    assert s["change_pipeline"]["candidates_ranked"] >= 1000
+    # was >=1000 at 1104 candidates (3-date, 2019-2024 span); Phase 8 extended the
+    # stack to 5 dates and the span pair to 2019-2026, giving 841 - a real pipeline
+    # change on a different date pair, not a regression floor to chase exactly.
+    assert s["change_pipeline"]["candidates_ranked"] >= 500
 
 
 def test_candidates_queue_filters_and_sorts(client):
     body = client.get("/candidates", params={"limit": 10}).json()
-    assert body["total"] > 1000 and body["count"] == 10
+    assert body["total"] > 500 and body["count"] == 10
     scores = [c["queue_score"] for c in body["candidates"]]
     assert scores == sorted(scores, reverse=True)
     for c in body["candidates"]:
@@ -202,12 +205,15 @@ def test_candidate_imagery_before_after_overlay_are_png(client):
 
 
 def test_date_selector_offers_only_valid_before_dates(client):
-    # a 2019->2024 span candidate: BEFORE dates are 2019 & 2021, AFTER is 2024
+    # every candidate is a span-pair survivor, so its pair's later observation
+    # (whatever the current span endpoint is - "2024" pre-Phase-8, "2026" after)
+    # must never appear among its own BEFORE choices.
     top = client.get("/candidates", params={"limit": 1}).json()["candidates"][0]["candidate_id"]
     im = client.get(f"/candidates/{top}").json()["imagery"]
-    assert im["after_date"] == "2024"
-    assert im["before_dates"] == ["2019", "2021"]         # NOT "2024" - would be before==after
-    assert "2024" not in im["before_dates"]
+    assert im["after_date"] not in im["before_dates"]
+    assert len(im["before_dates"]) >= 2                   # at least the original 2019/2021
+    assert im["before_dates"] == sorted(im["before_dates"])
+    assert all(d < im["after_date"] for d in im["before_dates"])
 
 
 def test_thumbnails_are_per_observation_white_balanced(client):
@@ -286,9 +292,15 @@ def test_export_geojson_features_carry_full_provenance(client):
     assert fc["features"][0]["geometry"]["type"] == "Polygon"
     assert "csv" in body and body["csv"].splitlines()[0].startswith("candidate_id,")
     assert body["geojson_path"].endswith(".geojson")
-    # flat GIS-reader-friendly provenance keys + real source acquisition dates
+    # flat GIS-reader-friendly provenance keys + real source acquisition dates.
+    # Every candidate is a span-pair survivor, so both dates are ISO and the
+    # first is always the archive's earliest observation (2019-03-30); the
+    # second is whatever the current span's later date is (moves as more
+    # dates are added - "2024-03-08" pre-Phase-8, "2026-03-08" after).
     assert p["weights_sha256"] and len(p["weights_sha256"]) == 64
-    assert p["git_commit"] and p["acquisition_dates"] == ["2019-03-30", "2024-03-08"]
+    assert p["git_commit"]
+    assert len(p["acquisition_dates"]) == 2 and p["acquisition_dates"][0] == "2019-03-30"
+    assert p["acquisition_dates"][1] > p["acquisition_dates"][0]
 
 
 def test_export_geojson_loads_in_a_standard_gis_reader(client, tmp_path):

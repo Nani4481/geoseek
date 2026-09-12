@@ -123,6 +123,104 @@ THIRD_DATE_BANDS = ("B04", "B03", "B02", "B08", "B11", "SCL")
 # the reference date the existing pair is normalized against (geoseek.change.prep)
 REFERENCE_DATE_SCENE_ID = "S2A_44RPQ_20240308_0_L2A"
 
+# --- Phase 8 Step A: extend the stack to 5 dates (3267 tiles/date-ish; the
+# archive was 2.5 years stale at 3 dates). Same MGRS tile 44RPQ, same 82 km
+# scaled AOI, same six bands as the third date. Chosen from a LIVE Earth
+# Search query (POST /v1/search, collection sentinel-2-l2a, bbox=
+# LARGE_AOI_BOUNDS_4326, query={"grid:code":{"eq":"MGRS-44RPQ"}}, datetime
+# Feb-Apr of each year, sortby eo:cloud_cover asc) run at authoring time
+# (2026-09-12) - not recalled from memory. Both land on the SAME day-of-year
+# as the existing 2024-03-08 reference (2019/2021/2024/2025/2026 are all
+# within a 26-day window of each other), the tightest possible phenology
+# control across 5 acquisitions, and both have negligible cloud + a swath
+# cut close to the third date's (~12.6% nodata -> "good coverage" pass,
+# confirmed against the ~41-42% "bad coverage" orbit pass also visible in the
+# same query for both years).
+ADDITIONAL_DATES = [
+    {
+        "scene_id": "S2B_44RPQ_20250308_0_L2A", "label": "2025",
+        "acq_date": "2025-03-08", "expected_cloud_cover_pct": 0.00058,
+        "expected_nodata_pct": 13.09,
+    },
+    {
+        "scene_id": "S2C_44RPQ_20260308_0_L2A", "label": "2026",
+        "acq_date": "2026-03-08", "expected_cloud_cover_pct": 0.04756,
+        "expected_nodata_pct": 12.90,
+    },
+]
+ADDITIONAL_DATE_BANDS = THIRD_DATE_BANDS
+
+
+def stage_additional_date(entry: dict, force: bool = False) -> dict:
+    """Phase 8 Step A: stage one Phase-8 date (2025 or 2026) over the scaled AOI.
+
+    Generalizes :func:`stage_third_date` to an arbitrary ``entry`` from
+    :data:`ADDITIONAL_DATES` instead of one hardcoded scene. Records provenance
+    for every band, confirms the reflectance encoding, and merges the result
+    into the manifest's ``additional_dates`` section (keyed by observation id
+    - a dict, not a single value, so staging 2026 does not clobber 2025's
+    already-recorded entry).
+    """
+    from geoseek.staging.manifest import load_manifest, record_analysis_section
+
+    settings = get_settings()
+    print_startup_banner(settings)
+
+    scene_id = entry["scene_id"]
+    dir_name = scene_id + LARGE_AOI_DIR_SUFFIX
+    print(f"\n=== {dir_name} (acq. {entry['acq_date']}, scaled AOI, Phase 8 date) ===")
+
+    if not force and scene_is_staged(scene_id, dir_name=dir_name, bands=ADDITIONAL_DATE_BANDS):
+        print(f"[staging] All six bands already staged under {settings.datasets_dir / dir_name} - skipping network.")
+        out_dir = settings.datasets_dir / dir_name
+        band_records = [
+            {"band": b, "path": out_dir / f"{b}.tif", "url": _band_url(scene_id, b)}
+            for b in ADDITIONAL_DATE_BANDS
+        ]
+    else:
+        band_records = _fetch_window(
+            scene_id, LARGE_AOI_BOUNDS_4326, out_dir_name=dir_name, bands=ADDITIONAL_DATE_BANDS
+        )
+
+    for rec in band_records:
+        artifact_name = f"sentinel2-{dir_name}-{rec['band']}"
+        arec = record_artifact(
+            name=artifact_name, source_url=rec["url"], local_path=rec["path"], license=DATA_LICENSE,
+        )
+        print(f"[staging]   provenance: {artifact_name} sha256={arec.sha256[:16]}... size={arec.byte_size}B")
+
+    confirmation = _confirm_extra_band_reflectance_scale(dir_name)
+
+    section = {
+        "purpose": "Phase 8 Step A: extend the archive from 3 to 5 dates (was 2.5 years stale at 2024-03-08).",
+        "scene_id": scene_id,
+        "observation_id": dir_name,
+        "acq_date": entry["acq_date"],
+        "mgrs_tile": "44RPQ",
+        "bands": list(ADDITIONAL_DATE_BANDS),
+        "aoi_bounds_4326": list(LARGE_AOI_BOUNDS_4326),
+        "reference_date_observation": REFERENCE_DATE_SCENE_ID + LARGE_AOI_DIR_SUFFIX,
+        "selection_rationale": (
+            f"MGRS 44RPQ, live Earth Search query Feb-Apr {entry['acq_date'][:4]}, sorted by cloud cover; "
+            f"chosen date matches the existing reference's day-of-year (03-08) for tightest phenology "
+            f"control, expected cloud_cover={entry['expected_cloud_cover_pct']}%, "
+            f"expected nodata={entry.get('expected_nodata_pct')}% (good-coverage swath pass, not the "
+            f"~41-42% partial-swath pass also seen in the same query window)."
+        ),
+        "reflectance_scale_confirmation": confirmation,
+    }
+    manifest = load_manifest()
+    all_additional = dict(manifest.get("additional_dates", {}))
+    all_additional[dir_name] = section
+    record_analysis_section("additional_dates", all_additional)
+    print(f"\n[staging] {entry['label']} date staged + confirmed. Manifest: {settings.provenance_manifest_path}")
+    return section
+
+
+def stage_phase8_dates(force: bool = False) -> list[dict]:
+    """Stage every :data:`ADDITIONAL_DATES` entry (2025 + 2026)."""
+    return [stage_additional_date(entry, force=force) for entry in ADDITIONAL_DATES]
+
 
 def _band_url(scene_id: str, band: str) -> str:
     date_token = scene_id.split("_")[2]  # e.g. "20190330"
@@ -529,10 +627,14 @@ def main(argv: list[str] | None = None) -> None:
                         help="Phase 3a: stage B08 (NIR) + B11 (SWIR-1) for the scaled AOI")
     parser.add_argument("--third-date", action="store_true",
                         help="Phase 3.5 Step 4: stage a third Sentinel-2 date (6 bands) over the scaled AOI")
+    parser.add_argument("--phase8-dates", action="store_true",
+                        help="Phase 8 Step A: stage the 2025 + 2026 dates (6 bands) over the scaled AOI")
     parser.add_argument("--force", action="store_true", help="re-fetch even if already staged")
     args = parser.parse_args(argv)
 
-    if args.third_date:
+    if args.phase8_dates:
+        stage_phase8_dates(force=args.force)
+    elif args.third_date:
         stage_third_date(force=args.force)
     elif args.extra_bands:
         stage_large_aoi_extra_bands(force=args.force)

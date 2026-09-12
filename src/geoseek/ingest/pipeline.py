@@ -41,7 +41,10 @@ RGB_BANDS = ("B04", "B03", "B02")
 SCL_BAND = "SCL"
 ALL_BANDS = (*RGB_BANDS, SCL_BAND)
 
-SCENE_ID_RE = re.compile(r"^(S2[AB])_\w+_(\d{8})_")
+# S2A/S2B were the only satellites flying when this was first written; Sentinel-2C
+# launched 2024-09 and Phase 8 stages a 2026 scene from it - S2[A-Z] covers C/D too.
+SCENE_ID_RE = re.compile(r"^(S2[A-Z])_\w+_(\d{8})_")
+_SENSOR_NAMES = {"S2A": "Sentinel-2A", "S2B": "Sentinel-2B", "S2C": "Sentinel-2C", "S2D": "Sentinel-2D"}
 
 
 def _sensor_and_date(scene_id: str) -> tuple[str, str]:
@@ -49,7 +52,7 @@ def _sensor_and_date(scene_id: str) -> tuple[str, str]:
     if not m:
         return "unknown", "unknown"
     sat, date_token = m.groups()
-    sensor = "Sentinel-2A" if sat == "S2A" else "Sentinel-2B"
+    sensor = _SENSOR_NAMES.get(sat, sat)
     acq_date = f"{date_token[:4]}-{date_token[4:6]}-{date_token[6:]}"
     return sensor, acq_date
 
