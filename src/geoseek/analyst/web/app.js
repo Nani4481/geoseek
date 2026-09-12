@@ -91,14 +91,19 @@ class CoordMap {
     ctx.strokeStyle = css.getPropertyValue("--line");
     ctx.fillStyle = css.getPropertyValue("--muted");
     ctx.lineWidth = 1; ctx.font = "10px system-ui, sans-serif";
-    const [w, s, e, n] = this.bbox, step = 0.1;
-    for (let lon = Math.ceil(w / step) * step; lon < e; lon += step) {
+    const [w, s, e, n] = this.bbox;
+    const stepLon = niceGraticuleStep(e - w), stepLat = niceGraticuleStep(n - s);
+    const decLon = Math.max(0, -Math.floor(Math.log10(stepLon))), decLat = Math.max(0, -Math.floor(Math.log10(stepLat)));
+    let lastLabelY = -Infinity;
+    for (let lon = Math.ceil(w / stepLon) * stepLon; lon < e; lon += stepLon) {
       const x = p.x(lon); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, p.H); ctx.stroke();
-      ctx.fillText(lon.toFixed(1) + "°E", x + 2, p.H - 3);
+      ctx.fillText(lon.toFixed(decLon) + "°E", x + 2, p.H - 3);
     }
-    for (let lat = Math.ceil(s / step) * step; lat < n; lat += step) {
+    for (let lat = Math.ceil(s / stepLat) * stepLat; lat < n; lat += stepLat) {
       const y = p.y(lat); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(p.W, y); ctx.stroke();
-      ctx.fillText(lat.toFixed(1) + "°N", 3, y - 3);
+      // skip a label that would overlap the previous one (happens if stepLat
+      // maps to less than a text-line's worth of pixels at extreme aspect ratios)
+      if (Math.abs(y - lastLabelY) >= 11) { ctx.fillText(lat.toFixed(decLat) + "°N", 3, y - 3); lastLabelY = y; }
     }
     this._screen = [];
     for (const it of this.items) {
@@ -136,6 +141,20 @@ class CoordMap {
 function hexA(hex, a) {
   const m = hex.replace("#", ""); const bi = parseInt(m.length === 3 ? m.split("").map(c => c + c).join("") : m, 16);
   return `rgba(${(bi >> 16) & 255},${(bi >> 8) & 255},${bi & 255},${a})`;
+}
+function niceGraticuleStep(range, targetLines = 6) {
+  // A fixed 0.1deg graticule step looked fine at AOI scale (~1deg spans) but
+  // produces hundreds of sub-pixel-spaced grid lines - and as many overlapping
+  // labels stacked at the left edge - once results are scattered across a much
+  // wider bbox (e.g. search hits spanning several regions). Pick a "nice"
+  // (1/2/5 x10^n) step sized so roughly `targetLines` gridlines fit the span,
+  // the standard adaptive-graticule approach, instead of a constant.
+  if (!(range > 0)) return 0.1;
+  const raw = range / targetLines;
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const nice = norm < 1.5 ? 1 : norm < 3.5 ? 2 : norm < 7.5 ? 5 : 10;
+  return nice * mag;
 }
 function pointInPoly(x, y, poly) {
   let inside = false;
@@ -215,6 +234,7 @@ async function loadOverview() {
     renderOverviewCounters(PRES);
     renderFeatured(PRES.featured || []);
     prewarm(featuredUrls(PRES.featured || []));
+    renderLatestAlerts(PRES.latest_alerts || []);
   } catch (e) {
     $("#ov-featured").innerHTML = `<span class="muted">${esc(e.message)}</span>`;
   }
@@ -230,6 +250,14 @@ async function loadOverview() {
 function renderOverviewCounters(p) {
   const c = p.counters || {};
   if (p.aoi) $("#ov-aoi").textContent = p.aoi;
+  const dates = p.observation_dates || [];
+  if (dates.length) {
+    const obs = dates.length === 1 ? "observation" : `${dates.length} observations`;
+    $("#ov_mapnote").innerHTML =
+      `Every flagged change over the ${esc(dates[0])} &rarr; ${esc(dates[dates.length - 1])} window ` +
+      `(${obs}), coloured by type. Offline canvas in EPSG:4326 &mdash; no web map tiles. ` +
+      `Click a footprint to open it.`;
+  }
   const cells = [
     ["change_candidates", "change candidates", true],
     ["tiles_indexed", "tiles indexed", false],
@@ -240,6 +268,19 @@ function renderOverviewCounters(p) {
   $("#ov-counters").innerHTML = cells.map(([k, label, accent]) =>
     `<div class="stat${accent ? " accent" : ""}"><div class="n">${nf(c[k])}</div><div class="l">${label}</div></div>`
   ).join("");
+}
+function renderLatestAlerts(alerts) {
+  const el = $("#ov-alerts");
+  if (!alerts.length) { el.innerHTML = `<span class="muted">no alerts yet &mdash; define a watch area to start monitoring</span>`; return; }
+  el.innerHTML = alerts.map(n => `
+    <div class="row alertrow" data-ids="${esc(n.candidate_ids.join(","))}" data-name="${esc(n.watch_name || n.watch_id)}">
+      <span class="band ${n.severity || "low"}">${(n.severity || "low").toUpperCase()}</span>
+      <b>${esc(n.watch_name || n.watch_id)}</b>
+      <span class="muted">${n.candidate_ids.length} candidate(s) &middot; obs ${esc(n.observation_id)}${n.observation_date ? " (" + esc(n.observation_date) + ")" : ""}</span>
+      <span class="muted small">${esc((n.created_at || "").replace("T", " ").slice(0, 16))}</span>
+    </div>`).join("");
+  $$("#ov-alerts .alertrow").forEach(row => row.addEventListener("click", () =>
+    openQueueForIds(row.dataset.ids.split(","), `${row.dataset.ids.split(",").length} candidate(s) from alert "${row.dataset.name}"`)));
 }
 function featuredUrls(featured) {
   const u = [];
@@ -350,12 +391,14 @@ function renderSearchResults(d) {
 
 /* ---------------------------------------------------------------- QUEUE */
 let queueMap, queueInit = false, queueSort = "queue_score";
+let queueIdsOverride = null;   // set by "Latest alerts" links -> filters to exactly those candidate_ids
 function ensureQueue() {
   if (queueInit) return; queueInit = true;
   queueMap = new CoordMap($("#q_map"), (it) => go("detail/" + it.id));
   legend("#q_legend", TYPES);
   $("#f_go").addEventListener("click", loadQueue);
   $("#f_export").addEventListener("click", exportFiltered);
+  $("#f_clear_ids").addEventListener("click", () => { queueIdsOverride = null; loadQueue(); });
   $$("#q_table th").forEach(th => th.addEventListener("click", () => {
     const k = th.dataset.k === "earliest" ? "rank" : th.dataset.k;
     queueSort = (queueSort === k) ? "-" + k : k;
@@ -363,18 +406,28 @@ function ensureQueue() {
   }));
   loadQueue();
 }
+function openQueueForIds(ids, note) {
+  queueIdsOverride = { ids, note: note || `${ids.length} candidate(s) from an alert` };
+  go("queue"); ensureQueue(); loadQueue();
+}
 function queueQS(extra) {
   const p = new URLSearchParams();
-  if ($("#f_type").value) p.set("change_type", $("#f_type").value);
-  if ($("#f_conf").value !== "") p.set("min_confidence", $("#f_conf").value);
-  if ($("#f_pers").value) p.set("persistence", $("#f_pers").value);
-  if ($("#f_sensor").value) p.set("sensor", $("#f_sensor").value);
-  if ($("#f_dec").value) p.set("decision", $("#f_dec").value);
-  if ($("#f_bbox").value.trim()) p.set("bbox", $("#f_bbox").value.trim());
+  if (queueIdsOverride) { p.set("candidate_ids", queueIdsOverride.ids.join(",")); }
+  else {
+    if ($("#f_type").value) p.set("change_type", $("#f_type").value);
+    if ($("#f_conf").value !== "") p.set("min_confidence", $("#f_conf").value);
+    if ($("#f_pers").value) p.set("persistence", $("#f_pers").value);
+    if ($("#f_sensor").value) p.set("sensor", $("#f_sensor").value);
+    if ($("#f_dec").value) p.set("decision", $("#f_dec").value);
+    if ($("#f_bbox").value.trim()) p.set("bbox", $("#f_bbox").value.trim());
+  }
   Object.entries(extra || {}).forEach(([k, v]) => p.set(k, v));
   return p;
 }
 async function loadQueue() {
+  $("#q_idsbanner").classList.toggle("hidden", !queueIdsOverride);
+  $("#f_clear_ids").classList.toggle("hidden", !queueIdsOverride);
+  if (queueIdsOverride) $("#q_idsbanner").textContent = `Filtered to ${queueIdsOverride.note}`;
   const p = queueQS({ sort: queueSort, limit: 400 });
   $("#q_table tbody").innerHTML = `<tr><td colspan="10"><span class="spinner"></span></td></tr>`;
   try {
@@ -727,6 +780,7 @@ async function loadWatch() {
     const [wd, nd] = await Promise.all([api("/watch-areas"), api("/notifications")]);
     renderWatchTable(wd.watch_areas || []);
     renderNotifications(nd.notifications || []);
+    setWatchBadge((nd.notifications || []).filter(n => !n.seen).length);
   } catch (e) { toast(e.message); }
 }
 
@@ -755,8 +809,9 @@ function renderNotifications(list) {
   $("#n_list").innerHTML = list.map(n => `
     <div class="panel pad" style="${n.seen ? "opacity:.6" : ""}">
       <div class="row"><b>${esc(n.watch_name || n.watch_id)}</b>
+        <span class="band ${n.severity || "low"}" title="max(confidence × significance) = ${num(n.severity_score)}">${(n.severity || "low").toUpperCase()}</span>
         <span class="small muted">${esc((n.created_at || "").replace("T", " ").slice(0, 19))}</span></div>
-      <div class="small muted">${n.candidates.length} new matching candidate(s) from observation ${esc(n.observation_id)}</div>
+      <div class="small muted">${n.candidates.length} new matching candidate(s) from observation ${esc(n.observation_id)}${n.observation_date ? " · " + esc(n.observation_date) : ""}</div>
       <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:6px;margin-top:6px">
         ${n.candidates.slice(0, 20).map(c => `<a href="#/detail/${encodeURIComponent(c.candidate_id)}" class="chip"
              style="text-decoration:none">${esc(c.candidate_id)} · ${esc(c.change_type || "?")}</a>`).join("")}
@@ -802,9 +857,9 @@ const DEMO_STEPS = [
     },
   },
   {
-    title: "One place, three dates, and the change overlay",
-    body: "The strongest water-gain candidate. Before / after / overlay imagery " +
-      "dominates the view; the 2019 · 2021 · 2024 selector steps through every " +
+    title: "One place, every date, and the change overlay",
+    body: () => "The strongest water-gain candidate. Before / after / overlay imagery " +
+      `dominates the view; the ${obsYears().join(" · ")} selector steps through every ` +
       "observation. “Why did the system flag this?” opens the full evidence and suppression trace.",
     run: async () => {
       const id = PRES && PRES.demo && PRES.demo.water_gain_candidate_id;
@@ -850,13 +905,16 @@ const DEMO_STEPS = [
   },
 ];
 
+function obsYears() { return Array.from(new Set(OBS_DATES.map(d => d.slice(0, 4)))); }
+
 async function demoPrewarm() {
   const id = PRES && PRES.demo && PRES.demo.water_gain_candidate_id;
   const u = [];
+  const years = obsYears();
   if (id) {
     const b = `/candidates/${encodeURIComponent(id)}/imagery`;
-    for (const dt of ["2019", "2021", "2024"]) u.push(`${b}?date=${dt}&view=rgb&scale=2`);
-    u.push(`${b}?date=2024&view=overlay&scale=2`);
+    for (const dt of years) u.push(`${b}?date=${dt}&view=rgb&scale=2`);
+    u.push(`${b}?date=${years[years.length - 1] || ""}&view=overlay&scale=2`);
   }
   u.push(...featuredUrls((PRES && PRES.featured) || []));
   prewarm(u);
@@ -890,7 +948,7 @@ async function demoGo(i) {
   $("#demo-progress").innerHTML = DEMO_STEPS.map((_, k) => `<i class="${k <= DEMO.i ? "on" : ""}"></i>`).join("");
   $("#demo-step").textContent = `Step ${DEMO.i + 1} / ${DEMO_STEPS.length}`;
   $("#demo-title").textContent = s.title;
-  $("#demo-body").textContent = s.body;
+  $("#demo-body").textContent = typeof s.body === "function" ? s.body() : s.body;
   $("#demo-back").disabled = DEMO.i === 0;
   $("#demo-next").textContent = DEMO.i === DEMO_STEPS.length - 1 ? "Finish" : "Next →";
   DEMO.running = true;
@@ -899,6 +957,16 @@ async function demoGo(i) {
 }
 
 /* ---------------------------------------------------------------- boot */
+function setWatchBadge(n) {
+  const el = $("#watch_navbadge");
+  el.textContent = n > 99 ? "99+" : String(n);
+  el.classList.toggle("hidden", !n);
+}
+async function refreshWatchBadge() {
+  try { setWatchBadge((await api("/notifications?unseen_only=true")).notifications.length); }
+  catch (e) { /* nav badge is a nicety */ }
+}
+
 async function boot() {
   try {
     const h = await api("/health");
@@ -907,6 +975,7 @@ async function boot() {
   try {
     PRES = await api("/presentation/summary");
     OBS_DATES = PRES.observation_dates || [];
+    setWatchBadge((PRES.counters || {}).unseen_notifications || 0);
   } catch (e) { /* overview will retry; other views don't need it */ }
 
   $("#demoBtn").addEventListener("click", demoStart);

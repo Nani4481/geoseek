@@ -4,13 +4,16 @@ A watch area is defined once (:class:`geoseek.catalog.entities.WatchArea`,
 stored through the :class:`~geoseek.catalog.repository.MetadataRepository`
 seam - the same pattern as the Phase 6 analyst-decisions audit table, but a
 normal editable/deletable record rather than a log). It is evaluated here
-against the candidate rows a change-pipeline run produces
-(``geoseek.change.analyze.run`` calls :func:`evaluate_and_notify` once it has
-written the full-detail candidate list) - **not** on a background timer or
-file-watcher (this project has neither): re-running
-``python -m geoseek.change.analyze`` after a new observation is ingested IS
-the trigger, since that is the point at which "new candidates" for that
-observation come into existence at all.
+against the candidate rows a change-pipeline run produces. **Not** on a
+background timer or file-watcher (this project has neither) - there are two
+real triggers instead: (1) ``geoseek.change.analyze.run`` calls
+:func:`evaluate_and_notify` once it has written the full-detail candidate
+list - the point at which *new* candidates come into existence at all; and
+(2) ``geoseek.ingest.pipeline.ingest_scene`` also calls it, at the end of
+every ingest, against whatever candidates already mention that observation in
+the current report - so a watch area created after candidates already exist
+(or a re-ingest of an already-analyzed observation) fires immediately rather
+than waiting for the next manual ``python -m geoseek.change.analyze`` run.
 
 Matching is 4 independent, all-must-pass predicates:
 

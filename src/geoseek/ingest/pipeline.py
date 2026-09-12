@@ -61,6 +61,38 @@ def _now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _evaluate_watch_areas_on_ingest(repo, observation_id: str) -> int:
+    """Real, additional automation trigger for standing watch areas (see
+    ``geoseek.watch.evaluator``): besides the existing trigger (the end of a
+    full ``python -m geoseek.change.analyze`` run), watch areas are now ALSO
+    evaluated right here, at the end of every ingest - using whatever change
+    candidates already exist for this observation in the current change
+    report. This means a newly-created watch area (or re-ingesting a scene
+    that a prior analyze run already produced candidates for) fires without
+    waiting for the next manual pipeline re-run. It is a genuine no-op (fast,
+    no torch/rasterio) when there is no change report yet, no active watch
+    areas, or no candidates mentioning this observation - i.e. the common
+    case of ingesting a brand-new date that has not been through change
+    detection yet."""
+    if not repo.list_watch_areas(active_only=True):
+        return 0
+    from geoseek.change.analyze import OUT_DIR
+
+    detail_path = OUT_DIR / "ayodhya_change_ranked_detail.json"
+    if not detail_path.is_file():
+        return 0
+    import json as _json
+
+    details = _json.loads(detail_path.read_text(encoding="utf-8"))
+    relevant = [c for c in details if observation_id in (c.get("pair") or "").split("->")]
+    if not relevant:
+        return 0
+    from geoseek.watch.evaluator import evaluate_and_notify
+
+    fired = evaluate_and_notify(repo, relevant, observation_id=observation_id)
+    return len(fired)
+
+
 def ingest_scene(
     scene_path: Path,
     save_sample: bool = True,
@@ -162,6 +194,13 @@ def ingest_scene(
         aoi_name="ayodhya_44RPQ_scaled_82km" if scene_id.endswith("_scaled") else "ayodhya_44RPQ_demo",
         indices_ref=str(idx_csv) if idx_csv.is_file() else None,
     )
+    try:
+        n_fired = _evaluate_watch_areas_on_ingest(store.repo, scene_id)
+        if n_fired:
+            print(f"[pipeline] watch areas: {n_fired} notification(s) fired for observation '{scene_id}'")
+    except Exception as e:  # watch evaluation must never fail an ingest
+        print(f"[pipeline] watch-area evaluation skipped: {type(e).__name__}: {e}")
+
     store.save()
     store.close()
 

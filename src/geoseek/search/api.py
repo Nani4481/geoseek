@@ -206,11 +206,14 @@ def list_candidates(
     sort: str = Query("queue_score", description="queue_score|confidence|significance|area_m2|rank; '-' prefix = ascending"),
     limit: int = Query(100, ge=1, le=5000),
     offset: int = Query(0, ge=0),
+    candidate_ids: Optional[str] = Query(None, description="comma-separated candidate_id list - "
+                                         "restricts to exactly these (e.g. from a watch notification)"),
 ):
     return _get_analyst().list_candidates(
         bbox=_parse_bbox(bbox), date_start=date_start, date_end=date_end, change_type=change_type,
         min_confidence=min_confidence, sensor=sensor, persistence=persistence, decision=decision,
         sort=sort, limit=limit, offset=offset,
+        candidate_ids=[c.strip() for c in candidate_ids.split(",") if c.strip()] if candidate_ids else None,
     )
 
 
@@ -225,7 +228,8 @@ def candidate_detail(candidate_id: str):
 @app.get("/candidates/{candidate_id}/imagery")
 def candidate_imagery(
     candidate_id: str,
-    date: str = Query("2024", description="2019 | 2021 | 2024"),
+    date: Optional[str] = Query(None, description="one of the ingested observation dates "
+                                "(see /stats or /presentation/summary); default: the latest"),
     view: str = Query("rgb", description="rgb | overlay (change mask on that date)"),
     scale: int = Query(1, ge=1, le=4, description="integer upsample for the presentation layer; 1 = native"),
 ):
@@ -233,8 +237,10 @@ def candidate_imagery(
     c = svc._by_id.get(candidate_id)
     if c is None:
         raise HTTPException(status_code=404, detail=f"no candidate {candidate_id!r}")
-    from geoseek.analyst.imagery import render_candidate_imagery
+    from geoseek.analyst.imagery import VALID_DATES, render_candidate_imagery
 
+    if date is None:
+        date = VALID_DATES[-1] if VALID_DATES else date
     try:
         png = render_candidate_imagery(c, date=date, view=view, prob_raster_path=svc.prob_raster_path)
     except ValueError as e:

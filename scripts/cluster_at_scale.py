@@ -18,6 +18,16 @@ Artifacts under data/discovery/:
   tile_clusters_at_scale_100k.json   {tile_id: label} for every tile
   cluster_at_scale_region_heatmap.png
 
+This is also now the ONLY thing that populates the live Discovery view: it
+additionally writes the canonical ``<index_dir>/tile_clusters.json`` (the file
+``AnalystService.discovery_clusters``/``cluster_for_tile`` read, same schema
+the older whole-corpus ``scripts/cluster_tiles.py`` used - "tile_cluster" +
+"cluster_map_png") and a spatial ``cluster_map.png`` alongside it, so re-running
+this script is what keeps the app's cluster map and every KNN result's
+`cluster` field in sync with however many tiles are currently indexed.
+``cluster_tiles.py`` (full single-pass HDBSCAN) is no longer practical at this
+corpus size - see the module docstring above - so it should not be re-run.
+
 Usage:
   python scripts/cluster_at_scale.py [--sample-size 20000] [--min-cluster-size 40] [--n-jobs -1]
 """
@@ -32,7 +42,7 @@ from collections import Counter
 import numpy as np
 
 from geoseek.config import get_settings
-from geoseek.discovery.cluster import CONCEPTS, cluster_sample_and_assign, load_all_vectors
+from geoseek.discovery.cluster import CONCEPTS, cluster_sample_and_assign, load_all_vectors, save_cluster_map
 from geoseek.search.engine import SearchEngine
 from geoseek.search.rerank import region_key
 
@@ -143,6 +153,27 @@ def _region_heatmap(tile_ids, labels, region_map, centroid_ids, concepts, out_pa
     return str(out_path)
 
 
+def _write_canonical_discovery_file(res, recs) -> tuple:
+    """Write ``<index_dir>/tile_clusters.json`` (+ its spatial ``cluster_map.png``)
+    in exactly the schema ``scripts/cluster_tiles.py`` used, so the app's
+    Discovery view and every KNN "similar" result's ``cluster`` field reflect
+    THIS (at-scale, full-corpus) result rather than whatever the last full
+    single-pass HDBSCAN run happened to leave behind."""
+    map_path = save_cluster_map(res, recs, OUT_DIR / "cluster_map.png")
+    payload = {
+        "n_clusters": res.n_clusters, "noise_count": res.noise_count,
+        "n_tiles": int(len(res.labels)), "sizes": res.sizes,
+        "cluster_concepts": {str(k): [[c, round(float(s), 4)] for c, s in v]
+                             for k, v in res.cluster_concepts.items()},
+        "params": res.params,
+        "tile_cluster": {tid: int(lab) for tid, lab in zip(res.tile_ids, res.labels.tolist())},
+        "cluster_map_png": str(map_path),
+    }
+    out_path = get_settings().index_dir / "tile_clusters.json"
+    out_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+    return out_path, map_path
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--sample-size", type=int, default=20_000)
@@ -251,6 +282,10 @@ def main() -> None:
             json.dumps({t: int(l) for t, l in zip(tile_ids, labels.tolist())}), encoding="utf-8")
         print(f"\n  -> {OUT_DIR / 'cluster_at_scale_100k.json'}")
         print(f"  -> {OUT_DIR / 'tile_clusters_at_scale_100k.json'}")
+
+        canon_json, canon_map = _write_canonical_discovery_file(res, recs)
+        print(f"  -> {canon_json}  (canonical - read by the running app's Discovery view)")
+        print(f"  -> {canon_map}")
     finally:
         eng.close()
 

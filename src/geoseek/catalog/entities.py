@@ -201,8 +201,10 @@ class WatchArea:
 @dataclass(frozen=True)
 class WatchNotification:
     """One firing of a :class:`WatchArea`: the new candidates it matched the
-    first time each was seen, produced when the change pipeline is re-run
-    after a new observation is ingested (see ``geoseek.watch.evaluator``)."""
+    first time each was seen - produced either when the change pipeline is
+    re-run, or at the end of a new observation's ingest if it already has
+    matching candidates in the current report (see
+    ``geoseek.watch.evaluator``)."""
 
     notification_id: str
     watch_id: str

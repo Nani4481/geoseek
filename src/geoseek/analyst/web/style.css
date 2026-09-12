@@ -42,6 +42,12 @@ nav button {
 }
 nav button:hover { background: var(--chip); color: var(--ink); }
 nav button.active { background: var(--accent); color: var(--accent-ink); }
+nav button { position: relative; }
+.navbadge {
+  position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 999px; background: var(--bad); color: #fff; font-size: 10px; font-weight: 700;
+  line-height: 16px; text-align: center; border: 1.5px solid var(--panel);
+}
 header .spacer { flex: 1; }
 .chip {
   background: var(--chip); border: 1px solid var(--line); border-radius: 999px;
@@ -289,3 +295,9 @@ body.demo-on { scroll-behavior: smooth; }
 button.small, button.ghost.small { padding: 4px 9px; font-size: 12px; }
 a.chip { display: inline-block; color: var(--ink); }
 a.chip:hover { border-color: var(--accent); }
+.alertrow {
+  padding: 9px 10px; border: 1px solid var(--line); border-radius: 9px; cursor: pointer;
+  justify-content: flex-start; flex-wrap: wrap;
+}
+.alertrow:hover { border-color: var(--accent); background: var(--chip); }
+#ov-alerts { gap: 8px; }

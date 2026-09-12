@@ -153,18 +153,23 @@ class AnalystService:
     def _current_verdicts(self) -> dict:
         return {cid: d.decision for cid, d in self.repo.latest_decision_by_candidate().items()}
 
-    @staticmethod
-    def _window_of(c: dict) -> tuple[str, str]:
-        w = c.get("earliest_supported") or ["2019-03-30", "2024-03-08"]
+    def _window_of(self, c: dict) -> tuple[str, str]:
+        dates = self._observation_dates()
+        fallback = [dates[0], dates[-1]] if dates else ["", ""]
+        w = c.get("earliest_supported") or fallback
         return w[0], w[1]
 
     def list_candidates(
         self, *, bbox=None, date_start=None, date_end=None, change_type=None, min_confidence=None,
         sensor=None, persistence=None, decision=None, sort="queue_score", limit=100, offset=0,
+        candidate_ids=None,
     ) -> dict:
         verdicts = self._current_verdicts()
+        ids_filter = set(candidate_ids) if candidate_ids else None
         rows = []
         for c in self.details:
+            if ids_filter is not None and c["candidate_id"] not in ids_filter:
+                continue
             if change_type and c.get("change_type") != change_type:
                 continue
             if min_confidence is not None and (c.get("confidence") or 0.0) < float(min_confidence):
@@ -579,7 +584,9 @@ class AnalystService:
                 "vectors": self._engine.count() if self._engine is not None else None,
                 "high_confidence": high_conf,
                 "analyst_decisions": len(self.repo.list_analyst_decisions()),
+                "unseen_notifications": self.unseen_notification_count(),
             },
+            "latest_alerts": self.list_notifications()[:5],
             "regions": regions,
             "change_type_distribution": dist,
             "change_type_labels": HUMAN_CHANGE_TYPE,
@@ -590,7 +597,8 @@ class AnalystService:
                 "discovery_seed": demo_cid,
                 "steps": [
                     "Natural-language search over the tile index",
-                    "Open the strongest water-gain candidate - 2019 / 2021 / 2024 + change overlay",
+                    f"Open the strongest water-gain candidate - every observation date "
+                    f"({', '.join(self._observation_dates())}) + change overlay",
                     "Find more places that look like it",
                     "Everything ran offline, with full provenance and an append-only audit trail",
                 ],
@@ -813,12 +821,38 @@ class AnalystService:
     def delete_watch_area(self, watch_id: str) -> None:
         self.repo.delete_watch_area(watch_id)
 
+    # Severity = max(confidence * significance) over a notification's matched
+    # candidates. Both factors already exist and already drive queue_score
+    # (confidence in [0,1], significance clipped to [0.10, 1.0]) - this is just
+    # "how confident, and how big/anomalous, is the worst-case member of this
+    # notification's match set". Thresholds are the empirical 75th/90th
+    # percentile of this product over the current candidate population
+    # (841 span-survivor candidates: p75=0.26, p90=0.43) rounded to 0.25/0.5 -
+    # i.e. HIGH is roughly "top decile" (matching how rare confidence>=0.85
+    # alone already is - 5.6% of candidates), MEDIUM the next-highest quartile.
+    _SEVERITY_HIGH, _SEVERITY_MEDIUM = 0.5, 0.25
+
+    def _severity(self, candidate_ids) -> tuple[str, float]:
+        score = 0.0
+        for cid in candidate_ids:
+            c = self._by_id.get(cid) or {}
+            score = max(score, float(c.get("confidence") or 0.0) * float(c.get("significance") or 0.0))
+        if score >= self._SEVERITY_HIGH:
+            band = "high"
+        elif score >= self._SEVERITY_MEDIUM:
+            band = "medium"
+        else:
+            band = "low"
+        return band, round(score, 4)
+
     def list_notifications(self, *, watch_id: str | None = None, unseen_only: bool = False) -> list[dict]:
         rows = []
         for n in self.repo.list_notifications(watch_id=watch_id, unseen_only=unseen_only):
             d = n.as_dict()
             watch = self.repo.get_watch_area(n.watch_id)
             d["watch_name"] = watch.name if watch else None
+            d["observation_date"] = self._date_from_obs(n.observation_id)
+            d["severity"], d["severity_score"] = self._severity(n.candidate_ids)
             d["candidates"] = [
                 {"candidate_id": cid, "change_type": (self._by_id.get(cid) or {}).get("change_type"),
                  "confidence": (self._by_id.get(cid) or {}).get("confidence"),
@@ -827,6 +861,9 @@ class AnalystService:
             ]
             rows.append(d)
         return rows
+
+    def unseen_notification_count(self) -> int:
+        return len(self.repo.list_notifications(unseen_only=True))
 
     def mark_notification_seen(self, notification_id: str) -> None:
         self.repo.mark_notification_seen(notification_id)

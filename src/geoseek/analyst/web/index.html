@@ -15,10 +15,10 @@
     <button data-route="queue">Review Queue</button>
     <button data-route="detail">Candidate Detail</button>
     <button data-route="discovery">Discovery</button>
-    <button data-route="watch">Watch Areas</button>
+    <button data-route="watch">Watch Areas<span class="navbadge hidden" id="watch_navbadge">0</span></button>
   </nav>
   <div class="spacer"></div>
-  <button class="demo-launch" id="demoBtn" title="Run the scripted 4-step walkthrough">&#9654;&nbsp;Demo</button>
+  <button class="demo-launch" id="demoBtn" title="Run the scripted 4-step walkthrough">&#9654;&nbsp;Guided Tour</button>
   <span class="chip" id="latencyChip">&nbsp;</span>
   <span class="chip ok" id="offlineChip">offline &middot; no external calls</span>
 </header>
@@ -37,12 +37,17 @@
 
     <div class="ov-counters" id="ov-counters"></div>
 
+    <div class="panel" id="ov-alerts-panel">
+      <h3>Latest alerts</h3>
+      <div class="body stack" id="ov-alerts"><span class="muted">loading&hellip;</span></div>
+    </div>
+
     <div class="panel ov-mappanel">
       <h3>Where the change candidates are</h3>
       <div class="body">
         <div class="mapwrap"><canvas class="map" id="ov_map"></canvas></div>
         <div class="maplegend" id="ov_legend"></div>
-        <div class="mapnote">Every flagged change over the 2019 &rarr; 2024 window, coloured by type.
+        <div class="mapnote" id="ov_mapnote">Every flagged change, coloured by type.
           Offline canvas in EPSG:4326 &mdash; no web map tiles. Click a footprint to open it.</div>
       </div>
     </div>
@@ -123,9 +128,11 @@
       </label>
       <button class="primary" id="f_go">Apply</button>
       <button class="ghost" id="f_export">Export filtered &darr;</button>
+      <button class="ghost hidden" id="f_clear_ids">Clear alert filter</button>
     </div>
     <div class="split">
       <div>
+        <div class="kvline pad hidden" id="q_idsbanner"></div>
         <div class="kvline pad" id="q_summary"></div>
         <div class="tablewrap"><table id="q_table">
           <thead><tr>

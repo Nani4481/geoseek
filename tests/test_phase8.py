@@ -330,6 +330,60 @@ def test_evaluate_and_notify_skips_inactive_watch_areas(repo):
 
 
 # --------------------------------------------------------------------------
+# ingest-time watch trigger (this round's addition): geoseek.ingest.pipeline
+# also calls evaluate_and_notify at the end of every ingest, against whatever
+# candidates already exist for that observation - not only at the end of a
+# full `python -m geoseek.change.analyze` run. Isolated via monkeypatched
+# OUT_DIR (a tmp change-report directory), never touches the real report.
+# --------------------------------------------------------------------------
+
+
+def test_ingest_trigger_fires_from_an_already_existing_report(repo, tmp_path, monkeypatch):
+    import json
+
+    import geoseek.change.analyze as analyze_mod
+    from geoseek.ingest.pipeline import _evaluate_watch_areas_on_ingest
+
+    monkeypatch.setattr(analyze_mod, "OUT_DIR", tmp_path)
+    detail_path = tmp_path / "ayodhya_change_ranked_detail.json"
+    detail_path.write_text(json.dumps([
+        {**_cand("2019_2026_000001"), "pair": "S2B_44RPQ_20190330->S2C_44RPQ_20260308"},
+        {**_cand("2019_2026_000002", change_type="water_gain"), "pair": "S2B_44RPQ_20190330->S2C_44RPQ_20260308"},
+    ]), encoding="utf-8")
+
+    repo.create_watch_area(WatchArea(watch_id="", name="ingest-trigger watch", change_types=("construction",)))
+
+    # brand-new observation with no candidates yet in the report: real no-op
+    assert _evaluate_watch_areas_on_ingest(repo, "S2X_44RPQ_20270101_0_L2A") == 0
+    assert repo.list_notifications() == []
+
+    # the newly-ingested observation IS one of the report's pair endpoints -
+    # fires immediately, without any change/analyze re-run in between
+    n_fired = _evaluate_watch_areas_on_ingest(repo, "S2C_44RPQ_20260308")
+    assert n_fired == 1
+    notifs = repo.list_notifications()
+    assert len(notifs) == 1
+    assert notifs[0].candidate_ids == ("2019_2026_000001",)
+
+    # re-ingesting the same observation again must not re-fire (already notified)
+    assert _evaluate_watch_areas_on_ingest(repo, "S2C_44RPQ_20260308") == 0
+    assert len(repo.list_notifications()) == 1
+
+
+def test_ingest_trigger_is_a_cheap_noop_with_no_report_or_no_watch_areas(repo, tmp_path, monkeypatch):
+    import geoseek.change.analyze as analyze_mod
+    from geoseek.ingest.pipeline import _evaluate_watch_areas_on_ingest
+
+    monkeypatch.setattr(analyze_mod, "OUT_DIR", tmp_path)
+    # no watch areas at all -> short-circuits before even looking for a report
+    assert _evaluate_watch_areas_on_ingest(repo, "any_obs") == 0
+
+    repo.create_watch_area(WatchArea(watch_id="", name="W", change_types=("construction",)))
+    # watch areas exist, but no report file on disk yet
+    assert _evaluate_watch_areas_on_ingest(repo, "any_obs") == 0
+
+
+# --------------------------------------------------------------------------
 # Step D - sector brief aggregation (fabricated in-memory service state)
 # --------------------------------------------------------------------------
 
