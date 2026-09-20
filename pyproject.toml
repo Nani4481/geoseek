@@ -40,10 +40,15 @@ dependencies = [
     "huggingface_hub>=0.22",
     "requests>=2.31",
     "tqdm>=4.66",
+    "gdown>=5.2",  # DOTA staging: Google Drive folders (large-file confirm-token handling)
 ]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "httpx>=0.27"]
+# Object detection (Phase 8F-2). ultralytics and its pretrained weights are AGPL-3.0 (incl. the sec. 13 network clause),
+# while geoseek is Apache-2.0 - so it is an OPTIONAL extra, imported only inside geoseek.models.yolo_obb. See
+# geoseek/staging/download_yolo.py for the licence discussion.
+detect = ["ultralytics>=8.4"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

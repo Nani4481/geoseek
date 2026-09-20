@@ -1,0 +1,224 @@
+"""YOLO-OBB implementation of :class:`geoseek.models.base.ObjectDetectionModel` (Phase 8F-2).
+
+This is the ONLY module that touches ``ultralytics`` (AGPL-3.0, network-use clause included), and only lazily inside
+:meth:`YoloObbDetectionModel.load` - importing geoseek, or this module, never imports it. The weights it runs are the
+fine-tuned checkpoint produced by ``scripts/train_detector.py`` (DOTAv1-pretrained YOLO26s-OBB, 8 classes); they inherit
+the AGPL-3.0 licence of the pretrained weights and DOTA's academic-use-only terms - see ``docs/PHASE8F2.md``.
+
+Behaviour worth knowing:
+
+  * RGB in, BGR to ultralytics. ultralytics treats ndarray inputs as OpenCV-style BGR and flips them to RGB itself; our
+    tiles are RGB, so they are flipped once here. (Feeding RGB straight through would silently swap the R and B channels.)
+  * Tiles larger than ``imgsz`` are run as overlapping windows (same 200 px overlap as training) and de-duplicated across
+    windows with a per-class rotated NMS - the same merge the full-image evaluation uses.
+  * The default score threshold is the operating point chosen on the *monitor* split (never the official val), read from
+    the model card written next to the weights (``<weights>.card.json`` -> ``operating_point.conf``).
+  * Runs offline: ``YOLO_OFFLINE=1`` is set before ultralytics is imported.
+"""
+
+from __future__ import annotations
+
+import json
+import math
+import os
+from pathlib import Path
+from typing import Sequence
+
+import numpy as np
+
+from geoseek.models.base import Detection, ObjectDetectionModel, TileGeoRef
+
+DEFAULT_MIN_SCORE = 0.25
+OVERLAP_PX = 200
+
+
+def _polys_from_xywhr(xywhr: np.ndarray) -> np.ndarray:
+    from geoseek.detect.evaluate import xywhr_to_polys
+
+    return xywhr_to_polys(xywhr)
+
+
+class YoloObbDetectionModel(ObjectDetectionModel):
+    def __init__(
+        self,
+        weights_path: str | Path,
+        *,
+        min_score: float | None = None,
+        iou: float = 0.7,
+        max_det: int = 1000,
+        imgsz: int = 1024,
+        device: str | None = None,
+        half: bool | None = None,
+        batch_size: int = 4,
+    ):
+        self.weights_path = Path(weights_path)
+        self.card = self._read_card(self.weights_path)
+        op = (self.card or {}).get("operating_point", {})
+        self.min_score = float(min_score if min_score is not None else op.get("conf", DEFAULT_MIN_SCORE))
+        self.iou, self.max_det, self.imgsz, self.batch_size = iou, max_det, imgsz, batch_size
+        self._device, self._half = device, half
+        self._model = None
+        self._names: tuple[str, ...] | None = None
+
+    # -- interface -----------------------------------------------------------------------------------------
+
+    @property
+    def class_names(self) -> tuple[str, ...]:
+        if self._names is None:
+            if self.card and self.card.get("classes"):
+                self._names = tuple(self.card["classes"])
+            else:
+                self.load()
+        return self._names
+
+    @property
+    def info(self) -> dict:
+        return {
+            "model": "YoloObbDetectionModel", "weights": str(self.weights_path),
+            "weights_sha256": (self.card or {}).get("weights_sha256"), "architecture": (self.card or {}).get("architecture"),
+            "classes": list(self.class_names), "min_score_default": self.min_score, "nms_iou": self.iou,
+            "max_det": self.max_det, "imgsz": self.imgsz,
+        }
+
+    def load(self) -> None:
+        if self._model is not None:
+            return
+        os.environ.setdefault("YOLO_OFFLINE", "1")                  # never touch the network at inference time
+        from ultralytics import YOLO                                  # AGPL-3.0: imported here and nowhere else
+
+        self._model = YOLO(str(self.weights_path))
+        names = self._model.names
+        self._names = tuple(names[i] for i in sorted(names))
+        if self._device is None:
+            import torch
+
+            self._device = 0 if torch.cuda.is_available() else "cpu"
+        if self._half is None:
+            self._half = self._device != "cpu"
+
+    def detect(
+        self,
+        tile_rgb_uint8: np.ndarray,
+        *,
+        classes: Sequence[str] | None = None,
+        min_score: float | None = None,
+        geo: TileGeoRef | None = None,
+    ) -> list[Detection]:
+        return self.detect_batch([tile_rgb_uint8], classes=classes, min_score=min_score, geo=geo)[0]
+
+    def detect_batch(self, tiles, *, classes=None, min_score=None, geo=None, geos=None) -> list[list[Detection]]:
+        """True batching for tiles that fit in one window; larger tiles fall back to windowed inference.
+        ``geos`` (one TileGeoRef per tile) takes precedence over ``geo`` for batches of different tiles."""
+        self.load()
+        thr = self.min_score if min_score is None else float(min_score)
+        wanted = None if classes is None else {c for c in classes}
+        if wanted is not None:
+            unknown = wanted - set(self.class_names)
+            if unknown:
+                raise ValueError(f"unknown class(es) {sorted(unknown)}; this model emits {list(self.class_names)}")
+
+        out: list[list[Detection] | None] = [None] * len(tiles)
+        small = [i for i, t in enumerate(tiles) if max(t.shape[:2]) <= self.imgsz]
+        for start in range(0, len(small), self.batch_size):
+            idxs = small[start:start + self.batch_size]
+            raw = self._predict([tiles[i] for i in idxs], thr)
+            for i, (xywhr, conf, cls) in zip(idxs, raw):
+                out[i] = self._to_detections(xywhr, conf, cls, wanted, (geos[i] if geos else geo))
+        for i, t in enumerate(tiles):
+            if out[i] is None:
+                out[i] = self._detect_large(t, thr, wanted, (geos[i] if geos else geo))
+        return out  # type: ignore[return-value]
+
+    # -- internals -----------------------------------------------------------------------------------------
+
+    @staticmethod
+    def _read_card(weights_path: Path) -> dict | None:
+        card = weights_path.with_suffix(".card.json")
+        if card.is_file():
+            try:
+                return json.loads(card.read_text(encoding="utf-8"))
+            except Exception:
+                return None
+        return None
+
+    def _predict(self, tiles_rgb: list[np.ndarray], thr: float):
+        """-> per tile (xywhr (N,5) float64, conf (N,), cls (N,) int), tile pixel coordinates."""
+        bgr = [np.ascontiguousarray(t[..., ::-1]) for t in tiles_rgb]            # RGB -> BGR (ultralytics ndarray convention)
+        results = self._model.predict(
+            bgr, imgsz=self.imgsz, conf=thr, iou=self.iou, max_det=self.max_det, device=self._device,
+            half=bool(self._half), verbose=False, augment=False,
+        )
+        out = []
+        for r in results:
+            if r.obb is None or len(r.obb) == 0:
+                out.append((np.zeros((0, 5)), np.zeros(0), np.zeros(0, dtype=int)))
+                continue
+            out.append((r.obb.xywhr.cpu().numpy().astype(np.float64), r.obb.conf.cpu().numpy().astype(np.float64),
+                        r.obb.cls.cpu().numpy().astype(int)))
+        return out
+
+    def _detect_large(self, tile: np.ndarray, thr: float, wanted, geo) -> list[Detection]:
+        from geoseek.detect.chipping import chip_origins
+        from geoseek.detect.evaluate import ImageDets, merge_cross_chip
+
+        h, w = tile.shape[:2]
+        origins = chip_origins(w, h, self.imgsz, self.imgsz - OVERLAP_PX)
+        polys_l, conf_l, cls_l, chip_l = [], [], [], []
+        for k in range(0, len(origins), self.batch_size):
+            group = origins[k:k + self.batch_size]
+            crops = [tile[y0:y0 + self.imgsz, x0:x0 + self.imgsz] for x0, y0 in group]
+            for (x0, y0), (xywhr, conf, cls) in zip(group, self._predict(crops, thr)):
+                if len(conf):
+                    xywhr = xywhr.copy()
+                    xywhr[:, 0] += x0
+                    xywhr[:, 1] += y0
+                    polys_l.append(xywhr)
+                    conf_l.append(conf)
+                    cls_l.append(cls)
+                    chip_l.append(np.full(len(conf), len(chip_l)))
+        if not conf_l:
+            return []
+        xywhr, conf, cls, chip = (np.concatenate(a) for a in (polys_l, conf_l, cls_l, chip_l))
+        merged = merge_cross_chip(ImageDets("tile", cls, conf, _polys_from_xywhr(xywhr), chip), 0.5)
+        # re-derive xywhr for the survivors by matching polygons back to their source rows
+        keep = np.array([int(np.argmin(np.abs(_polys_from_xywhr(xywhr) - p).sum(axis=(1, 2)))) for p in merged.polys])
+        return self._to_detections(xywhr[keep], conf[keep], cls[keep], wanted, geo)
+
+    def _to_detections(self, xywhr, conf, cls, wanted, geo) -> list[Detection]:
+        if len(conf) == 0:
+            return []
+        names = self.class_names
+        polys = _polys_from_xywhr(xywhr)
+        wkts = _polys_to_wkt_4326(polys, geo) if geo is not None else [None] * len(conf)
+        dets = []
+        for i in range(len(conf)):
+            name = names[int(cls[i])]
+            if wanted is not None and name not in wanted:
+                continue
+            cx, cy, w, h, r = (float(v) for v in xywhr[i])
+            dets.append(Detection(
+                class_name=name, class_id=int(cls[i]), score=float(conf[i]), obb_px=(cx, cy, w, h, r),
+                polygon_px=tuple((float(x), float(y)) for x, y in polys[i]), geom_wkt_4326=wkts[i]))
+        dets.sort(key=lambda d: -d.score)
+        return dets
+
+
+_TRANSFORMERS: dict[str, object] = {}
+
+
+def _polys_to_wkt_4326(polys: np.ndarray, geo: TileGeoRef) -> list[str]:
+    """Tile-pixel quads -> WKT POLYGON (lon lat) via the tile's affine + CRS."""
+    import pyproj
+
+    tr = _TRANSFORMERS.get(geo.crs)
+    if tr is None:
+        tr = _TRANSFORMERS[geo.crs] = pyproj.Transformer.from_crs(geo.crs, "EPSG:4326", always_xy=True)
+    a, b, c, d, e, f = geo.transform
+    out = []
+    for poly in polys:
+        x = a * poly[:, 0] + b * poly[:, 1] + c
+        y = d * poly[:, 0] + e * poly[:, 1] + f
+        lon, lat = tr.transform(x, y)
+        ring = list(zip(lon, lat)) + [(lon[0], lat[0])]
+        out.append("POLYGON ((" + ", ".join(f"{px:.7f} {py:.7f}" for px, py in ring) + "))")
+    return out
