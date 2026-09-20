@@ -231,8 +231,8 @@ Per-epoch numbers (monitor split, chip-level protocol; train losses are on augme
   overfit: the monitor loss did not rise. The step at epoch 17 is mosaic switching off (`close_mosaic=4`) — un-mosaicked images are easier, so
   the train loss drops by construction.
 * **`best.pt` is therefore the epoch-1 checkpoint, not a 20-epoch model.** It was chosen by Ultralytics' fitness (0.1·mAP50 + 0.9·mAP50-95)
-  on the *monitor* split before the official val was opened; the model card records `weights_epoch: 1 of 20`. The epoch-14 and epoch-20
-  fitness values are within 0.005 of it — the ranking among epochs is noise-level. §6.6 scores the final epoch on the official val too:
+  on the *monitor* split before the official val was opened; the model card records `weights_epoch: 1 of 20`. Epoch 1's fitness is 0.7267; epoch 14 is
+  0.7240 and epoch 20 is 0.7206 — the ranking among epochs is noise-level. §6.6 scores the final epoch on the official val too:
   it is not worse, and is slightly better at strict localisation; I kept `best.pt` because switching to `last.pt` *after seeing val* would
   be selecting on val.
 * The lesson for the next run is not "train longer": more epochs of the same data on the same head bought nothing measurable. What
