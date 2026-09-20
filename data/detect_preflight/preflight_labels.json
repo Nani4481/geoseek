@@ -1,0 +1,85 @@
+{
+  "gt_chips": [
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detect_preflight\\gt_chips\\gt_P0685__0_824.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detect_preflight\\gt_chips\\gt_P0580__0_0.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detect_preflight\\gt_chips\\gt_P0828__0_1169.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detect_preflight\\gt_chips\\gt_P1173__2457_2784.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detect_preflight\\gt_chips\\gt_P1059__2496_824.png"
+  ],
+  "loader_roundtrip": {
+    "chips_compared": 400,
+    "boxes_compared": 16581,
+    "chips_with_box_count_mismatch": 0,
+    "PASS_loader_vs_minAreaRect_corner_error_px": {
+      "median": 0.0001,
+      "p99": 1.9994,
+      "max": 22.0324
+    },
+    "elongated_boxes_compared": 15067,
+    "PASS_long_axis_angle_error_deg_vs_minAreaRect": {
+      "median": 0.0001,
+      "p99": 3.8262,
+      "max": 12.8289
+    },
+    "PASS_elongated_boxes_with_angle_error_gt_45deg (== a 90-degree swap)": 0,
+    "INFO_loader_vs_raw_quad_corner_error_px": {
+      "median": 1.399,
+      "p99": 12.8824,
+      "max": 242.76
+    },
+    "INFO_quad_vs_its_min_area_rectangle_IoU_by_class": {
+      "bridge": {
+        "n": 226,
+        "median": 0.939,
+        "p10": 0.833
+      },
+      "harbor": {
+        "n": 416,
+        "median": 0.958,
+        "p10": 0.835
+      },
+      "helicopter": {
+        "n": 22,
+        "median": 0.967,
+        "p10": 0.87
+      },
+      "large-vehicle": {
+        "n": 1166,
+        "median": 0.943,
+        "p10": 0.885
+      },
+      "plane": {
+        "n": 891,
+        "median": 0.961,
+        "p10": 0.926
+      },
+      "ship": {
+        "n": 4000,
+        "median": 0.955,
+        "p10": 0.895
+      },
+      "small-vehicle": {
+        "n": 9266,
+        "median": 0.925,
+        "p10": 0.85
+      },
+      "storage-tank": {
+        "n": 594,
+        "median": 1.0,
+        "p10": 1.0
+      }
+    }
+  },
+  "augmentation": {
+    "rotation_on": {
+      "n_elongated_boxes": 1308,
+      "pct_off_axis_gt_5deg": 91.4,
+      "median_axis_deviation_deg": 22.3
+    },
+    "rotation_off": {
+      "n_elongated_boxes": 1366,
+      "pct_off_axis_gt_5deg": 75.3,
+      "median_axis_deviation_deg": 21.8
+    }
+  }
+}

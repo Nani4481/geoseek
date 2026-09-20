@@ -1,0 +1,40 @@
+{
+ "model": "yolo26n-obb.pt",
+ "batch": 16,
+ "workers": 6,
+ "cache": "False",
+ "imgsz": 1024,
+ "amp": true,
+ "error": null,
+ "wall_s": 40.6,
+ "iterations": 31,
+ "samples_per_s_steady": 24.21,
+ "iter_s_median": 0.637,
+ "iter_s_p95": 0.76,
+ "iter_s_max": 2.87,
+ "n_iters_gt_3x_median": 0,
+ "peak_vram_torch_allocated_gb": 6.8,
+ "peak_vram_torch_reserved_gb": 6.87,
+ "peak_vram_nvidia_smi_gb": 6.46,
+ "gpu_total_gb": 8.59,
+ "gpu_util_mean_pct": 28.2,
+ "cpu_util_mean_pct": 30.0,
+ "ram_available_min_gb": 1.24,
+ "max_labels_per_image_in_batch": {
+  "median": 203.0,
+  "p90": 452.0,
+  "max": 701
+ },
+ "mem_fraction": 0.8,
+ "assigner_oom_retry_messages": 4,
+ "assigner_oom_retry_text": "WARNING CUDA out of memory in TaskAlignedAssigner with batch_size=16 and max_num_obj=340; retrying assignment one image at a time on GPU. Model forward batch size is unchanged.",
+ "loss_finite": null,
+ "loss_first_last": null,
+ "battery": {
+  "on_ac_start": true,
+  "percent_start": 94,
+  "on_ac_end": true
+ },
+ "torch": "2.2.2",
+ "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU"
+}
