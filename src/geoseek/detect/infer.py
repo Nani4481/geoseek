@@ -32,7 +32,7 @@ def predict_chips(
     device: int | str = 0,
     half: bool = True,
     class_map: dict[int, int] | None = None,
-    end2end: bool | None = False,
+    nms_free: bool = False,
     log_every: int = 500,
 ) -> dict:
     """-> {"chip_ids": [...], "det_chip_idx": (N,), "xywhr": (N,5), "conf": (N,), "cls": (N,), "seconds": float}"""
@@ -42,8 +42,9 @@ def predict_chips(
     model = YOLO(str(weights))
     kw = dict(imgsz=imgsz, conf=conf, iou=iou, max_det=max_det, device=device, half=half, batch=batch, verbose=False,
               stream=True, augment=False)
-    if end2end is not None:
-        kw["end2end"] = end2end                          # False: classic one-to-many head + NMS (better on dense scenes)
+    if nms_free:
+        kw["nms"] = False                                # NMS-free one-to-one head; default (omitted) = classic head + NMS,
+                                                         # which scored higher on dense scenes at epoch 0 (0.821 vs 0.810)
     chip_ids = [Path(p).stem for p in chip_paths]
     idx_l, xywhr_l, conf_l, cls_l = [], [], [], []
     t0 = time.time()

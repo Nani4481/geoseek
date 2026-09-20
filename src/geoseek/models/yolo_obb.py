@@ -30,6 +30,7 @@ from geoseek.models.base import Detection, ObjectDetectionModel, TileGeoRef
 
 DEFAULT_MIN_SCORE = 0.25
 OVERLAP_PX = 200
+CROSS_WINDOW_MERGE_IOU = 0.3      # same de-duplication threshold as the full-image evaluation (DOTA devkit standard)
 
 
 def _polys_from_xywhr(xywhr: np.ndarray) -> np.ndarray:
@@ -179,7 +180,7 @@ class YoloObbDetectionModel(ObjectDetectionModel):
         if not conf_l:
             return []
         xywhr, conf, cls, chip = (np.concatenate(a) for a in (polys_l, conf_l, cls_l, chip_l))
-        merged = merge_cross_chip(ImageDets("tile", cls, conf, _polys_from_xywhr(xywhr), chip), 0.5)
+        merged = merge_cross_chip(ImageDets("tile", cls, conf, _polys_from_xywhr(xywhr), chip), CROSS_WINDOW_MERGE_IOU)
         # re-derive xywhr for the survivors by matching polygons back to their source rows
         keep = np.array([int(np.argmin(np.abs(_polys_from_xywhr(xywhr) - p).sum(axis=(1, 2)))) for p in merged.polys])
         return self._to_detections(xywhr[keep], conf[keep], cls[keep], wanted, geo)

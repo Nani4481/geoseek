@@ -378,8 +378,11 @@ a frozen baseline that is skipped once the index legitimately outgrows it).
   where HNSW is *needed* at ~300k–700k vectors.
 * **No embedded geometry engine.** Spatial predicates are bbox/point in Python +
   a SQLite R\*Tree prefilter; there is no PostGIS / GEOS-in-SQL.
-* **No object detection.** 10 m GSD cannot resolve vehicles or individual small
-  structures; retrieval has no vehicle-scale queries.
+* **Object detection exists only for sub-metre imagery.** At Sentinel-2's 10 m GSD
+  vehicles and individual small structures are not resolvable, so the detector
+  (Phase 8F-2, `ObjectDetectionModel`, see FW-5 below) runs on the staged Maxar
+  Open Data tiles only, and retrieval still has no vehicle-scale queries over the
+  Sentinel-2 archive.
 * **No continuous / streaming ingestion.** Ingestion is batch, one observation at
   a time, and the FAISS persist is a full-file rewrite (fine at the current
   append cadence, O(n) and scaling worse — flagged).
@@ -451,28 +454,48 @@ collection and use LISS-IV for retrieval/visual confirmation. No schema change;
 mixed-resolution retrieval is already expressible (`native_gsd_m` is on
 `Collection`).
 
-### FW-5 · Object detection behind a new `ObjectDetectionModel` interface
+### FW-5 · Object detection behind an `ObjectDetectionModel` interface — **implemented in Phase 8F-2**
 
-*Trigger:* a higher-resolution collection (FW-4) making sub-tile objects
-(vehicles, aircraft, individual buildings, storage tanks) resolvable, plus an
-analyst need to *count* or *locate* them, not just retrieve tiles.
-*Shape:* a **new** ABC in `models/base.py` alongside `EmbeddingModel` /
-`ChangeDetectionModel`, e.g.:
+*This item is no longer a design path: the interface below exists in `models/base.py`
+(it was only a sketch here before), with one concrete implementation. What is still
+future work is listed at the end.*
 
 ```python
 class ObjectDetectionModel(abc.ABC):
+    @property
     @abc.abstractmethod
-    def detect(self, tile_rgb_uint8: np.ndarray, *, classes: list[str] | None = None
-               ) -> list[Detection]:  # Detection = {class, score, bbox_px, geom_wkt_4326}
-        ...
+    def class_names(self) -> tuple[str, ...]: ...
+    @abc.abstractmethod
+    def detect(self, tile_rgb_uint8: np.ndarray, *, classes=None, min_score=None,
+               geo: TileGeoRef | None = None) -> list[Detection]: ...
+    def detect_batch(self, tiles, **kw) -> list[list[Detection]]: ...
+    def load(self) -> None: ...
+    @property
+    def info(self) -> dict: ...          # weights sha256, operating point, ...
+# Detection = class_name, class_id, score, obb_px (cx,cy,w,h,angle), polygon_px, geom_wkt_4326
 ```
 
-It would consume the same true-colour tile arrays the embedding pipeline already
-produces, and its outputs would be registered as `DerivedProduct`s
-(`kind="detection"`, referenced by path — a per-tile GeoJSON) so they inherit
-the provenance chain and show up in `/export` with no new plumbing. It stays
-**out** of the retrieval and change seams — a parallel enrichment, not a
-dependency.
+`YoloObbDetectionModel` (`models/yolo_obb.py`) is the only implementation and the only
+module that imports the **AGPL-3.0** `ultralytics` package — lazily, and `ultralytics`
+is an optional extra (`pip install geoseek[detect]`). The interface itself is
+dependency-free, and a test asserts that importing geoseek never imports the
+framework, so replacing the detector (for a permissively licensed one, say) is a new
+subclass and nothing else. It consumes the same true-colour tile arrays the embedding
+pipeline produces; larger inputs are windowed with cross-window de-duplication; the
+default score threshold is the operating point chosen on the *monitor* split and read
+from the model card next to the weights.
+
+Outputs are per-observation GeoJSON files registered as
+`DerivedProduct(kind="detection")` (`scripts/detect_maxar.py`), so they inherit the
+provenance chain. The detector stays **out** of the retrieval and change seams — a
+parallel enrichment, not a dependency.
+
+**Still future work:** surfacing detections in the analyst UI / `/export`; object
+*counts over time* as a change signal (a per-observation count needs a same-sensor,
+same-footprint pair, which the staged Maxar quadkeys do not provide); re-fitting on
+Maxar-domain labels (see `docs/PHASE8F2.md` for the measured domain gap); and a
+higher-resolution Sentinel-2 successor (FW-4) to make any of this apply to the main
+archive.
 
 ---
 
