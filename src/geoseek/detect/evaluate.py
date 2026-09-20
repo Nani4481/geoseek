@@ -172,45 +172,85 @@ class ClassMatches:
     gt_difficult_all: np.ndarray   # (n_gt_total,) bool
 
 
-def match_class(gt: dict[str, ImageGT], dets: dict[str, ImageDets], cls: int) -> ClassMatches:
-    scores, best_iou, gt_key, gt_diff, gt_size, det_size = [], [], [], [], [], []
-    gt_sizes_all, gt_diff_all = [], []
-    offset = 0
-    stems = sorted(set(gt) | set(dets))
-    for stem in stems:
-        g = gt.get(stem)
-        gi = np.flatnonzero(g.classes == cls) if g is not None else np.zeros(0, dtype=np.int64)
-        gq = g.quads[gi] if g is not None else np.zeros((0, 4, 2))
-        gd = g.difficult[gi] if g is not None else np.zeros(0, dtype=bool)
-        gs = long_side(gq) if len(gq) else np.zeros(0)
-        gt_sizes_all.append(gs)
-        gt_diff_all.append(gd)
-        d = dets.get(stem)
-        di = np.flatnonzero(d.classes == cls) if d is not None else np.zeros(0, dtype=np.int64)
-        if len(di):
-            dp = d.polys[di]
-            neigh = _neighbours(dp, gq)
-            ds = long_side(dp)
-            for k in range(len(di)):
-                bi, bj = 0.0, -1
-                for j in neigh[k]:
-                    v = _convex_iou(dp[k], gq[j])
-                    if v > bi:
-                        bi, bj = v, int(j)
-                scores.append(float(d.scores[di[k]]))
-                best_iou.append(bi)
-                gt_key.append(offset + bj if bj >= 0 else -1)
-                gt_diff.append(bool(gd[bj]) if bj >= 0 else False)
-                gt_size.append(float(gs[bj]) if bj >= 0 else float("nan"))
-                det_size.append(float(ds[k]))
-        offset += len(gq)
-    gs_all = np.concatenate(gt_sizes_all) if gt_sizes_all else np.zeros(0)
-    gd_all = np.concatenate(gt_diff_all) if gt_diff_all else np.zeros(0, dtype=bool)
+def _image_matches(g: ImageGT | None, d: ImageDets | None, cls: int) -> dict:
+    """Best-GT bookkeeping for ONE image and class. ``gt_local`` indexes this image's class-``cls`` GT (-1: none)."""
+    gi = np.flatnonzero(g.classes == cls) if g is not None else np.zeros(0, dtype=np.int64)
+    gq = g.quads[gi] if g is not None else np.zeros((0, 4, 2))
+    gd = g.difficult[gi] if g is not None else np.zeros(0, dtype=bool)
+    gs = long_side(gq) if len(gq) else np.zeros(0)
+    di = np.flatnonzero(d.classes == cls) if d is not None else np.zeros(0, dtype=np.int64)
+    n = len(di)
+    out = {"scores": np.zeros(n), "best_iou": np.zeros(n), "gt_local": np.full(n, -1, dtype=np.int64),
+           "gt_diff": np.zeros(n, dtype=bool), "gt_size": np.full(n, np.nan), "det_size": np.zeros(n),
+           "gt_sizes": gs, "gt_diffs": gd}
+    if n:
+        dp = d.polys[di]
+        neigh = _neighbours(dp, gq)
+        out["det_size"] = long_side(dp)
+        out["scores"] = d.scores[di].astype(float)
+        for k in range(n):
+            bi, bj = 0.0, -1
+            for j in neigh[k]:
+                v = _convex_iou(dp[k], gq[j])
+                if v > bi:
+                    bi, bj = v, int(j)
+            out["best_iou"][k] = bi
+            out["gt_local"][k] = bj
+            if bj >= 0:
+                out["gt_diff"][k] = bool(gd[bj])
+                out["gt_size"][k] = float(gs[bj])
+    return out
+
+
+def _combine(parts: list[dict]) -> ClassMatches:
+    """Concatenate per-image pieces; every copy of a piece gets its own GT-key range (so bootstrap duplicates stay distinct)."""
+    keys, offset = [], 0
+    for q in parts:
+        keys.append(np.where(q["gt_local"] >= 0, q["gt_local"] + offset, -1))
+        offset += len(q["gt_sizes"])
+    cat = lambda k, dt=float: np.concatenate([q[k] for q in parts]).astype(dt) if parts else np.zeros(0, dtype=dt)
+    gd_all = cat("gt_diffs", bool)
     return ClassMatches(
-        scores=np.asarray(scores), best_iou=np.asarray(best_iou), gt_key=np.asarray(gt_key, dtype=np.int64),
-        gt_difficult=np.asarray(gt_diff, dtype=bool), gt_size=np.asarray(gt_size), det_size=np.asarray(det_size),
-        n_gt=int((~gd_all).sum()), gt_sizes_all=gs_all, gt_difficult_all=gd_all,
+        scores=cat("scores"), best_iou=cat("best_iou"), gt_key=np.concatenate(keys).astype(np.int64) if keys else np.zeros(0, dtype=np.int64),
+        gt_difficult=cat("gt_diff", bool), gt_size=cat("gt_size"), det_size=cat("det_size"),
+        n_gt=int((~gd_all).sum()), gt_sizes_all=cat("gt_sizes"), gt_difficult_all=gd_all,
     )
+
+
+def match_class_by_image(gt: dict[str, ImageGT], dets: dict[str, ImageDets], cls: int) -> list[dict]:
+    return [_image_matches(gt.get(s), dets.get(s), cls) for s in sorted(set(gt) | set(dets))]
+
+
+def match_class(gt: dict[str, ImageGT], dets: dict[str, ImageDets], cls: int) -> ClassMatches:
+    return _combine(match_class_by_image(gt, dets, cls))
+
+
+def bootstrap_ap(
+    gt: dict[str, ImageGT], dets: dict[str, ImageDets], class_names: tuple[str, ...], groups: dict[str, tuple[str, ...]],
+    *, n_boot: int = 100, seed: int = 0, level: float = 0.95,
+) -> dict:
+    """Percentile confidence intervals over IMAGES (the independent unit; chips of one photograph share pixels) for the
+    per-class and per-group AP50 / AP50:95. The same resampled image set is used for every class in a replicate."""
+    per_class_parts = [match_class_by_image(gt, dets, c) for c in range(len(class_names))]
+    n_img = len(per_class_parts[0])
+    rng = np.random.default_rng(seed)
+    ap50 = np.full((n_boot, len(class_names)), np.nan)
+    ap5095 = np.full((n_boot, len(class_names)), np.nan)
+    for b in range(n_boot):
+        pick = rng.integers(0, n_img, n_img)
+        for c in range(len(class_names)):
+            m = _combine([per_class_parts[c][i] for i in pick])
+            r = class_ap(m)
+            ap50[b, c], ap5095[b, c] = r["AP50"], r["AP50_95"]
+    lo, hi = (1 - level) / 2 * 100, (1 + level) / 2 * 100
+    ci = lambda a: [float("nan")] * 2 if np.all(np.isnan(a)) else [float(np.nanpercentile(a, lo)), float(np.nanpercentile(a, hi))]
+    out = {"n_boot": n_boot, "n_images": n_img, "level": level, "per_class": {}, "groups": {}}
+    for c, name in enumerate(class_names):
+        out["per_class"][name] = {"AP50_ci": ci(ap50[:, c]), "AP50_95_ci": ci(ap5095[:, c])}
+    for g, names in list(groups.items()) + [("all_kept_classes", tuple(class_names))]:
+        idx = [class_names.index(n) for n in names]
+        out["groups"][g] = {"macro_AP50_ci": ci(np.nanmean(ap50[:, idx], axis=1)), "macro_AP50_95_ci": ci(np.nanmean(ap5095[:, idx], axis=1))}
+    return out
 
 
 def _tp_fp(m: ClassMatches, thr: float, size_range: tuple[float, float] | None = None):
