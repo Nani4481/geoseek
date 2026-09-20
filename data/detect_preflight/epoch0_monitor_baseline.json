@@ -1,0 +1,56 @@
+{
+ "nms_one2many": {
+  "seconds": 57.3,
+  "mAP50": 0.8209,
+  "mAP50-95": 0.6708,
+  "P": 0.9168,
+  "R": 0.7668,
+  "per_class_AP50": {
+   "small-vehicle": 0.3614,
+   "large-vehicle": 0.7481,
+   "ship": 0.8976,
+   "plane": 0.9946,
+   "helicopter": 0.8046,
+   "storage-tank": 0.925,
+   "harbor": 0.9345,
+   "bridge": 0.9017
+  },
+  "per_class_AP50-95": {
+   "small-vehicle": 0.2859,
+   "large-vehicle": 0.6113,
+   "ship": 0.7543,
+   "plane": 0.9101,
+   "helicopter": 0.6656,
+   "storage-tank": 0.7764,
+   "harbor": 0.7373,
+   "bridge": 0.6255
+  }
+ },
+ "nms_free_one2one": {
+  "seconds": 49.2,
+  "mAP50": 0.8095,
+  "mAP50-95": 0.6642,
+  "P": 0.9005,
+  "R": 0.748,
+  "per_class_AP50": {
+   "small-vehicle": 0.3485,
+   "large-vehicle": 0.7296,
+   "ship": 0.8869,
+   "plane": 0.994,
+   "helicopter": 0.807,
+   "storage-tank": 0.9186,
+   "harbor": 0.912,
+   "bridge": 0.8794
+  },
+  "per_class_AP50-95": {
+   "small-vehicle": 0.2804,
+   "large-vehicle": 0.5986,
+   "ship": 0.7469,
+   "plane": 0.9072,
+   "helicopter": 0.6666,
+   "storage-tank": 0.7707,
+   "harbor": 0.7286,
+   "bridge": 0.6143
+  }
+ }
+}

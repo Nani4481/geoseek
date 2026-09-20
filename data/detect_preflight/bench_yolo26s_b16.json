@@ -1,0 +1,38 @@
+{
+ "model": "yolo26s-obb.pt",
+ "batch": 16,
+ "workers": 10,
+ "cache": "False",
+ "imgsz": 1024,
+ "amp": true,
+ "error": "RuntimeError: CUDA error: unknown error\nCUDA kernel errors might be asynchronously reported at some other API call, so the stacktrace below might be incorrect.\nFor debugging consider passing CUDA_LAUNCH_BLOCKING=1.\nCompile with `TORCH_USE_CUDA_DSA` to enable device-side assertions.\n",
+ "wall_s": 80.0,
+ "iterations": 0,
+ "samples_per_s_steady": null,
+ "iter_s_median": null,
+ "iter_s_p95": null,
+ "iter_s_max": null,
+ "n_iters_gt_3x_median": null,
+ "peak_vram_torch_allocated_gb": 12.85,
+ "peak_vram_torch_reserved_gb": 13.14,
+ "peak_vram_nvidia_smi_gb": 7.76,
+ "gpu_total_gb": 8.59,
+ "gpu_util_mean_pct": 9.7,
+ "cpu_util_mean_pct": 33.1,
+ "ram_available_min_gb": 0.0,
+ "max_labels_per_image_in_batch": {
+  "median": 115.0,
+  "p90": 125.4,
+  "max": 128
+ },
+ "assigner_cpu_fallback_events": 0,
+ "loss_finite": null,
+ "loss_first_last": null,
+ "battery": {
+  "on_ac_start": true,
+  "percent_start": 91,
+  "on_ac_end": true
+ },
+ "torch": "2.2.2",
+ "gpu": "NVIDIA GeForce RTX 4060 Laptop GPU"
+}

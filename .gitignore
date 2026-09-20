@@ -35,3 +35,10 @@ data/eval_retrieval/pool_labels.json
 # judge_diagnosis manifest + hand annotations + summary), drop the regenerable
 # contact-sheet PNGs.
 data/eval_retrieval/judge_diagnosis/*.png
+
+# Phase 8F-2 detector: run dirs (weights/plots/logs), pre-flight renders (regenerable; JSON records are kept)
+data/runs/
+data/detect_preflight/*.png
+data/detect_preflight/*.jpg
+data/detect_preflight/gt_chips/
+data/detect_eval/
