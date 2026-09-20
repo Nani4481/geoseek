@@ -253,3 +253,41 @@ To demo the **UI** fully offline: disable your network adapter (or pull the
 cable / turn off Wi-Fi), then run step 2 and open `http://127.0.0.1:8000/app/` —
 the canvas map, thumbnails, imagery and change queue all work with zero
 outbound requests (no CDN, no web fonts, no map tiles).
+
+---
+
+## 9. Object detector (Phase 8F-2)
+
+Oriented detection of vehicles / ships / aircraft / tanks / harbors / bridges in
+sub-metre RGB imagery (YOLO26s-OBB fine-tuned on DOTA v1.5). It needs the optional
+extra (`ultralytics` is **AGPL-3.0**, see `docs/PHASE8F2.md`):
+
+```powershell
+pip install -e ".[detect]" --no-deps      # only ultralytics; never let pip touch the CUDA torch
+$env:YOLO_OFFLINE = "1"                    # ultralytics must not phone home
+```
+
+End to end (each step is resumable and prints what it measured):
+
+```powershell
+python scripts\prepare_detect_data.py --plan-only     # measure first: windows, negatives, monitor split, RFS table
+python scripts\prepare_detect_data.py                 # convert DOTA -> 1024 px YOLO-OBB chips (~3 min, 12 workers)
+python scripts\render_detect_sanity_chips.py          # pre-flight: GT chips, loader round-trip, augmented batch
+python scripts\train_detector.py --print-config       # the full planned training config, runs nothing
+python scripts\train_detector.py                      # ~3.3 h on an RTX 4060 laptop; re-run the same command to resume
+python scripts\finalize_detector.py                   # freeze best.pt, model card, manifest, loss/mAP curves
+python scripts\eval_detector.py                       # honest evaluation on the held-out val (~45 min, GPU)
+python scripts\detect_maxar.py                        # run on the staged Maxar tiles (GeoJSON + samples + DerivedProduct)
+```
+
+Use it from code (RGB `HxWx3 uint8` in, oriented detections out):
+
+```python
+from geoseek.models import YoloObbDetectionModel, TileGeoRef
+model = YoloObbDetectionModel("data/models/detector/geoseek_obb_v15_yolo26s.pt")   # threshold from the model card
+dets = model.detect(rgb_tile, classes=["small-vehicle"], geo=TileGeoRef(transform=(a, b, c, d, e, f), crs="EPSG:32611"))
+```
+
+Machine notes that cost real time to find (details in `docs/PHASE8F2.md`): the trainer sets a hard torch
+VRAM cap because Windows' driver otherwise spills CUDA memory into RAM; do not run other torch processes
+while it trains (RAM is ~95 % used); never start two supervisors on one run directory (there is a lock).

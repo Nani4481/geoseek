@@ -52,7 +52,7 @@ from geoseek.detect.plots import plot_pr, plot_per_class, plot_training_curves, 
 
 CONF_FLOOR_FULL = 0.005        # candidate floor for the full-image protocol (the chip-level validator uses 0.001)
 NMS_IOU = 0.7                  # the detector's own per-chip NMS
-MERGE_IOU = 0.5                # cross-chip de-duplication
+MERGE_IOU = 0.3                # cross-chip de-duplication (DOTA devkit / Ultralytics merge_results standard; only across chips)
 MAX_DET = 2500                 # per chip (the densest val chip holds 2,314 GT)
 SEED = 20260920
 CLASS_BGR = {"small-vehicle": (0, 255, 0), "large-vehicle": (0, 200, 255), "ship": (255, 200, 0), "plane": (255, 0, 255),
@@ -154,7 +154,7 @@ def chip_level_val(weights: Path, yaml_path: Path, split_key: str = "val") -> di
 
     m = YOLO(str(weights))
     r = m.val(data=str(yaml_path), split=split_key, imgsz=1024, batch=8, conf=0.001, iou=NMS_IOU, max_det=MAX_DET, half=True,
-              plots=False, workers=6, device=0, verbose=False, end2end=False,
+              plots=False, workers=6, device=0, verbose=False,
               project=str(Path(os.environ.get("TEMP", ".")) / "geoseek_eval_val"), name="tmp", exist_ok=True)
     b = r.box
     idx = [int(i) for i in b.ap_class_index]
@@ -163,6 +163,28 @@ def chip_level_val(weights: Path, yaml_path: Path, split_key: str = "val") -> di
         "per_class_AP50": {KEPT_CLASSES[c]: float(v) for c, v in zip(idx, b.ap50)},
         "per_class_AP50_95": {KEPT_CLASSES[c]: float(v) for c, v in zip(idx, b.ap)},
     }
+
+
+def crosscheck_chip_level(pred: dict, root: Path, split: str) -> dict:
+    """Validate OUR evaluator against Ultralytics' on the SAME predictions: score every chip as its own image against the
+    chip's own (rectangle) labels, difficult counted as ordinary GT, no cross-chip merge - i.e. the chip-level protocol.
+    Differences that remain are the IoU (true polygon IoU vs ProbIoU), the AP interpolation (all-point vs 101-point) and
+    the matching rule (VOC best-GT vs assignment to the best unmatched GT)."""
+    idx_of = {c: i for i, c in enumerate(pred["chip_ids"])}
+    order = np.argsort(pred["det_chip_idx"], kind="stable")
+    di, xywhr, conf, cls = (pred[k][order] for k in ("det_chip_idx", "xywhr", "conf", "cls"))
+    bounds = np.searchsorted(di, np.arange(len(pred["chip_ids"]) + 1))
+    gt, dets = {}, {}
+    for cid, i in idx_of.items():
+        lines = [ln.split() for ln in (root / split / "labels" / f"{cid}.txt").read_text().splitlines() if ln.strip()]
+        gcls = np.array([int(p[0]) for p in lines], dtype=int)
+        gpol = np.array([[[float(p[k]) * 1024, float(p[k + 1]) * 1024] for k in range(1, 9, 2)] for p in lines]).reshape(-1, 4, 2)
+        gt[cid] = ImageGT(cid, gcls, gpol, np.zeros(len(gcls), bool))
+        lo, hi = bounds[i], bounds[i + 1]
+        dets[cid] = ImageDets(cid, cls[lo:hi].astype(int), conf[lo:hi], xywhr_to_polys(xywhr[lo:hi]) if hi > lo else np.zeros((0, 4, 2)),
+                              np.zeros(hi - lo, dtype=np.int64))
+    res = evaluate_dataset(gt, dets, KEPT_CLASSES)
+    return {n: {"AP50": res["per_class"][n]["AP50"], "AP50_95": res["per_class"][n]["AP50_95"]} for n in KEPT_CLASSES}
 
 
 # --------------------------------------------------------------------------
@@ -272,7 +294,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", default="geoseek_obb_v15_yolo26s")
     ap.add_argument("--weights", type=Path, default=None, help="default: <run>/weights/best.pt")
-    ap.add_argument("--stages", default="monitor,val,baseline,chip,checkpoints,qual,curves")
+    ap.add_argument("--stages", default="monitor,val,baseline,chip,crosscheck,checkpoints,qual,curves")
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--checkpoint-epochs", default="1,3,7,11,15,19")
@@ -348,6 +370,23 @@ def main() -> None:
         results["monitor_chip_level_ultralytics"] = {
             "finetuned": chip_level_val(weights, root / "dataset_monitor.yaml", "val"),
             "pretrained_restricted": chip_level_val(init, root / "dataset_monitor.yaml", "val")}
+        save()
+
+    # ---- evaluator cross-check against Ultralytics (chip-level protocol on identical predictions) -----------------
+    if "crosscheck" in stages and "val_chip_level_ultralytics" in results:
+        pv = pv or get_pred("finetuned", weights, "val", root, out_dir)
+        ours = crosscheck_chip_level(pv, root, "val")
+        ul = results["val_chip_level_ultralytics"]["finetuned"]
+        rows = {n: {"ours_AP50": ours[n]["AP50"], "ultralytics_AP50": ul["per_class_AP50"][n],
+                    "ours_AP50_95": ours[n]["AP50_95"], "ultralytics_AP50_95": ul["per_class_AP50_95"][n]} for n in KEPT_CLASSES}
+        d50 = [abs(r["ours_AP50"] - r["ultralytics_AP50"]) for r in rows.values()]
+        d95 = [abs(r["ours_AP50_95"] - r["ultralytics_AP50_95"]) for r in rows.values()]
+        results["evaluator_crosscheck_vs_ultralytics"] = {
+            "protocol": "chip level: chip rectangles as GT, difficult counted, no cross-chip merge",
+            "per_class": rows, "max_abs_diff_AP50": float(max(d50)), "mean_abs_diff_AP50": float(np.mean(d50)),
+            "max_abs_diff_AP50_95": float(max(d95)), "mean_abs_diff_AP50_95": float(np.mean(d95))}
+        print(f"[eval] evaluator cross-check vs Ultralytics: max |dAP50| {max(d50):.3f}, mean {np.mean(d50):.3f}; "
+              f"max |dAP50-95| {max(d95):.3f}", flush=True)
         save()
 
     # ---- post-hoc official-val curve over saved checkpoints (reporting only) ------------------------------------------

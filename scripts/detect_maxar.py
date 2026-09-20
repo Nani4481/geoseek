@@ -44,7 +44,6 @@ from rasterio.windows import transform as window_transform  # noqa: E402
 from geoseek.catalog.entities import DerivedProduct  # noqa: E402
 from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository  # noqa: E402
 from geoseek.config import get_settings, print_startup_banner  # noqa: E402
-from geoseek.ingest.tiler import parse_tile_row_col  # noqa: E402
 from geoseek.models import TileGeoRef, YoloObbDetectionModel  # noqa: E402
 from geoseek.staging.download_maxar import COLLECTION_ID, MAXAR_TILE_SIZE  # noqa: E402
 from geoseek.staging.manifest import record_analysis_section  # noqa: E402
@@ -101,7 +100,7 @@ def main() -> None:
     model.load()
     print(f"[maxar] model: {json.dumps(model.info)}", flush=True)
 
-    repo = SQLiteMetadataRepository(settings.index_dir / "tiles.sqlite") if hasattr(SQLiteMetadataRepository, "__init__") else None
+    repo = SQLiteMetadataRepository(settings.index_dir / "tiles.sqlite")
     obs_list = repo.list_observations(collection=COLLECTION_ID)
     if args.observations:
         keys = args.observations.split(",")
@@ -121,7 +120,7 @@ def main() -> None:
         feats, per_tile, kept_imgs = [], [], {}
         t0 = time.time()
         for k, t in enumerate(tiles):
-            row, col = parse_tile_row_col(t.tile_id)
+            row, col = t.row, t.col
             rgb, geo = read_rgb_tile(scene_dir, row, col)
             dets = model.detect(rgb, geo=geo)
             counts = Counter(d.class_name for d in dets)
@@ -183,7 +182,8 @@ def main() -> None:
             derived_id=f"detection:{obs.observation_id}", kind="detection", path=str(gj), observation_id=obs.observation_id,
             params={"model_sha256": model.info.get("weights_sha256"), "min_score": model.min_score, "n_detections": len(feats),
                     "classes": list(model.class_names)}, created_at=datetime.now(timezone.utc).isoformat()))
-        report["observations"][obs.observation_id] = {"aoi": label, **{k: v for k, v in summary.items() if k != "per_tile"},
+        report["observations"][obs.observation_id] = {"aoi": label, "role": (obs.metadata or {}).get("role"),
+                                                        **{k: v for k, v in summary.items() if k != "per_tile"},
                                                         "geojson": str(gj), "samples": sample_paths}
 
     record_analysis_section("detector_maxar_inference", report)
