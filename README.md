@@ -111,6 +111,15 @@ serve different queries: one finds *what looks like X*, the other finds
   once via Earth Search STAC (Element 84, backed by the public AWS Open Data
   Sentinel-2 bucket) under the Copernicus Sentinel Data license (free and
   open, EU Copernicus Data Policy).
+- **Sub-metre imagery** (object-detection track, Phase 8 Step A): Maxar Open
+  Data Program ARD tiles (`maxar-opendata` collection), 0.3–0.6 m visual
+  (pansharpened RGB), staged for the North India Floods (Sikkim glacial lake
+  outburst, Oct 2023) event — see `data/provenance_manifest.json` under
+  `maxar_opendata` for the full per-tile record.
+  **Maxar Open Data Program was accessed on 2026-09-13 from
+  https://registry.opendata.aws/maxar-open-data.** Licensed
+  CC BY-NC 4.0 (non-commercial) — satellite imagery courtesy of Maxar
+  Technologies.
 - **Search model**: RemoteCLIP ViT-B-32 weights from Hugging Face
   (`chendelong/RemoteCLIP`), Apache-2.0 licensed, used as published with no
   fine-tuning.
@@ -119,6 +128,31 @@ serve different queries: one finds *what looks like X*, the other finds
   code are Apache-2.0; the trained weights are a derivative of OSCD, which is
   CC-BY-NC-SA-4.0 (non-commercial, share-alike) — the weights inherit that
   restriction.
+- **Object-detection training data** (Phase 8F-1/8F-2): DOTA v1.5 oriented-box
+  annotations on the DOTA-v1.0 images (train 1,411 img / val 458 img,
+  academic-use-only license), staged via `geoseek.staging.download_dota` and
+  converted into 1024x1024 YOLO-OBB chips (200 px overlap) by
+  `scripts/prepare_detect_data.py`. Three splits, disjoint by source image:
+  `train`, a class-stratified `monitor` holdout carved out of *train* (the only
+  thing per-epoch curves, checkpoint choice and the confidence threshold ever
+  see), and the official `val` (touched only by `scripts/eval_detector.py`,
+  after training). 8 of the 16 classes are trained (vehicles, ships, aircraft,
+  storage tanks, harbors, bridges); the reasoning, the imbalance strategy
+  (repeat-factor sampling, hard-negative chips) and the label-source decision
+  (v1.5 OBB, because v1.0's vehicle labels are incomplete) are in
+  `geoseek.detect.classes`. A staging bug that silently overwrote the v1.5
+  oriented labels with axis-aligned ones was found and fixed in this phase —
+  see `docs/PHASE8F2.md`.
+- **Object-detection model**: YOLO26s-OBB (Ultralytics), fine-tuned from its
+  DOTAv1-pretrained weights onto those 8 classes (class-head rows transplanted
+  from the pretrained head by name). **Licence: ultralytics and its weights are
+  AGPL-3.0** (including the network-use clause) while geoseek is Apache-2.0, so
+  it is an *optional* extra (`pip install geoseek[detect]`), imported only inside
+  `geoseek.models.yolo_obb` behind the dependency-free `ObjectDetectionModel`
+  interface; the fine-tuned weights are also non-commercial (DOTA is
+  academic-use-only). Chosen over Oriented R-CNN/MMRotate on measured VRAM and
+  a stale dependency lattice — see `geoseek.staging.download_yolo` and
+  `docs/PHASE8F2.md` for the comparison and the numbers.
 - Every download, checksum, and derivation is recorded in
   `data/provenance_manifest.json`, generated automatically by the staging
   scripts — see that file for the authoritative, machine-checked record.

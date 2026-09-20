@@ -1,17 +1,23 @@
 """Model interfaces for geoseek.
 
-Only :class:`EmbeddingModel` and :class:`QualityEstimator` have implementations
-today. :class:`ChangeDetectionModel` is defined here as an interface only - its
-input contract is fixed now so Phase 3b slots in without reshaping anything:
-``predict_change`` consumes an :class:`geoseek.temporal.contract.ObservationPair`
-straight from :class:`geoseek.temporal.matcher.TemporalObservationMatcher`.
+:class:`EmbeddingModel`, :class:`QualityEstimator`, :class:`ChangeDetectionModel` (Phase 3b) and
+:class:`ObjectDetectionModel` (Phase 8F-2) have implementations. :class:`ChangeDetectionModel`'s input
+contract was fixed in Phase 3.5 so Phase 3b slotted in without reshaping anything: ``predict_change``
+consumes an :class:`geoseek.temporal.contract.ObservationPair` straight from
+:class:`geoseek.temporal.matcher.TemporalObservationMatcher`.
+
+:class:`ObjectDetectionModel` was only a design sketch (``docs/ARCHITECTURE.md`` FW-5) until Phase 8F-2 - there
+was no ABC in code before it. It is deliberately dependency-free (numpy only): the one concrete implementation,
+:class:`geoseek.models.yolo_obb.YoloObbDetectionModel`, is the ONLY place the AGPL-3.0 ``ultralytics`` package is
+touched, so swapping the detector (e.g. for a permissively licensed one) is a new subclass and nothing else.
 """
 
 from __future__ import annotations
 
 import abc
+import math
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Sequence
 
 import numpy as np
 
@@ -135,3 +141,96 @@ class ChangeDetectionModel(abc.ABC):
         matcher's spatially-overlapping tiles); ``aoi_wkt`` optionally restricts
         it to a sub-AOI; ``bands`` selects the spectral bands to use.
         """
+
+
+# --------------------------------------------------------------------------
+# ObjectDetectionModel  (Phase 8F-2)
+# --------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class TileGeoRef:
+    """Where a tile sits on the ground, so pixel detections can be turned into lon/lat footprints.
+
+    ``transform`` is the affine tile-pixel -> CRS map as rasterio orders it, ``(a, b, c, d, e, f)`` with
+    ``x = a*col + b*row + c`` and ``y = d*col + e*row + f`` (pixel-corner origin); ``crs`` is anything pyproj
+    accepts (``"EPSG:32645"``). Kept as plain values so this module needs neither rasterio nor pyproj.
+    """
+
+    transform: tuple[float, float, float, float, float, float]
+    crs: str
+
+
+@dataclass(frozen=True)
+class Detection:
+    """One oriented detection in a tile. Pixel geometry is always present; the lon/lat footprint only with a
+    :class:`TileGeoRef`."""
+
+    class_name: str
+    class_id: int
+    score: float
+    obb_px: tuple[float, float, float, float, float]          # (cx, cy, w, h, angle_rad) in tile pixels (image coords)
+    polygon_px: tuple[tuple[float, float], ...]                # the 4 corners of that rectangle, tile pixels
+    geom_wkt_4326: str | None = None                           # oriented footprint, POLYGON in EPSG:4326 (lon lat)
+
+    @property
+    def long_side_px(self) -> float:
+        return max(self.obb_px[2], self.obb_px[3])
+
+    @property
+    def heading_deg(self) -> float:
+        """Direction of the long axis in [0, 180) degrees, image coordinates (y down)."""
+        cx, cy, w, h, r = self.obb_px
+        a = math.degrees(r) + (0.0 if w >= h else 90.0)
+        return a % 180.0
+
+    def as_dict(self) -> dict:
+        return {
+            "class": self.class_name, "class_id": self.class_id, "score": round(self.score, 4),
+            "obb_px": [round(v, 2) for v in self.obb_px],
+            "polygon_px": [[round(x, 2), round(y, 2)] for x, y in self.polygon_px],
+            "geom_wkt_4326": self.geom_wkt_4326,
+        }
+
+
+class ObjectDetectionModel(abc.ABC):
+    """Finds and classifies oriented objects (vehicles, aircraft, vessels, tanks, ...) in one true-colour tile.
+
+    It consumes the same ``HxWx3 uint8 RGB`` tile arrays the embedding pipeline already produces, and stays OUT of the
+    retrieval and change seams - a parallel enrichment, not a dependency. Outputs are meant to be registered as
+    ``DerivedProduct(kind="detection")`` (a per-observation GeoJSON, referenced by path) so they inherit the provenance
+    chain and show up in ``/export`` with no new plumbing.
+    """
+
+    @property
+    @abc.abstractmethod
+    def class_names(self) -> tuple[str, ...]:
+        """The classes this model can emit, in class-id order."""
+
+    @abc.abstractmethod
+    def detect(
+        self,
+        tile_rgb_uint8: np.ndarray,
+        *,
+        classes: Sequence[str] | None = None,
+        min_score: float | None = None,
+        geo: TileGeoRef | None = None,
+    ) -> list[Detection]:
+        """Detect objects in one RGB tile.
+
+        ``classes`` restricts the output to those class names (None = all); ``min_score`` overrides the model's
+        default operating threshold; with ``geo`` each detection also carries its lon/lat footprint. Tiles larger
+        than the model's native window are handled by the implementation (windowed inference + cross-window
+        de-duplication), not by the caller."""
+
+    def detect_batch(self, tiles: Sequence[np.ndarray], **kwargs) -> list[list[Detection]]:
+        """Default: one tile at a time. Implementations may override with true batching."""
+        return [self.detect(t, **kwargs) for t in tiles]
+
+    def load(self) -> None:
+        """Optional: make the model resident before the first call. Default: no-op."""
+
+    @property
+    def info(self) -> dict:
+        """Provenance of the running model (name, weights checksum, operating point). Default: empty."""
+        return {}
