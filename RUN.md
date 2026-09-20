@@ -274,10 +274,16 @@ python scripts\prepare_detect_data.py --plan-only     # measure first: windows, 
 python scripts\prepare_detect_data.py                 # convert DOTA -> 1024 px YOLO-OBB chips (~3 min, 12 workers)
 python scripts\render_detect_sanity_chips.py          # pre-flight: GT chips, loader round-trip, augmented batch
 python scripts\train_detector.py --print-config       # the full planned training config, runs nothing
-python scripts\train_detector.py                      # ~3.3 h on an RTX 4060 laptop; re-run the same command to resume
+python scripts\train_detector.py                      # ~3.1 h of compute on an RTX 4060 laptop (measured); re-run the same command to resume
 python scripts\finalize_detector.py                   # freeze best.pt, model card, manifest, loss/mAP curves
-python scripts\eval_detector.py                       # honest evaluation on the held-out val (~45 min, GPU)
+python scripts\eval_detector.py                       # honest evaluation on the held-out val (~45 min, GPU); add --stages checkpoints for the per-checkpoint val curve
+python scripts\finalize_detector.py                   # again: the model card now carries the operating point + evaluation summary
+python scripts\eval_size_operating_point.py           # vehicle recall / precision by pixel size at the operating confidence (no GPU)
 python scripts\detect_maxar.py                        # run on the staged Maxar tiles (GeoJSON + samples + DerivedProduct)
+python scripts\eval_domain_shift_proxy.py             # controlled blur / upscaling on the monitor split (one component of the DOTA -> Maxar gap)
+python scripts\audit_maxar_crops.py --observation vannuys --n-tiles 5 --crops-per-tile 2 --min-dets 0   # seeded crops for a MANUAL tally
+python scripts\maxar_scale_probe.py --observations vannuys --scales 1.0,1.5,2.0                         # exploratory: test-time upscaling on Maxar
+python scripts\make_phase8f2_tables.py > data\detect_eval\phase8f2_tables.md   # every table of docs/PHASE8F2.md from the JSON artifacts
 ```
 
 Use it from code (RGB `HxWx3 uint8` in, oriented detections out):
@@ -286,7 +292,12 @@ Use it from code (RGB `HxWx3 uint8` in, oriented detections out):
 from geoseek.models import YoloObbDetectionModel, TileGeoRef
 model = YoloObbDetectionModel("data/models/detector/geoseek_obb_v15_yolo26s.pt")   # threshold from the model card
 dets = model.detect(rgb_tile, classes=["small-vehicle"], geo=TileGeoRef(transform=(a, b, c, d, e, f), crs="EPSG:32611"))
+# opt-in test-time upscaling (default 1.0): resamples the tile, reports boxes in ORIGINAL pixels. Exploratory - see docs/PHASE8F2.md sec. 7.5
+model2 = YoloObbDetectionModel("data/models/detector/geoseek_obb_v15_yolo26s.pt", upscale=2.0)
 ```
+
+What to expect (measured, `docs/PHASE8F2.md`): on the held-out DOTA val the 8-class macro AP50 is 0.817; on the staged Maxar tiles the detector
+finds aircraft and large objects but only a few percent of visible cars - do not use it as a car counter there.
 
 Machine notes that cost real time to find (details in `docs/PHASE8F2.md`): the trainer sets a hard torch
 VRAM cap because Windows' driver otherwise spills CUDA memory into RAM; do not run other torch processes

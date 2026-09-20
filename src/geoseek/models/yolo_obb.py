@@ -13,6 +13,10 @@ Behaviour worth knowing:
     windows with a per-class rotated NMS - the same merge the full-image evaluation uses.
   * The default score threshold is the operating point chosen on the *monitor* split (never the official val), read from
     the model card written next to the weights (``<weights>.card.json`` -> ``operating_point.conf``).
+  * ``upscale`` (default 1.0 = off) resamples the tile by that factor (cubic) before inference and reports every box back in
+    ORIGINAL tile pixels (and, with a TileGeoRef, at the same place on the ground). It exists because the detector is
+    much weaker on ~15 px objects than on 25-30 px ones (docs/PHASE8F2.md sec. 6-7); it is off by default because its effect
+    on the Maxar tiles has only been checked by eye, not against ground truth.
   * Runs offline: ``YOLO_OFFLINE=1`` is set before ultralytics is imported.
 """
 
@@ -51,7 +55,11 @@ class YoloObbDetectionModel(ObjectDetectionModel):
         device: str | None = None,
         half: bool | None = None,
         batch_size: int = 4,
+        upscale: float = 1.0,
     ):
+        if not upscale > 0:
+            raise ValueError(f"upscale must be > 0, got {upscale}")
+        self.upscale = float(upscale)
         self.weights_path = Path(weights_path)
         self.card = self._read_card(self.weights_path)
         op = (self.card or {}).get("operating_point", {})
@@ -78,7 +86,7 @@ class YoloObbDetectionModel(ObjectDetectionModel):
             "model": "YoloObbDetectionModel", "weights": str(self.weights_path),
             "weights_sha256": (self.card or {}).get("weights_sha256"), "architecture": (self.card or {}).get("architecture"),
             "classes": list(self.class_names), "min_score_default": self.min_score, "nms_iou": self.iou,
-            "max_det": self.max_det, "imgsz": self.imgsz,
+            "max_det": self.max_det, "imgsz": self.imgsz, "upscale": self.upscale,
         }
 
     def load(self) -> None:
@@ -118,6 +126,23 @@ class YoloObbDetectionModel(ObjectDetectionModel):
             if unknown:
                 raise ValueError(f"unknown class(es) {sorted(unknown)}; this model emits {list(self.class_names)}")
 
+        if self.upscale != 1.0:
+            return self._detect_batch_upscaled(tiles, thr, wanted, geo, geos)
+        return self._detect_batch_native(tiles, thr, wanted, geo, geos)
+
+    # -- internals -----------------------------------------------------------------------------------------
+
+    def _detect_batch_upscaled(self, tiles, thr, wanted, geo, geos) -> list[list[Detection]]:
+        import cv2
+
+        s = self.upscale
+        interp = cv2.INTER_CUBIC if s > 1.0 else cv2.INTER_AREA
+        big = [cv2.resize(t, None, fx=s, fy=s, interpolation=interp) for t in tiles]
+        geos_s = [_scale_geo(geos[i] if geos else geo, s) for i in range(len(tiles))]
+        inner = self._detect_batch_native(big, thr, wanted, None, geos_s)
+        return [[_rescale_detection(d, s) for d in dets] for dets in inner]
+
+    def _detect_batch_native(self, tiles, thr, wanted, geo, geos) -> list[list[Detection]]:
         out: list[list[Detection] | None] = [None] * len(tiles)
         small = [i for i, t in enumerate(tiles) if max(t.shape[:2]) <= self.imgsz]
         for start in range(0, len(small), self.batch_size):
@@ -129,8 +154,6 @@ class YoloObbDetectionModel(ObjectDetectionModel):
             if out[i] is None:
                 out[i] = self._detect_large(t, thr, wanted, (geos[i] if geos else geo))
         return out  # type: ignore[return-value]
-
-    # -- internals -----------------------------------------------------------------------------------------
 
     @staticmethod
     def _read_card(weights_path: Path) -> dict | None:
@@ -145,9 +168,10 @@ class YoloObbDetectionModel(ObjectDetectionModel):
     def _predict(self, tiles_rgb: list[np.ndarray], thr: float):
         """-> per tile (xywhr (N,5) float64, conf (N,), cls (N,) int), tile pixel coordinates."""
         bgr = [np.ascontiguousarray(t[..., ::-1]) for t in tiles_rgb]            # RGB -> BGR (ultralytics ndarray convention)
+        extra = {"quantize": 16} if self._half else {}                            # fp16 ('half=' is deprecated in ultralytics 8.4.x)
         results = self._model.predict(
             bgr, imgsz=self.imgsz, conf=thr, iou=self.iou, max_det=self.max_det, device=self._device,
-            half=bool(self._half), verbose=False, augment=False,
+            verbose=False, augment=False, **extra,
         )
         out = []
         for r in results:
@@ -202,6 +226,21 @@ class YoloObbDetectionModel(ObjectDetectionModel):
                 polygon_px=tuple((float(x), float(y)) for x, y in polys[i]), geom_wkt_4326=wkts[i]))
         dets.sort(key=lambda d: -d.score)
         return dets
+
+
+def _scale_geo(geo: TileGeoRef | None, s: float) -> TileGeoRef | None:
+    """The affine of the tile after it was resampled by ``s`` (a pixel of the big tile is 1/s of an original pixel)."""
+    if geo is None:
+        return None
+    a, b, c, d, e, f = geo.transform
+    return TileGeoRef(transform=(a / s, b / s, c, d / s, e / s, f), crs=geo.crs)
+
+
+def _rescale_detection(d: Detection, s: float) -> Detection:
+    """A detection found on the ``s``-times resampled tile, expressed in ORIGINAL tile pixels (the footprint is unchanged)."""
+    cx, cy, w, h, r = d.obb_px
+    return Detection(class_name=d.class_name, class_id=d.class_id, score=d.score, obb_px=(cx / s, cy / s, w / s, h / s, r),
+                     polygon_px=tuple((x / s, y / s) for x, y in d.polygon_px), geom_wkt_4326=d.geom_wkt_4326)
 
 
 _TRANSFORMERS: dict[str, object] = {}

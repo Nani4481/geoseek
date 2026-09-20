@@ -34,6 +34,7 @@ and is **not** claimed here.
 12. [SAR corroboration — 51% agreement and the physical reason](#12-sar-corroboration)
 13. [Reproduction — clean checkout, offline after staging](#13-reproduction)
 14. [Limitations](#14-limitations)
+15. [Object detector (Phase 8F-2) — a separate track, summarised here](#15-object-detector)
 
 ---
 
@@ -1053,6 +1054,33 @@ pushed.
    tiles**. That is enough to expose the FlatIP O(n) signature, the HDBSCAN wall,
    and the persist-time growth — but it is not a national or global archive, and
    the crossover estimates in §10.3 are extrapolations, explicitly ranged.
+
+---
+
+## 15. Object detector
+
+*A separate, later track (sub-metre imagery, not the Sentinel-2 archive above); everything below is summarised from the
+full report in `docs/PHASE8F2.md`, which names the script and artifact behind each number.*
+
+A **YOLO26s-OBB** oriented detector (10.5 M parameters; DOTA-pretrained, fine-tuned on DOTA v1.5 for 8 classes: small / large vehicle, ship,
+plane, helicopter, storage tank, harbor, bridge) sits behind the dependency-free `ObjectDetectionModel` interface. Trained 20 epochs in
+3.1 h of compute on the RTX 4060 (peak reserved VRAM 6.87 GB = the hard cap), it was evaluated **once, after training, on the official DOTA val** (458 images; disjoint source images,
+never used for checkpoint or threshold selection — `docs/PHASE8F2.md` §6.1).
+
+| DOTA official val, v1.5 labels, full-image DOTA-devkit protocol (95 % bootstrap CI over images) | AP50 | AP50:95 |
+|---|---:|---:|
+| ground vehicles (small + large) | 0.854 [0.786–0.891] | 0.471 |
+| ships + aircraft | 0.859 [0.735–0.911] | 0.557 |
+| infrastructure (tanks, harbors, bridges) | 0.751 [0.704–0.784] | 0.414 |
+| all 8 classes | 0.817 [0.764–0.845] | 0.482 |
+
+Reported as measured: vehicles do **not** score lower than infrastructure at IoU 0.5, but small vehicles are the weakest at strict localisation
+(AP50:95 0.413), have the lowest precision at the operating point (0.597) and collapse below ~16 px (AP50 0.42 for 10–16 px cars). The
+fine-tuning gain is concentrated in one epoch and one class (small-vehicle AP50 0.606 → 0.845, the effect of correcting the labels from v1.0 to v1.5).
+On the staged **Maxar** tiles (no ground truth) the detector reliably finds aircraft and other large objects but only a few percent of visible cars at its
+DOTA-calibrated operating point; a controlled blur explains only ~4 points of that gap, so the vehicle numbers above do **not** transfer to that product
+(`docs/PHASE8F2.md` §7). The evaluator's own disagreement with Ultralytics' validator was measured and attributed (§6.8).
+Licence: `ultralytics` and the weights are AGPL-3.0 (optional extra, isolated behind the interface); the fine-tuned weights are non-commercial.
 
 ---
 

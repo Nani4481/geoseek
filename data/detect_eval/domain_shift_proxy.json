@@ -1,0 +1,172 @@
+{
+ "k": 1.8,
+ "conf": 0.525,
+ "weights": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\runs\\detector\\geoseek_obb_v15_yolo26s\\weights\\best.pt",
+ "split": "monitor (train-domain images; NOT the official val)",
+ "runs": {
+  "original_imgsz1024": {
+   "per_class_AP50": {
+    "small-vehicle": 0.9410343595396373,
+    "large-vehicle": 0.8088266688989234,
+    "ship": 0.9247837920080011,
+    "plane": 0.9942243846169037,
+    "helicopter": 0.9310745294945495,
+    "storage-tank": 0.9660329758168451,
+    "harbor": 0.8162148556976982,
+    "bridge": 0.8000995962620723
+   },
+   "per_class_AP50_95": {
+    "small-vehicle": 0.5207268484610441,
+    "large-vehicle": 0.5060112085937121,
+    "ship": 0.5886075471432124,
+    "plane": 0.751520416433842,
+    "helicopter": 0.532742319418947,
+    "storage-tank": 0.6546797510802297,
+    "harbor": 0.48274662909776545,
+    "bridge": 0.3452318942182602
+   },
+   "macro_AP50": 0.8977863952918288,
+   "macro_AP50_95": 0.5477833268058767,
+   "ground_vehicles_macro_AP50": 0.8749305142192804,
+   "operating_point": {
+    "ground_vehicles": {
+     "precision": 0.8172166427546629,
+     "recall": 0.9097588244689346,
+     "TP": 5696,
+     "FP": 1274,
+     "FN": 565
+    },
+    "all": {
+     "precision": 0.8565475349625653,
+     "recall": 0.9102304285821512,
+     "TP": 12127,
+     "FP": 2031,
+     "FN": 1196
+    }
+   }
+  },
+  "degraded_k1.8_imgsz1024": {
+   "per_class_AP50": {
+    "small-vehicle": 0.9079207060304936,
+    "large-vehicle": 0.7979665209161109,
+    "ship": 0.933027690308242,
+    "plane": 0.9940825539115521,
+    "helicopter": 0.9023646569489123,
+    "storage-tank": 0.9683568605209285,
+    "harbor": 0.8233608747835902,
+    "bridge": 0.7766077371067714
+   },
+   "per_class_AP50_95": {
+    "small-vehicle": 0.47627437315940496,
+    "large-vehicle": 0.4705688997684515,
+    "ship": 0.5656966310627891,
+    "plane": 0.7342603006521257,
+    "helicopter": 0.45293695211869994,
+    "storage-tank": 0.6482415720194088,
+    "harbor": 0.47714594210435973,
+    "bridge": 0.3207477933238815
+   },
+   "macro_AP50": 0.8879609500658251,
+   "macro_AP50_95": 0.5182340580261402,
+   "ground_vehicles_macro_AP50": 0.8529436134733022,
+   "operating_point": {
+    "ground_vehicles": {
+     "precision": 0.8195364238410596,
+     "recall": 0.8696693818878773,
+     "TP": 5445,
+     "FP": 1199,
+     "FN": 816
+    },
+    "all": {
+     "precision": 0.8688113332841437,
+     "recall": 0.8838099527133528,
+     "TP": 11775,
+     "FP": 1778,
+     "FN": 1548
+    }
+   }
+  },
+  "degraded_k1.8_imgsz1536": {
+   "per_class_AP50": {
+    "small-vehicle": 0.9152663871898771,
+    "large-vehicle": 0.8191026811078714,
+    "ship": 0.9392832608731345,
+    "plane": 0.9940551004020325,
+    "helicopter": 0.8655490403769502,
+    "storage-tank": 0.9633456228522452,
+    "harbor": 0.8124391994347653,
+    "bridge": 0.776795781249416
+   },
+   "per_class_AP50_95": {
+    "small-vehicle": 0.48826255692127385,
+    "large-vehicle": 0.4911097923733635,
+    "ship": 0.5723670289633932,
+    "plane": 0.7434261227372884,
+    "helicopter": 0.5455650492062388,
+    "storage-tank": 0.6448726839403085,
+    "harbor": 0.43169617882955835,
+    "bridge": 0.30989274217086804
+   },
+   "macro_AP50": 0.8857296341857865,
+   "macro_AP50_95": 0.5283990193927866,
+   "ground_vehicles_macro_AP50": 0.8671845341488742,
+   "operating_point": {
+    "ground_vehicles": {
+     "precision": 0.8172358200205189,
+     "recall": 0.8905925570995049,
+     "TP": 5576,
+     "FP": 1247,
+     "FN": 685
+    },
+    "all": {
+     "precision": 0.8653734379540832,
+     "recall": 0.8940178638444795,
+     "TP": 11911,
+     "FP": 1853,
+     "FN": 1412
+    }
+   }
+  },
+  "original_imgsz1536": {
+   "per_class_AP50": {
+    "small-vehicle": 0.9393640323486132,
+    "large-vehicle": 0.8507555566518585,
+    "ship": 0.9189040511077355,
+    "plane": 0.99462218673837,
+    "helicopter": 0.969850951897544,
+    "storage-tank": 0.9629507129977604,
+    "harbor": 0.8112761986263135,
+    "bridge": 0.7977275411569802
+   },
+   "per_class_AP50_95": {
+    "small-vehicle": 0.5312334881265428,
+    "large-vehicle": 0.5406519423854825,
+    "ship": 0.5853935617081487,
+    "plane": 0.7575625800905503,
+    "helicopter": 0.6015289389860597,
+    "storage-tank": 0.6605480430394499,
+    "harbor": 0.4376853327930676,
+    "bridge": 0.3492761552207677
+   },
+   "macro_AP50": 0.9056814039406469,
+   "macro_AP50_95": 0.5579850052937587,
+   "ground_vehicles_macro_AP50": 0.8950597945002359,
+   "operating_point": {
+    "ground_vehicles": {
+     "precision": 0.8089747151986663,
+     "recall": 0.9300431241015812,
+     "TP": 5823,
+     "FP": 1375,
+     "FN": 438
+    },
+    "all": {
+     "precision": 0.8485079805690493,
+     "recall": 0.9177362455903325,
+     "TP": 12227,
+     "FP": 2183,
+     "FN": 1096
+    }
+   }
+  }
+ }
+}

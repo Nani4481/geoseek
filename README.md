@@ -40,7 +40,7 @@ offline-capable system with a working analyst interface on top.
 | Observation dates | 2019-03-29 to 2026-03-08 (77 Sentinel-1/2 scenes; Ayodhya alone has 5 dates: 2019, 2021, 2024, 2025, 2026) |
 | Search latency (warm) | ~17 ms median / 26 ms p99 per query on the full corpus |
 | Change detection | F1 56.0% on the held-out OSCD test split (vs. 52.8% published for the same architecture) |
-| Tests | 275 passed, 3 skipped (`pytest`, `tests/`) |
+| Tests | 351 passed, 3 skipped (`pytest`, `tests/`; the 275 tests that predate Phase 8F-2 are unchanged, +76 for the detector) |
 
 ## Quick start
 
@@ -152,7 +152,12 @@ serve different queries: one finds *what looks like X*, the other finds
   interface; the fine-tuned weights are also non-commercial (DOTA is
   academic-use-only). Chosen over Oriented R-CNN/MMRotate on measured VRAM and
   a stale dependency lattice — see `geoseek.staging.download_yolo` and
-  `docs/PHASE8F2.md` for the comparison and the numbers.
+  `docs/PHASE8F2.md` for the comparison and the numbers. **Measured result**
+  (official DOTA val, v1.5 labels, full-image DOTA protocol, evaluated once after
+  training): macro AP50 0.817 / AP50:95 0.482 over the 8 classes; ground vehicles
+  0.854 / 0.471, ships + aircraft 0.859 / 0.557, infrastructure 0.751 / 0.414.
+  On the staged Maxar tiles it finds aircraft and other large objects but only a
+  few percent of visible cars (limitations below).
 - Every download, checksum, and derivation is recorded in
   `data/provenance_manifest.json`, generated automatically by the staging
   scripts — see that file for the authoritative, machine-checked record.
@@ -173,6 +178,13 @@ serve different queries: one finds *what looks like X*, the other finds
 - **SAR corroboration**: Sentinel-1 change signal is used as a confidence
   weight on optical change candidates, not as an independently validated
   detector — it hasn't been checked against ground-truth SAR change labels.
+- **Vehicle detection on Maxar imagery**: the detector's DOTA-val vehicle
+  numbers do not transfer to the staged Maxar tiles. There is no ground truth
+  there; a small manual audit found only a few percent of visible cars at the
+  operating confidence (aircraft, a bridge and round tanks were found correctly),
+  and a controlled-blur experiment explains only ~4 points of the gap. Test-time
+  upscaling (`upscale=2`, opt-in) recovers about a third of the cars but multiplies
+  `ship` false positives ~9x. See `docs/PHASE8F2.md` sections 7-8.
 - **Deployment**: designed and tested as a single-node, single-machine
   system; no distributed or multi-user concurrency story.
 

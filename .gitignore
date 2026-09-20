@@ -42,3 +42,8 @@ data/detect_preflight/*.png
 data/detect_preflight/*.jpg
 data/detect_preflight/gt_chips/
 data/detect_eval/
+
+# Phase 8F-2 detector on Maxar: keep the JSON / GeoJSON evidence, drop the regenerable annotated tiles and audit crops
+data/detections/samples/
+data/detections/audit/*.png
+data/detections/scale_probe/*.png

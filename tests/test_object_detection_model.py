@@ -163,6 +163,29 @@ def test_batch_detect_batches_small_tiles_and_matches_single_calls(tmp_path):
     assert all(len(o) == 1 for o in out)
 
 
+def test_upscale_runs_on_the_resampled_tile_and_reports_in_original_pixels(tmp_path):
+    fake = FakeYolo()
+    m = make_model(tmp_path, fake, min_score=0.5, upscale=2.0)
+    geo = TileGeoRef(transform=(1e-5, 0.0, 88.5, 0.0, -1e-5, 27.6), crs="EPSG:4326")
+    (d,) = m.detect(rgb_tile(h=128, w=256), geo=geo)
+    assert fake.calls[0]["first"].shape[:2] == (256, 512)                        # the predictor saw the 2x tile ...
+    assert d.obb_px == pytest.approx((25.0, 30.0, 15.0, 5.0, 0.5))               # ... and its box comes back in ORIGINAL tile pixels
+    assert np.mean([p[0] for p in d.polygon_px]) == pytest.approx(25.0)
+    coords = [tuple(map(float, p.split())) for p in d.geom_wkt_4326[len("POLYGON (("):-2].split(", ")]
+    lon, lat = np.mean([c[0] for c in coords[:4]]), np.mean([c[1] for c in coords[:4]])
+    assert lon == pytest.approx(88.5 + 25 * 1e-5, abs=1e-6) and lat == pytest.approx(27.6 - 30 * 1e-5, abs=1e-6)
+    assert m.info["upscale"] == 2.0 and YoloObbDetectionModel(tmp_path / "w.pt").upscale == 1.0
+    with pytest.raises(ValueError):
+        YoloObbDetectionModel(tmp_path / "w.pt", upscale=0.0)
+
+
+def test_upscale_makes_a_tile_that_now_exceeds_imgsz_run_as_windows(tmp_path):
+    fake = FakeYolo()
+    m = make_model(tmp_path, fake, min_score=0.5, upscale=2.0, imgsz=300, batch_size=8)
+    m.detect(rgb_tile(h=128, w=256))                                            # 256x512 after upscaling > imgsz 300 -> windowed
+    assert sum(c["n"] for c in fake.calls) > 1 and all(max(c["first"].shape[:2]) <= 300 for c in fake.calls)
+
+
 # --------------------------------------------------------------------------
 # large tiles: windows + cross-window de-duplication
 # --------------------------------------------------------------------------

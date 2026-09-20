@@ -154,7 +154,7 @@ def chip_level_val(weights: Path, yaml_path: Path, split_key: str = "val") -> di
 
     m = YOLO(str(weights))
     r = m.val(data=str(yaml_path), split=split_key, imgsz=1024, batch=8, conf=0.001, iou=NMS_IOU, max_det=MAX_DET, half=True,
-              plots=False, workers=6, device=0, verbose=False,
+              plots=False, workers=4, device=0, verbose=False,
               project=str(Path(os.environ.get("TEMP", ".")) / "geoseek_eval_val"), name="tmp", exist_ok=True)
     b = r.box
     idx = [int(i) for i in b.ap_class_index]
@@ -165,7 +165,7 @@ def chip_level_val(weights: Path, yaml_path: Path, split_key: str = "val") -> di
     }
 
 
-def crosscheck_chip_level(pred: dict, root: Path, split: str) -> dict:
+def crosscheck_chip_level(pred: dict, root: Path, split: str, *, iou: str = "polygon") -> dict:
     """Validate OUR evaluator against Ultralytics' on the SAME predictions: score every chip as its own image against the
     chip's own (rectangle) labels, difficult counted as ordinary GT, no cross-chip merge - i.e. the chip-level protocol.
     Differences that remain are the IoU (true polygon IoU vs ProbIoU), the AP interpolation (all-point vs 101-point) and
@@ -183,8 +183,107 @@ def crosscheck_chip_level(pred: dict, root: Path, split: str) -> dict:
         lo, hi = bounds[i], bounds[i + 1]
         dets[cid] = ImageDets(cid, cls[lo:hi].astype(int), conf[lo:hi], xywhr_to_polys(xywhr[lo:hi]) if hi > lo else np.zeros((0, 4, 2)),
                               np.zeros(hi - lo, dtype=np.int64))
-    res = evaluate_dataset(gt, dets, KEPT_CLASSES)
+    import geoseek.detect.evaluate as ev_mod
+    original = ev_mod._convex_iou
+    if iou == "probiou":                     # swap ONLY the overlap measure; our matching rule and AP interpolation stay as they are
+        ev_mod._convex_iou = probiou_polys
+    try:
+        res = evaluate_dataset(gt, dets, KEPT_CLASSES)
+    finally:
+        ev_mod._convex_iou = original
     return {n: {"AP50": res["per_class"][n]["AP50"], "AP50_95": res["per_class"][n]["AP50_95"]} for n in KEPT_CLASSES}
+
+
+def _read_chip_gt(root: Path, split: str, cid: str) -> tuple[np.ndarray, np.ndarray]:
+    """Class ids (M,) and corner polygons in chip pixels (M,4,2) from the chip's YOLO-OBB label file."""
+    lines = [ln.split() for ln in (root / split / "labels" / f"{cid}.txt").read_text().splitlines() if ln.strip()]
+    gcls = np.array([int(p[0]) for p in lines], dtype=int)
+    gpol = np.array([[[float(p[k]) * 1024, float(p[k + 1]) * 1024] for k in range(1, 9, 2)] for p in lines]).reshape(-1, 4, 2)
+    return gcls, gpol
+
+
+def _rect_gauss(p: np.ndarray) -> tuple[float, float, float, float, float]:
+    """(cx, cy, sxx, syy, sxy) of the uniform distribution over a rectangle given by its 4 corners (Ultralytics' Gaussian box)."""
+    e1x, e1y = p[1, 0] - p[0, 0], p[1, 1] - p[0, 1]
+    e2x, e2y = p[2, 0] - p[1, 0], p[2, 1] - p[1, 1]
+    return (float(p[:, 0].mean()), float(p[:, 1].mean()), (e1x * e1x + e2x * e2x) / 12.0, (e1y * e1y + e2y * e2y) / 12.0,
+            (e1x * e1y + e2x * e2y) / 12.0)
+
+
+def probiou_polys(a: np.ndarray, b: np.ndarray, eps: float = 1e-7) -> float:
+    """Ultralytics' oriented-box overlap: ProbIoU = 1 - Hellinger distance between the two boxes' Gaussian approximations.
+    Not an area ratio: for two same-shape boxes offset by 0.2 of their width the true IoU is 0.67 and ProbIoU 0.76, and a
+    ProbIoU of 0.5 corresponds to a true IoU of about 0.3, so every threshold is effectively looser. Checked against
+    ultralytics.utils.metrics.batch_probiou by ``check_probiou``."""
+    import math
+    x1, y1, a1, b1, c1 = _rect_gauss(np.asarray(a, dtype=np.float64))
+    x2, y2, a2, b2, c2 = _rect_gauss(np.asarray(b, dtype=np.float64))
+    sa, sb, sc = a1 + a2, b1 + b2, c1 + c2
+    det = sa * sb - sc * sc
+    d1, d2 = a1 * b1 - c1 * c1, a2 * b2 - c2 * c2
+    if det <= 0 or d1 <= 0 or d2 <= 0:
+        return 0.0
+    dx, dy = x1 - x2, y1 - y2
+    bd = 0.25 * (sb * dx * dx - 2.0 * sc * dx * dy + sa * dy * dy) / det + 0.5 * math.log(det / (4.0 * math.sqrt(d1 * d2) + eps) + eps)
+    bd = min(max(bd, eps), 100.0)
+    return 1.0 - math.sqrt(1.0 - math.exp(-bd) + eps)
+
+
+def check_probiou(n: int = 300, seed: int = 0) -> float:
+    """Max |difference| between probiou_polys and Ultralytics' own batch_probiou on random overlapping rectangles."""
+    import torch
+    from ultralytics.utils.metrics import batch_probiou
+    rng = np.random.default_rng(seed)
+    worst = 0.0
+    for _ in range(n):
+        r = np.stack([rng.uniform(-5, 5, 2).tolist() + rng.uniform(8, 40, 2).tolist() + [rng.uniform(-3.1, 3.1)] for _ in range(2)])
+        r[1, :2] += r[0, :2]
+        polys = xywhr_to_polys(r)
+        ref = float(batch_probiou(torch.tensor(r[:1], dtype=torch.float64), torch.tensor(r[1:], dtype=torch.float64))[0, 0])
+        worst = max(worst, abs(ref - probiou_polys(polys[0], polys[1])))
+    return worst
+
+
+def ultralytics_rescore(pred: dict, root: Path, split: str) -> dict:
+    """Re-run Ultralytics' OWN metric code (ProbIoU, its IoU-ordered one-to-one assignment, ap_per_class) on OUR saved
+    predictions. If this reproduces the Ultralytics validator's AP, then our inference plumbing (infer.predict_chips + the npz
+    round trip) produces the same detections as the validator saw, and every remaining difference between the two evaluators
+    is protocol, not a bug."""
+    import torch
+    from ultralytics.utils.metrics import ap_per_class, batch_probiou
+    thresholds = np.linspace(0.5, 0.95, 10)
+    order = np.argsort(pred["det_chip_idx"], kind="stable")
+    di, xywhr, conf, cls = (pred[k][order] for k in ("det_chip_idx", "xywhr", "conf", "cls"))
+    bounds = np.searchsorted(di, np.arange(len(pred["chip_ids"]) + 1))
+    tps, confs, pcls, tcls = [], [], [], []
+    for i, cid in enumerate(pred["chip_ids"]):
+        gcls, gpol = _read_chip_gt(root, split, cid)
+        lo, hi = bounds[i], bounds[i + 1]
+        correct = np.zeros((hi - lo, len(thresholds)), dtype=bool)
+        if len(gcls) and hi > lo:
+            g = []
+            for poly in gpol:                                            # Ultralytics' xyxyxyxy2xywhr: cv2.minAreaRect
+                (cx, cy), (w, h), ang = cv2.minAreaRect(poly.astype(np.float32))
+                g.append([cx, cy, w, h, ang / 180.0 * np.pi])
+            iou = batch_probiou(torch.tensor(np.array(g), dtype=torch.float32), torch.tensor(xywhr[lo:hi], dtype=torch.float32)).numpy()
+            iou = iou * (gcls[:, None] == cls[lo:hi][None, :])
+            for k, t in enumerate(thresholds):
+                m = np.array(np.nonzero(iou >= t)).T
+                if m.shape[0]:
+                    if m.shape[0] > 1:
+                        m = np.concatenate([m, iou[m[:, 0], m[:, 1]][:, None]], 1)
+                        m = m[m[:, 2].argsort()[::-1]]
+                        m = m[np.unique(m[:, 1], return_index=True)[1]]
+                        m = m[m[:, 2].argsort()[::-1]]
+                        m = m[np.unique(m[:, 0], return_index=True)[1]]
+                    correct[m[:, 1].astype(int), k] = True
+        tps.append(correct)
+        confs.append(conf[lo:hi])
+        pcls.append(cls[lo:hi])
+        tcls.append(gcls)
+    out = ap_per_class(np.concatenate(tps), np.concatenate(confs), np.concatenate(pcls), np.concatenate(tcls))
+    ap, classes = out[5], out[6]
+    return {KEPT_CLASSES[int(c)]: {"AP50": float(ap[j, 0]), "AP50_95": float(ap[j].mean())} for j, c in enumerate(classes)}
 
 
 # --------------------------------------------------------------------------
@@ -232,8 +331,8 @@ def render_qualitative(root: Path, pred: dict, conf: float, out_dir: Path) -> li
         gt_lines = [ln.split() for ln in (root / "val" / "labels" / f"{chip_id}.txt").read_text().splitlines() if ln.strip()]
         gt_cls = np.array([int(p[0]) for p in gt_lines], dtype=int)
         gt_polys = np.array([[[float(p[i]) * 1024, float(p[i + 1]) * 1024] for i in range(1, 9, 2)] for p in gt_lines])
-        for c, poly in zip(gt_cls, gt_polys):
-            cv2.polylines(left, [poly.astype(np.int32).reshape(-1, 1, 2)], True, (0, 255, 0), 2, cv2.LINE_AA)
+        for c, poly in zip(gt_cls, gt_polys):                    # same class palette as the predictions, so class confusion is visible
+            cv2.polylines(left, [poly.astype(np.int32).reshape(-1, 1, 2)], True, CLASS_BGR[KEPT_CLASSES[c]], 2, cv2.LINE_AA)
         m = (pred["det_chip_idx"] == idx_of[chip_id]) & (pred["conf"] >= conf)
         px, pc, pk = pred["xywhr"][m], pred["conf"][m], pred["cls"][m]
         ppoly = xywhr_to_polys(px) if len(pc) else np.zeros((0, 4, 2))
@@ -250,6 +349,11 @@ def render_qualitative(root: Path, pred: dict, conf: float, out_dir: Path) -> li
         for im, cap in ((left, cap_l), (right, cap_r)):
             cv2.rectangle(im, (0, 0), (1024, 26), (0, 0, 0), -1)
             cv2.putText(im, cap, (6, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.55, (255, 255, 255), 1, cv2.LINE_AA)
+            cv2.rectangle(im, (0, 26), (1024, 46), (0, 0, 0), -1)                       # colour legend
+            x = 6
+            for k, cname in enumerate(KEPT_CLASSES):
+                cv2.putText(im, cname, (x, 41), cv2.FONT_HERSHEY_SIMPLEX, 0.42, CLASS_BGR[cname], 1, cv2.LINE_AA)
+                x += 12 + 8 * len(cname)
         path = out_dir / f"qualitative_{len(written) + 1}_{chip_id}.png"
         cv2.imwrite(str(path), np.hstack([left, right]))
         written.append({"stratum": name, "chip_id": chip_id, "path": str(path), "n_gt": int(len(gt_cls)),
@@ -294,7 +398,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", default="geoseek_obb_v15_yolo26s")
     ap.add_argument("--weights", type=Path, default=None, help="default: <run>/weights/best.pt")
-    ap.add_argument("--stages", default="monitor,val,bootstrap,baseline,chip,crosscheck,checkpoints,qual,curves")
+    ap.add_argument("--stages", default="monitor,val,bootstrap,baseline,last,chip,crosscheck,qual,curves,checkpoints")
     ap.add_argument("--n-boot", type=int, default=100)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--force", action="store_true")
@@ -372,6 +476,15 @@ def main() -> None:
         _MATCHES["base15"] = mb15
         save()
 
+    # ---- the FINAL epoch as well (reporting only): the selection rule picked an early epoch; show how much that matters -----
+    if "last" in stages:
+        last_pt = run_dir / "weights" / "last.pt"
+        pl = get_pred("last_epoch", last_pt, "val", root, out_dir, force=args.force)
+        rl, ml = score_full(pl, dota_root, "val", "v1.5", size_buckets=False)
+        results["val_full_image_v15_last_epoch"] = {"per_class": rl["per_class"], "groups": rl["groups"]}
+        results["val_operating_point_v15_last_epoch"] = operating_metrics(ml, conf)
+        save()
+
     # ---- chip-level (Ultralytics) protocol --------------------------------------------------------------------------
     if "chip" in stages:
         print("[eval] Ultralytics chip-level validation (fine-tuned) ...", flush=True)
@@ -386,33 +499,68 @@ def main() -> None:
     # ---- evaluator cross-check against Ultralytics (chip-level protocol on identical predictions) -----------------
     if "crosscheck" in stages and "val_chip_level_ultralytics" in results:
         pv = pv or get_pred("finetuned", weights, "val", root, out_dir)
-        ours = crosscheck_chip_level(pv, root, "val")
+        t0 = time.time()
+        results["probiou_implementation_max_abs_error_vs_ultralytics"] = check_probiou()
+        print(f"[eval] probiou_polys vs ultralytics batch_probiou: max |diff| {results['probiou_implementation_max_abs_error_vs_ultralytics']:.2e}", flush=True)
+        ours = crosscheck_chip_level(pv, root, "val")                        # our IoU (true polygon), our matching, all-point AP
+        ours_p = crosscheck_chip_level(pv, root, "val", iou="probiou")       # + Ultralytics' overlap measure
+        resc = ultralytics_rescore(pv, root, "val")                          # Ultralytics' overlap AND matching AND AP code
         ul = results["val_chip_level_ultralytics"]["finetuned"]
         rows = {n: {"ours_AP50": ours[n]["AP50"], "ultralytics_AP50": ul["per_class_AP50"][n],
-                    "ours_AP50_95": ours[n]["AP50_95"], "ultralytics_AP50_95": ul["per_class_AP50_95"][n]} for n in KEPT_CLASSES}
-        d50 = [abs(r["ours_AP50"] - r["ultralytics_AP50"]) for r in rows.values()]
-        d95 = [abs(r["ours_AP50_95"] - r["ultralytics_AP50_95"]) for r in rows.values()]
+                    "ours_AP50_95": ours[n]["AP50_95"], "ultralytics_AP50_95": ul["per_class_AP50_95"][n],
+                    "ours_probiou_AP50": ours_p[n]["AP50"], "ours_probiou_AP50_95": ours_p[n]["AP50_95"],
+                    "rescored_AP50": resc[n]["AP50"], "rescored_AP50_95": resc[n]["AP50_95"]} for n in KEPT_CLASSES}
+
+        def gap(key50: str, key95: str) -> dict:
+            a = [abs(r[key50] - r["ultralytics_AP50"]) for r in rows.values()]
+            b = [abs(r[key95] - r["ultralytics_AP50_95"]) for r in rows.values()]
+            return {"max_abs_diff_AP50": float(max(a)), "mean_abs_diff_AP50": float(np.mean(a)),
+                    "max_abs_diff_AP50_95": float(max(b)), "mean_abs_diff_AP50_95": float(np.mean(b))}
+        attribution = {
+            "ours_polygon_iou_vs_validator": gap("ours_AP50", "ours_AP50_95"),
+            "ours_probiou_vs_validator": gap("ours_probiou_AP50", "ours_probiou_AP50_95"),
+            "ultralytics_code_on_our_predictions_vs_validator": gap("rescored_AP50", "rescored_AP50_95")}
         results["evaluator_crosscheck_vs_ultralytics"] = {
             "protocol": "chip level: chip rectangles as GT, difficult counted, no cross-chip merge",
-            "per_class": rows, "max_abs_diff_AP50": float(max(d50)), "mean_abs_diff_AP50": float(np.mean(d50)),
-            "max_abs_diff_AP50_95": float(max(d95)), "mean_abs_diff_AP50_95": float(np.mean(d95))}
-        print(f"[eval] evaluator cross-check vs Ultralytics: max |dAP50| {max(d50):.3f}, mean {np.mean(d50):.3f}; "
-              f"max |dAP50-95| {max(d95):.3f}", flush=True)
+            "per_class": rows, **attribution["ours_polygon_iou_vs_validator"], "attribution": attribution,
+            "how_to_read": ("ours_polygon_iou: our evaluator as used for the headline numbers, restricted to the chip-level protocol. "
+                            "ours_probiou: the same, with only the overlap measure replaced by Ultralytics' ProbIoU. "
+                            "rescored: Ultralytics' overlap, matching and AP code run on our saved predictions - its distance to the "
+                            "validator is the plumbing check (same detections?)")}
+        for k, v in attribution.items():
+            print(f"[eval] cross-check {k}: max |dAP50| {v['max_abs_diff_AP50']:.3f} mean {v['mean_abs_diff_AP50']:.3f}; "
+                  f"max |dAP50-95| {v['max_abs_diff_AP50_95']:.3f} mean {v['mean_abs_diff_AP50_95']:.3f}", flush=True)
+        print(f"[eval] cross-check took {time.time() - t0:.0f}s", flush=True)
         save()
 
-    # ---- post-hoc official-val curve over saved checkpoints (reporting only) ------------------------------------------
+    # ---- post-hoc official-val curve over saved checkpoints (reporting only; nothing is chosen with it) -----------------
     if "checkpoints" in stages:
-        pts = [{"epoch": 0, **results["val_chip_level_ultralytics"]["pretrained_restricted"]}] if "val_chip_level_ultralytics" in results else []
+        cols = read_results_csv(run_dir)
+        fitness = 0.1 * cols["metrics/mAP50(B)"] + 0.9 * cols["metrics/mAP50-95(B)"]
+        best_epoch = int(cols["epoch"][int(np.argmax(fitness))])                    # what best.pt IS: chosen on the monitor split
+        last_epoch = int(cols["epoch"].max())
+        results["best_checkpoint_epoch_by_monitor_fitness"] = best_epoch
+        results["last_epoch"] = last_epoch
+        pts = [{"epoch": 0, **results["val_chip_level_ultralytics"]["pretrained_restricted"], "label": "pretrained, no fine-tuning"}] \
+            if "val_chip_level_ultralytics" in results else []
+        done_epochs = set()
         for e in [int(x) for x in args.checkpoint_epochs.split(",")]:
             ck = run_dir / "weights" / f"epoch{e - 1}.pt"
-            if ck.is_file():
+            if ck.is_file() and e not in (best_epoch, last_epoch):
                 print(f"[eval] official-val chip-level, checkpoint after epoch {e} ...", flush=True)
                 v = chip_level_val(ck, root / "dataset_official_val.yaml")
-                pts.append({"epoch": e, "mAP50": v["mAP50"], "mAP50_95": v["mAP50_95"]})
-        if "val_chip_level_ultralytics" in results:
+                pts.append({"epoch": e, "mAP50": v["mAP50"], "mAP50_95": v["mAP50_95"], "label": f"epoch{e - 1}.pt"})
+                done_epochs.add(e)
+        if "val_chip_level_ultralytics" in results:                                   # `weights` (= best.pt by default) is already scored
             f = results["val_chip_level_ultralytics"]["finetuned"]
-            pts.append({"epoch": int(read_results_csv(run_dir)["epoch"].max()), "mAP50": f["mAP50"], "mAP50_95": f["mAP50_95"]})
-        results["official_val_by_checkpoint"] = [{k: p[k] for k in ("epoch", "mAP50", "mAP50_95")} for p in pts]
+            pts.append({"epoch": best_epoch, "mAP50": f["mAP50"], "mAP50_95": f["mAP50_95"], "label": "best.pt (selected on monitor)"})
+        last_pt = run_dir / "weights" / "last.pt"
+        if last_pt.is_file() and last_epoch != best_epoch:
+            print(f"[eval] official-val chip-level, last.pt (epoch {last_epoch}) ...", flush=True)
+            v = chip_level_val(last_pt, root / "dataset_official_val.yaml")
+            pts.append({"epoch": last_epoch, "mAP50": v["mAP50"], "mAP50_95": v["mAP50_95"], "label": "last.pt (final epoch)"})
+        pts.sort(key=lambda r: r["epoch"])
+        results["official_val_by_checkpoint"] = [{k: p[k] for k in ("epoch", "mAP50", "mAP50_95", "label")} for p in pts]
         save()
 
     # ---- qualitative -----------------------------------------------------------------------------------------------

@@ -94,6 +94,7 @@ def main() -> None:
             stem = f"{o.observation_id}__{t['row']:03d}_{t['col']:03d}__x{x0}_y{y0}"
             cv2.imwrite(str(out_dir / f"{stem}__raw.png"), big)
             cv2.imwrite(str(out_dir / f"{stem}__det.png"), marked)
+            cv2.imwrite(str(out_dir / f"{stem}__pair.png"), np.hstack([big, marked]))       # raw | detections, one image to read
             manifest.append({"stem": stem, "tile_id": t["tile_id"], "x0": x0, "y0": y0, "n_detections_in_crop": len(inside),
                              "by_class": dict(counts), "mean_score": round(float(np.mean([d.score for d in inside])), 3) if inside else None})
             print(f"[audit] {stem}: {len(inside)} detections {dict(counts)}", flush=True)
