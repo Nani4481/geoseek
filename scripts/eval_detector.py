@@ -45,7 +45,7 @@ from geoseek.config import get_settings  # noqa: E402
 from geoseek.detect.classes import CLASS_GROUPS, KEPT_CLASSES, LABEL_SETS  # noqa: E402
 from geoseek.detect.eval_io import assemble_full_image_dets, load_dota_gt, parse_chip_id  # noqa: E402
 from geoseek.detect.evaluate import (  # noqa: E402
-    ImageDets, ImageGT, best_f1_threshold, evaluate_dataset, group_summary, match_class, merge_cross_chip,
+    ImageDets, ImageGT, best_f1_threshold, bootstrap_ap, evaluate_dataset, group_summary, match_class, merge_cross_chip,
     operating_point, pr_curve, xywhr_to_polys)
 from geoseek.detect.infer import load_predictions, predict_chips, save_predictions  # noqa: E402
 from geoseek.detect.plots import plot_pr, plot_per_class, plot_training_curves, read_results_csv  # noqa: E402
@@ -294,7 +294,8 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", default="geoseek_obb_v15_yolo26s")
     ap.add_argument("--weights", type=Path, default=None, help="default: <run>/weights/best.pt")
-    ap.add_argument("--stages", default="monitor,val,baseline,chip,crosscheck,checkpoints,qual,curves")
+    ap.add_argument("--stages", default="monitor,val,bootstrap,baseline,chip,crosscheck,checkpoints,qual,curves")
+    ap.add_argument("--n-boot", type=int, default=100)
     ap.add_argument("--out", type=Path, default=None)
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--checkpoint-epochs", default="1,3,7,11,15,19")
@@ -349,6 +350,16 @@ def main() -> None:
         results["val_operating_point_v10"] = operating_metrics(m10, conf)
         save()
         _MATCHES["ft15"] = m15
+
+    # ---- bootstrap confidence intervals over val IMAGES (the independent unit) -----------------------------------------
+    if "bootstrap" in stages:
+        pv = pv or get_pred("finetuned", weights, "val", root, out_dir)
+        stems = {parse_chip_id(c)[0] for c in pv["chip_ids"]}
+        gt15 = load_dota_gt(dota_root / "val" / LABEL_SETS["v1.5"], stems)
+        t0 = time.time()
+        results["val_bootstrap_v15"] = bootstrap_ap(gt15, full_image_dets(pv), KEPT_CLASSES, CLASS_GROUPS, n_boot=args.n_boot, seed=SEED)
+        print(f"[eval] bootstrap ({args.n_boot} resamples of {len(gt15)} val images) took {time.time() - t0:.0f}s", flush=True)
+        save()
 
     # ---- OFFICIAL VAL, pretrained-restricted baseline ---------------------------------------------------------------
     if "baseline" in stages:

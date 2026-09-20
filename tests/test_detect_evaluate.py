@@ -10,6 +10,7 @@ import pytest
 
 from geoseek.detect.evaluate import (
     ImageDets,
+    bootstrap_ap,
     ImageGT,
     _convex_iou,
     best_f1_threshold,
@@ -209,3 +210,49 @@ def test_group_summary_reports_groups_separately_with_macro_and_weighted_means()
     assert s["vehicles"]["macro_AP50"] == pytest.approx((1.0 + r["per_class"]["large-vehicle"]["AP50"]) / 2)
     w = (1 * 1.0 + 3 * r["per_class"]["large-vehicle"]["AP50"]) / 4
     assert s["vehicles"]["weighted_AP50"] == pytest.approx(w)
+
+
+# --------------------------------------------------------------------------
+# bootstrap confidence intervals (over images)
+# --------------------------------------------------------------------------
+
+
+def _many_images(n_img=40, hit_rate=0.7, seed=0):
+    rng = np.random.default_rng(seed)
+    gt, dets = {}, {}
+    for i in range(n_img):
+        stem = f"P{i:04d}"
+        polys = [rect(50 + 60 * k, 100, 20, 8) for k in range(5)]
+        gt[stem] = gt_of(stem, [(0, p, False) for p in polys])
+        found = [p for p in polys if rng.random() < hit_rate]
+        dets[stem] = dets_of(stem, [(0, float(rng.uniform(0.5, 1.0)), p, 0) for p in found])
+    return gt, dets
+
+
+def test_bootstrap_ci_contains_the_point_estimate_and_is_reproducible():
+    gt, dets = _many_images()
+    one = ("small-vehicle",)                                                    # a class with no GT would have NaN CIs (nan != nan)
+    point = evaluate_dataset(gt, dets, one)["per_class"]["small-vehicle"]["AP50"]
+    a = bootstrap_ap(gt, dets, one, {"vehicles": one}, n_boot=60, seed=3)
+    b = bootstrap_ap(gt, dets, one, {"vehicles": one}, n_boot=60, seed=3)
+    lo, hi = a["per_class"]["small-vehicle"]["AP50_ci"]
+    assert lo <= point <= hi and hi - lo > 0
+    assert a == b
+    assert a["n_images"] == 40 and a["level"] == 0.95 and "vehicles" in a["groups"] and "all_kept_classes" in a["groups"]
+    empty = bootstrap_ap(gt, dets, NAMES, {"v": NAMES}, n_boot=5, seed=0)["per_class"]["large-vehicle"]["AP50_ci"]
+    assert all(np.isnan(empty))                                                 # no GT for that class -> NaN, silently
+
+
+def test_bootstrap_ci_is_narrower_with_more_images():
+    small = bootstrap_ap(*_many_images(n_img=10, seed=1), NAMES, {"v": NAMES}, n_boot=80, seed=1)["per_class"]["small-vehicle"]["AP50_ci"]
+    big = bootstrap_ap(*_many_images(n_img=120, seed=1), NAMES, {"v": NAMES}, n_boot=80, seed=1)["per_class"]["small-vehicle"]["AP50_ci"]
+    assert (big[1] - big[0]) < (small[1] - small[0])
+
+
+def test_match_class_refactor_is_unchanged_on_a_mixed_case():
+    g = {"a": gt_of("a", [(0, rect(50, 50, 20, 10), False), (0, rect(150, 50, 20, 10), True)]),
+         "b": gt_of("b", [(0, rect(80, 80, 20, 10), False)])}
+    d = {"a": dets_of("a", [(0, 0.9, rect(50, 50, 20, 10), 0), (0, 0.8, rect(51, 50, 20, 10), 1), (0, 0.7, rect(150, 50, 20, 10), 0)]),
+         "b": dets_of("b", [(0, 0.6, rect(300, 300, 20, 10), 0)])}
+    op = operating_point(match_class(g, d, 0), 0.0)
+    assert (op["TP"], op["FP"], op["FN"]) == (1, 2, 1)             # 1 hit; duplicate + a miss in b are FP; b's GT is missed; difficult ignored
