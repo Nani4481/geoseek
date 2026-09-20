@@ -8,6 +8,7 @@ data/index/*
 !data/index/.gitkeep
 data/provenance_manifest.json
 data/sample_tile_true_color.png
+data/sample_maxar_*.png
 data/prove_semantic/
 data/change_model/
 

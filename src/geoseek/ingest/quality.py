@@ -45,3 +45,19 @@ def cloud_fraction(scl_tile: np.ndarray) -> float:
         return 1.0
     bad = np.isin(scl_tile, list(BAD_SCL_CLASSES))
     return float(bad.sum()) / float(scl_tile.size)
+
+
+# Maxar Open Data ARD "cloud-mask-raster" classification (STAC `classification`
+# extension, confirmed on the live item asset): 0=nodata, 1=clear, 2=cloud,
+# 3=cloud_shadow. Distinct class codes from Sentinel-2's SCL above, so this is
+# a separate small function rather than overloading BAD_SCL_CLASSES.
+MAXAR_CLOUD_CLASS_NAMES = {0: "nodata", 1: "clear", 2: "cloud", 3: "cloud_shadow"}
+MAXAR_BAD_CLOUD_CLASSES = frozenset({0, 2, 3})
+
+
+def maxar_cloud_fraction(mask_tile: np.ndarray) -> float:
+    """Fraction (0..1) of pixels that are nodata/cloud/cloud-shadow in a Maxar cloud-mask-raster tile."""
+    if mask_tile.size == 0:
+        return 1.0
+    bad = np.isin(mask_tile, list(MAXAR_BAD_CLOUD_CLASSES))
+    return float(bad.sum()) / float(mask_tile.size)
