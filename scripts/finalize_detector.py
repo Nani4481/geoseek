@@ -96,6 +96,18 @@ def main() -> None:
     epoch_secs = [r["epoch_seconds"] for r in progress]
     unplugged = [r["epoch"] for r in progress if r.get("ac_power") is False]
 
+    # WHICH epoch are these weights from? best.pt is chosen on the MONITOR split by Ultralytics' fitness (0.1*mAP50 + 0.9*mAP50-95);
+    # it need not be the last epoch, and the card must not imply "20 epochs of training" when it is an early one.
+    import csv
+    with open(run_dir / "results.csv", newline="", encoding="utf-8") as fh:
+        rows = list(csv.reader(fh))
+    head = [h.strip() for h in rows[0]]
+    col = {h: [float(r[i]) for r in rows[1:]] for i, h in enumerate(head)}
+    fit = [0.1 * a + 0.9 * b for a, b in zip(col["metrics/mAP50(B)"], col["metrics/mAP50-95(B)"])]
+    best_i = max(range(len(fit)), key=fit.__getitem__)
+    weights_epoch = int(col["epoch"][best_i])
+    fitness_by_epoch = {int(e): round(f, 4) for e, f in zip(col["epoch"], fit)}
+
     eval_path = settings.data_dir / "detect_eval" / "eval_results.json"
     ev = json.loads(eval_path.read_text(encoding="utf-8")) if eval_path.is_file() else None
 
@@ -136,6 +148,13 @@ def main() -> None:
             "train_density_cap": conv["train_density_cap"]["max_labels_per_chip"],
         },
         "hyperparameters": train_args,
+        "weights_epoch": {
+            "epoch": weights_epoch, "of": int(max(col["epoch"])),
+            "selected_by": "Ultralytics fitness (0.1*mAP50 + 0.9*mAP50-95) on the MONITOR split - never on the official val",
+            "monitor_fitness_by_epoch": fitness_by_epoch,
+            "note": ("these weights are the checkpoint after epoch %d of %d, not the final epoch" % (weights_epoch, int(max(col["epoch"]))))
+                    if weights_epoch != int(max(col["epoch"])) else "these weights are the final epoch",
+        },
         "training": {
             "epochs_completed": len(progress), "epochs_planned": train_args.get("epochs"),
             "wall_clock_train_and_val_hours": round(sum(epoch_secs) / 3600, 2) if epoch_secs else None,

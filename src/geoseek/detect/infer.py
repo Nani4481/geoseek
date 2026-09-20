@@ -40,29 +40,35 @@ def predict_chips(
     from ultralytics import YOLO
 
     model = YOLO(str(weights))
-    kw = dict(imgsz=imgsz, conf=conf, iou=iou, max_det=max_det, device=device, half=half, batch=batch, verbose=False,
-              stream=True, augment=False)
+    kw = dict(imgsz=imgsz, conf=conf, iou=iou, max_det=max_det, device=device, verbose=False, augment=False)
+    if half:
+        kw["quantize"] = 16                                # fp16 ('half=' is deprecated in ultralytics 8.4.x)
     if nms_free:
         kw["nms"] = False                                # NMS-free one-to-one head; default (omitted) = classic head + NMS,
                                                          # which scored higher on dense scenes at epoch 0 (0.821 vs 0.810)
     chip_ids = [Path(p).stem for p in chip_paths]
     idx_l, xywhr_l, conf_l, cls_l = [], [], [], []
     t0 = time.time()
-    for i, r in enumerate(model.predict([str(p) for p in chip_paths], **kw)):
-        if r.obb is not None and len(r.obb):
-            xywhr = r.obb.xywhr.cpu().numpy().astype(np.float64)
-            c = r.obb.conf.cpu().numpy().astype(np.float64)
-            k = r.obb.cls.cpu().numpy().astype(int)
-            if class_map is not None:
-                keep = np.array([kk in class_map for kk in k], dtype=bool)
-                xywhr, c, k = xywhr[keep], c[keep], np.array([class_map[kk] for kk in k[keep]], dtype=int)
-            if len(c):
-                idx_l.append(np.full(len(c), i, dtype=np.int64))
-                xywhr_l.append(xywhr)
-                conf_l.append(c)
-                cls_l.append(k)
-        if log_every and (i + 1) % log_every == 0:
-            print(f"[infer]   {i + 1}/{len(chip_paths)} chips  {time.time() - t0:.0f}s", flush=True)
+    # Batch MANUALLY. With a LIST source, ultralytics 8.4.152 ignores ``batch=`` and stacks the whole list into one tensor
+    # (1,476 chips -> a 23 GiB conv allocation); it is invisible on short lists, so it must not be relied on.
+    for start in range(0, len(chip_paths), batch):
+        group = [str(p) for p in chip_paths[start:start + batch]]
+        for j, r in enumerate(model.predict(group, **kw)):
+            i = start + j
+            if r.obb is not None and len(r.obb):
+                xywhr = r.obb.xywhr.cpu().numpy().astype(np.float64)
+                c = r.obb.conf.cpu().numpy().astype(np.float64)
+                k = r.obb.cls.cpu().numpy().astype(int)
+                if class_map is not None:
+                    keep = np.array([kk in class_map for kk in k], dtype=bool)
+                    xywhr, c, k = xywhr[keep], c[keep], np.array([class_map[kk] for kk in k[keep]], dtype=int)
+                if len(c):
+                    idx_l.append(np.full(len(c), i, dtype=np.int64))
+                    xywhr_l.append(xywhr)
+                    conf_l.append(c)
+                    cls_l.append(k)
+        if log_every and ((start + batch) // batch) % max(log_every // batch, 1) == 0:
+            print(f"[infer]   {min(start + batch, len(chip_paths))}/{len(chip_paths)} chips  {time.time() - t0:.0f}s", flush=True)
     cat = lambda l, shape: np.concatenate(l) if l else np.zeros(shape)
     return {
         "chip_ids": chip_ids, "det_chip_idx": cat(idx_l, (0,)).astype(np.int64), "xywhr": cat(xywhr_l, (0, 5)),

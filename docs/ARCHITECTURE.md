@@ -483,7 +483,9 @@ framework, so replacing the detector (for a permissively licensed one, say) is a
 subclass and nothing else. It consumes the same true-colour tile arrays the embedding
 pipeline produces; larger inputs are windowed with cross-window de-duplication; the
 default score threshold is the operating point chosen on the *monitor* split and read
-from the model card next to the weights.
+from the model card next to the weights. An opt-in `upscale` factor (default 1.0) resamples
+the tile before inference and reports boxes back in original pixels; on the staged Maxar tiles it
+finds more cars but multiplies false `ship` detections, so it is left off (`docs/PHASE8F2.md` §7.5).
 
 Outputs are per-observation GeoJSON files registered as
 `DerivedProduct(kind="detection")` (`scripts/detect_maxar.py`), so they inherit the

@@ -1,0 +1,41 @@
+{
+ "observation_id": "10300100CE8D0400_120220122202",
+ "min_score": 0.525,
+ "scales": {
+  "1.0": {
+   "n_detections": 5,
+   "by_class": {
+    "storage-tank": 2,
+    "small-vehicle": 1,
+    "bridge": 1,
+    "large-vehicle": 1
+   },
+   "tiles_with_detections": 4,
+   "score_quantiles": {
+    "0.1": 0.541,
+    "0.5": 0.691,
+    "0.9": 0.699
+   },
+   "seconds_per_tile": 0.021
+  },
+  "2.0": {
+   "n_detections": 33,
+   "by_class": {
+    "small-vehicle": 25,
+    "ship": 3,
+    "storage-tank": 2,
+    "harbor": 1,
+    "large-vehicle": 1,
+    "plane": 1
+   },
+   "tiles_with_detections": 14,
+   "score_quantiles": {
+    "0.1": 0.538,
+    "0.5": 0.604,
+    "0.9": 0.724
+   },
+   "seconds_per_tile": 0.148
+  }
+ },
+ "crops": []
+}

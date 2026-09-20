@@ -1,0 +1,161 @@
+{
+ "model": {
+  "model": "YoloObbDetectionModel",
+  "weights": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\models\\detector\\geoseek_obb_v15_yolo26s.pt",
+  "weights_sha256": "67f617170b608dd1541d63f4aedbd3b4752cbda9f67702e0d63f4aaaae31e113",
+  "architecture": {
+   "family": "Ultralytics YOLO26s-OBB",
+   "head": "OBB26",
+   "n_params": 10526414,
+   "input": "RGB, 1024x1024 (larger inputs are windowed with 200 px overlap)",
+   "dual_head": "one-to-many (NMS) + one-to-one (NMS-free); inference here uses the NMS path (better on dense scenes: monitor mAP50 0.821 vs 0.810 for the NMS-free head at epoch 0)",
+   "ultralytics_version_trained_with": "8.4.152",
+   "torch": "2.2.2"
+  },
+  "classes": [
+   "small-vehicle",
+   "large-vehicle",
+   "ship",
+   "plane",
+   "helicopter",
+   "storage-tank",
+   "harbor",
+   "bridge"
+  ],
+  "min_score_default": 0.525,
+  "nms_iou": 0.7,
+  "max_det": 1000,
+  "imgsz": 1024
+ },
+ "min_score": 0.525,
+ "observations": {
+  "10300100CE8D0400_120220122202": {
+   "aoi": "maxar_india-floods-oct-2023_q120220122202_chungthang",
+   "role": "single (pre-event only, no matching post-event footprint at this quadkey)",
+   "observation_id": "10300100CE8D0400_120220122202",
+   "n_tiles": 289,
+   "n_tiles_with_detections": 4,
+   "n_detections": 5,
+   "by_class": {
+    "storage-tank": 2,
+    "small-vehicle": 1,
+    "bridge": 1,
+    "large-vehicle": 1
+   },
+   "tile_seconds_mean": 0.071,
+   "score_quantiles": {
+    "0.1": 0.541,
+    "0.5": 0.691,
+    "0.9": 0.699
+   },
+   "detections_per_tile": {
+    "mean": 0.02,
+    "max": 2,
+    "n_clear_tiles": 289
+   },
+   "geojson": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\10300100CE8D0400_120220122202\\detections.geojson",
+   "samples": [
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100CE8D0400_120220122202__top__r015_c010.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100CE8D0400_120220122202__top__r002_c007.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100CE8D0400_120220122202__top__r003_c008.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100CE8D0400_120220122202__random__r015_c013.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100CE8D0400_120220122202__random__r014_c011.png"
+   ]
+  },
+  "10300100E34B4D00_120220030330": {
+   "aoi": "maxar_india-floods-oct-2023_q120220030330",
+   "role": "pre",
+   "observation_id": "10300100E34B4D00_120220030330",
+   "n_tiles": 289,
+   "n_tiles_with_detections": 1,
+   "n_detections": 1,
+   "by_class": {
+    "helicopter": 1
+   },
+   "tile_seconds_mean": 0.076,
+   "score_quantiles": {
+    "0.1": 0.658,
+    "0.5": 0.658,
+    "0.9": 0.658
+   },
+   "detections_per_tile": {
+    "mean": 0.0,
+    "max": 1,
+    "n_clear_tiles": 289
+   },
+   "geojson": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\10300100E34B4D00_120220030330\\detections.geojson",
+   "samples": [
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100E34B4D00_120220030330__top__r000_c016.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100E34B4D00_120220030330__top__r000_c000.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100E34B4D00_120220030330__top__r000_c001.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100E34B4D00_120220030330__random__r015_c010.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\10300100E34B4D00_120220030330__random__r016_c000.png"
+   ]
+  },
+  "1050010036A0EC00_120220030330": {
+   "aoi": "maxar_india-floods-oct-2023_q120220030330",
+   "role": "post",
+   "observation_id": "1050010036A0EC00_120220030330",
+   "n_tiles": 289,
+   "n_tiles_with_detections": 1,
+   "n_detections": 1,
+   "by_class": {
+    "helicopter": 1
+   },
+   "tile_seconds_mean": 0.079,
+   "score_quantiles": {
+    "0.1": 0.626,
+    "0.5": 0.626,
+    "0.9": 0.626
+   },
+   "detections_per_tile": {
+    "mean": 0.0,
+    "max": 1,
+    "n_clear_tiles": 289
+   },
+   "geojson": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\1050010036A0EC00_120220030330\\detections.geojson",
+   "samples": [
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\1050010036A0EC00_120220030330__top__r010_c002.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\1050010036A0EC00_120220030330__top__r000_c000.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\1050010036A0EC00_120220030330__top__r000_c001.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\1050010036A0EC00_120220030330__random__r015_c002.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\1050010036A0EC00_120220030330__random__r015_c006.png"
+   ]
+  },
+  "103001010C12B000_031311102120": {
+   "aoi": "maxar_wildfires-losangeles-jan-2025_q031311102120_vannuys",
+   "role": "single (dense-vehicle resolution/density demo; no matching second-date footprint, no change pair)",
+   "observation_id": "103001010C12B000_031311102120",
+   "n_tiles": 289,
+   "n_tiles_with_detections": 190,
+   "n_detections": 867,
+   "by_class": {
+    "small-vehicle": 550,
+    "plane": 223,
+    "ship": 70,
+    "large-vehicle": 12,
+    "storage-tank": 11,
+    "helicopter": 1
+   },
+   "tile_seconds_mean": 0.088,
+   "score_quantiles": {
+    "0.1": 0.536,
+    "0.5": 0.609,
+    "0.9": 0.893
+   },
+   "detections_per_tile": {
+    "mean": 3.0,
+    "max": 46,
+    "n_clear_tiles": 289
+   },
+   "geojson": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\103001010C12B000_031311102120\\detections.geojson",
+   "samples": [
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__top__r010_c006.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__top__r007_c005.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__top__r015_c008.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__random__r016_c014.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__random__r012_c016.png"
+   ]
+  }
+ }
+}
