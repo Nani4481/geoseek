@@ -85,22 +85,43 @@ class TileStore:
         source_url: str | None,
         checksums: dict | None,
         aoi_name: str | None,
+        collection_id: str | None = None,
+        collection_sensor: str | None = None,
+        collection_platform: str | None = None,
+        collection_native_gsd_m: float | None = None,
+        collection_description: str | None = None,
+        collection_metadata: dict | None = None,
+        scene_license: str | None = None,
+        obs_metadata: dict | None = None,
     ) -> None:
+        """Register the collection/scene/observation chain for a batch of tiles.
+
+        Defaults to the original Sentinel-2 L2A assumptions (this project's
+        first and still primary collection) when the ``collection_*`` overrides
+        are not given, so every pre-Phase-8-Step-A caller is unaffected. A
+        caller staging a new collection (e.g. ``maxar-opendata``) passes its
+        own collection_id/sensor/platform/native_gsd_m/license explicitly
+        instead of going through the Sentinel-2 defaults.
+        """
         scene_id_base = base_scene_id(observation_id)
-        collection_id = _SENSOR_TO_COLLECTION.get(platform, "sentinel-2-l2a")
+        collection_id = collection_id or _SENSOR_TO_COLLECTION.get(platform, "sentinel-2-l2a")
         footprint = _envelope_wkt(geoms) if geoms else "POLYGON EMPTY"
 
         self.repo.register_collection(Collection(
-            collection_id=collection_id, sensor="MSI", platform="Sentinel-2",
-            bands=tuple(bands) if bands else _DEFAULT_BANDS, native_gsd_m=10.0,
-            description="Sentinel-2 L2A surface reflectance COGs.",
+            collection_id=collection_id,
+            sensor=collection_sensor or "MSI",
+            platform=collection_platform or "Sentinel-2",
+            bands=tuple(bands) if bands else _DEFAULT_BANDS,
+            native_gsd_m=collection_native_gsd_m if collection_native_gsd_m is not None else 10.0,
+            description=collection_description or "Sentinel-2 L2A surface reflectance COGs.",
+            metadata=collection_metadata or {},
         ))
         if self.repo.get_scene(scene_id_base) is None:
             self.repo.register_scene(Scene(
                 scene_id=scene_id_base, collection_id=collection_id, platform=platform,
                 acquired_at=acq_date, footprint_wkt_4326=footprint, processing_baseline=None,
                 source_url=source_url or scene_source_url(scene_id_base),
-                license="Copernicus Sentinel Data (free & open, EU Copernicus Data Policy)",
+                license=scene_license or "Copernicus Sentinel Data (free & open, EU Copernicus Data Policy)",
                 crs=crs, checksums=checksums or {},
                 metadata={"footprint_source": "observation extent"},
             ))
@@ -117,6 +138,7 @@ class TileStore:
                 "cloud_fraction_max": round(max(cloud_fractions), 6) if n else None,
                 "n_clear_tiles_cf_le_0p05": sum(1 for cf in cloud_fractions if cf <= 0.05),
             },
+            metadata=obs_metadata or {},
         ))
 
     def add_tiles(
@@ -130,11 +152,27 @@ class TileStore:
         checksums: dict | None = None,
         aoi_name: str | None = None,
         indices_ref: str | None = None,
+        collection_id: str | None = None,
+        collection_sensor: str | None = None,
+        collection_platform: str | None = None,
+        collection_native_gsd_m: float | None = None,
+        collection_description: str | None = None,
+        collection_metadata: dict | None = None,
+        scene_license: str | None = None,
+        obs_metadata: dict | None = None,
     ) -> list[int]:
         """Append new tile vectors + catalog rows. Never touches existing vectors/rows.
 
         Each record needs: tile_id, scene_id, sensor, acq_date, geom_wkt_4326,
         cloud_fraction, embedding (np.float32[EMBEDDING_DIM]), processing_history.
+
+        The ``collection_*``/``scene_license``/``obs_metadata`` overrides let a
+        caller register tiles under a NEW collection (different sensor/native
+        GSD/license) instead of the Sentinel-2 L2A defaults - e.g. Maxar Open
+        Data (sub-metre VHR). ``obs_metadata`` is the place to record the exact
+        per-observation GSD (:class:`~geoseek.temporal.matcher.TemporalObservationMatcher`
+        prefers it over the collection-wide value, so a mixed-GSD collection
+        still gates correctly pair-by-pair).
 
         Returns the faiss_id assigned to each new record, in order.
         """
@@ -157,6 +195,12 @@ class TileStore:
                 cloud_fractions=[float(r["cloud_fraction"]) for r in obs_recs],
                 dataset_dir=dataset_dir, crs=crs, bands=bands, source_url=source_url,
                 checksums=checksums, aoi_name=aoi_name,
+                collection_id=collection_id, collection_sensor=collection_sensor,
+                collection_platform=collection_platform,
+                collection_native_gsd_m=collection_native_gsd_m,
+                collection_description=collection_description,
+                collection_metadata=collection_metadata,
+                scene_license=scene_license, obs_metadata=obs_metadata,
             )
 
         tiles: list[Tile] = []

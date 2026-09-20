@@ -54,6 +54,19 @@ class TemporalObservationMatcher:
     # -- helpers ------------------------------------------------------------
 
     def _gsd_for_observation(self, obs: Observation) -> float | None:
+        """Per-observation GSD if recorded (``obs.metadata['native_gsd_m']``),
+        else the collection-wide native GSD.
+
+        A collection whose sensors don't share one exact resolution (e.g.
+        ``maxar-opendata``, where WV02 ~0.58 m and GE01 ~0.49 m both stage
+        as visual RGB) records the exact per-scene value at ingest
+        (``geoseek.ingest.store.TileStore.add_tiles(obs_metadata=...)``) so
+        this gate still compares real numbers instead of one nominal
+        collection figure that would silently pass a same-collection,
+        different-sensor pair.
+        """
+        if obs.metadata and obs.metadata.get("native_gsd_m") is not None:
+            return float(obs.metadata["native_gsd_m"])
         scene = self.repo.get_scene(obs.scene_id)
         if scene is None:
             return None
