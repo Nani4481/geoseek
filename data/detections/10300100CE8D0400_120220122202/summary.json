@@ -8,7 +8,7 @@
   "large-vehicle": 3,
   "bridge": 1
  },
- "tile_seconds_mean": 0.061,
+ "tile_seconds_mean": 0.081,
  "score_quantiles": {
   "0.1": 0.233,
   "0.5": 0.498,
