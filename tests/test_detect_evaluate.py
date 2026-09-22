@@ -14,11 +14,13 @@ from geoseek.detect.evaluate import (
     ImageGT,
     _convex_iou,
     best_f1_threshold,
+    dets_to_enclosing_hbb,
     evaluate_dataset,
     group_summary,
     long_side,
     match_class,
     merge_cross_chip,
+    obb_to_enclosing_hbb,
     operating_point,
     xywhr_to_polys,
 )
@@ -70,6 +72,45 @@ def test_convex_iou_known_values():
     assert _convex_iou(a, rect(500, 500, 20, 10)) == 0.0
     assert _convex_iou(rect(50, 50, 30, 10, 0), rect(50, 50, 30, 10, 90)) == pytest.approx(100 / (300 + 300 - 100), abs=1e-3)
     assert long_side(a[None])[0] == pytest.approx(20.0)
+
+
+def test_obb_to_enclosing_hbb_is_identity_on_axis_aligned_boxes():
+    a = rect(50, 50, 20, 10, 0)
+    np.testing.assert_allclose(obb_to_enclosing_hbb(a[None])[0], a, atol=1e-9)
+
+
+def test_obb_to_enclosing_hbb_area_matches_known_geometry_for_a_rotated_square():
+    # a side-s square rotated 45 deg has an axis-aligned enclosing box of side s*sqrt(2) -> area 2x
+    s = 10.0
+    sq = rect(0, 0, s, s, 45)
+    hbb = obb_to_enclosing_hbb(sq[None])[0]
+    enclosing_area = (hbb[:, 0].max() - hbb[:, 0].min()) * (hbb[:, 1].max() - hbb[:, 1].min())
+    assert enclosing_area == pytest.approx(2 * s * s, rel=1e-3)
+
+
+def test_enclosing_hbb_fixes_the_tight_obb_vs_loose_hbb_iou_penalty():
+    """The scenario the fix exists for: a PERFECT rotated detection of a car scored against its
+    own axis-aligned (xView-style) ground-truth box. Raw OBB IoU falls noticeably below 1.0 purely
+    from the shape mismatch (not a detection error); the enclosing-box conversion recovers ~1.0."""
+    obb_pred = rect(50, 50, 8, 4, 45)                                    # a tight oriented "car"
+    hbb_gt = obb_to_enclosing_hbb(obb_pred[None])[0]                     # xView-style: the axis-aligned box AROUND it
+
+    raw_iou = _convex_iou(obb_pred, hbb_gt)
+    assert raw_iou < 0.6                                                 # would be discarded at the standard 0.5 threshold
+
+    fixed_iou = _convex_iou(obb_to_enclosing_hbb(obb_pred[None])[0], hbb_gt)
+    assert fixed_iou == pytest.approx(1.0, abs=1e-6)
+
+
+def test_dets_to_enclosing_hbb_only_changes_polys():
+    d = dets_of("a", [(0, 0.9, rect(50, 50, 20, 8, 30), 2), (1, 0.7, rect(150, 80, 20, 8, 75), 5)])
+    out = dets_to_enclosing_hbb(d)
+    assert out.stem == d.stem
+    np.testing.assert_array_equal(out.classes, d.classes)
+    np.testing.assert_array_equal(out.scores, d.scores)
+    np.testing.assert_array_equal(out.chip_ids, d.chip_ids)
+    np.testing.assert_allclose(out.polys, obb_to_enclosing_hbb(d.polys))
+    assert not np.allclose(out.polys[0], d.polys[0])                     # actually changed for the rotated one
 
 
 # --------------------------------------------------------------------------

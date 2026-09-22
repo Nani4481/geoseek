@@ -51,6 +51,27 @@ def xywhr_to_polys(xywhr: np.ndarray) -> np.ndarray:
     return pts
 
 
+def obb_to_enclosing_hbb(polys: np.ndarray) -> np.ndarray:
+    """(N,4,2) oriented corners -> (N,4,2) each one's own axis-aligned ENCLOSING rectangle.
+
+    For comparing an oriented predictor against axis-aligned ground truth (e.g. xView, which only
+    ships ``xmin,ymin,xmax,ymax``), true polygon IoU between the tight OBB prediction and the loose
+    HBB ground-truth box is geometrically exact but NOT a fair like-for-like comparison: HBB ground
+    truth is systematically larger than the object it bounds whenever the real object isn't axis-
+    aligned (a box tight to a 45-degree car has ~2.2x the tight OBB's area), so a perfect oriented
+    prediction scores an IoU well under 1.0 against it and can fall below the 0.5 threshold purely
+    from this geometry mismatch, not a detection error. Converting the PREDICTION to its own
+    enclosing axis-aligned box before scoring removes that asymmetry - both sides are then "loose"
+    the same way, matching DOTA's own HBB-derivative evaluation convention (Task2 GT is likewise an
+    enclosing box, not the raw OBB)."""
+    polys = np.asarray(polys, dtype=np.float64).reshape(-1, 4, 2)
+    xmin, ymin = polys[:, :, 0].min(axis=1), polys[:, :, 1].min(axis=1)
+    xmax, ymax = polys[:, :, 0].max(axis=1), polys[:, :, 1].max(axis=1)
+    return np.stack([
+        np.stack([xmin, ymin], -1), np.stack([xmax, ymin], -1),
+        np.stack([xmax, ymax], -1), np.stack([xmin, ymax], -1)], axis=1)
+
+
 def long_side(polys: np.ndarray) -> np.ndarray:
     e = np.roll(polys, -1, axis=1) - polys
     l = np.hypot(e[..., 0], e[..., 1])
@@ -109,6 +130,13 @@ class ImageDets:
     def __post_init__(self):
         if len(self.chip_ids) != len(self.scores):
             self.chip_ids = np.full(len(self.scores), -1, dtype=np.int64)
+
+
+def dets_to_enclosing_hbb(dets: ImageDets) -> ImageDets:
+    """Same detections, ``polys`` replaced by each one's own enclosing axis-aligned box (see
+    :func:`obb_to_enclosing_hbb`). Apply AFTER :func:`merge_cross_chip` - de-duplication should use
+    the true oriented shape, not an artificially enlarged one."""
+    return ImageDets(dets.stem, dets.classes, dets.scores, obb_to_enclosing_hbb(dets.polys), dets.chip_ids)
 
 
 def merge_cross_chip(dets: ImageDets, iou_thr: float = 0.5) -> ImageDets:
