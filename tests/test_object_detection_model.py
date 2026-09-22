@@ -132,6 +132,34 @@ def test_min_score_default_override_and_class_filter(tmp_path):
         m.detect(rgb_tile(), classes=["tennis-court"])
 
 
+def test_per_class_min_score_uses_the_lowest_class_as_the_ultralytics_floor_and_filters_afterwards(tmp_path):
+    # small-vehicle (conf 0.9) and ship (conf 0.3) both come back from FakeYolo's default world objects.
+    fake = FakeYolo()
+    m = make_model(tmp_path, fake, min_score={"small-vehicle": 0.95, "ship": 0.2})
+    dets = m.detect(rgb_tile())
+    # ultralytics is asked for the LOWEST threshold in effect (0.2), so nothing is dropped before NMS ...
+    assert fake.calls[-1]["kw"]["conf"] == 0.2
+    # ... but small-vehicle's own 0.95 threshold then filters out its 0.9-confidence candidate
+    assert [d.class_name for d in dets] == ["ship"]
+
+
+def test_per_class_min_score_from_the_card(tmp_path):
+    w = tmp_path / "geoseek.pt"
+    (w.with_suffix(".card.json")).write_text(json.dumps({
+        "classes": list(NAMES), "weights_sha256": "abc", "architecture": "YOLO26s-OBB",
+        "operating_point": {"per_class": {"small-vehicle": {"conf": 0.95}, "ship": {"conf": 0.2}}},
+    }), encoding="utf-8")
+    m = YoloObbDetectionModel(w)  # constructor reads the card -> no override needed
+    assert m.min_score == {"small-vehicle": 0.95, "ship": 0.2}
+    fake = FakeYolo()
+    m._model, m._names, m._device, m._half = fake, NAMES, "cpu", False
+    dets = m.detect(rgb_tile())
+    assert fake.calls[-1]["kw"]["conf"] == 0.2                                   # floor = min of the two entries
+    assert [d.class_name for d in dets] == ["ship"]                              # small-vehicle's 0.9 < its own 0.95
+    # a class absent from the card's per_class map falls back to DEFAULT_MIN_SCORE at lookup time, not stored
+    assert "plane" not in m.min_score
+
+
 def test_pixel_geometry_and_orientation_are_carried_through(tmp_path):
     m = make_model(tmp_path)
     (d,) = m.detect(rgb_tile(), min_score=0.5)
@@ -231,12 +259,28 @@ def test_operating_point_and_classes_come_from_the_model_card_without_loading_ul
     w = tmp_path / "geoseek.pt"
     (tmp_path / "geoseek.card.json").write_text(json.dumps(
         {"classes": list(NAMES), "weights_sha256": "abc", "architecture": "YOLO26s-OBB",
+         "operating_point": {"per_class": {n: {"conf": 0.1 * (i + 1)} for i, n in enumerate(NAMES)}}}), encoding="utf-8")
+    m = YoloObbDetectionModel(w)
+    expected = {n: pytest.approx(0.1 * (i + 1)) for i, n in enumerate(NAMES)}
+    assert m.min_score == expected and m.class_names == NAMES and m._model is None
+    assert m.info["weights_sha256"] == "abc" and m.info["min_score_default"] == expected
+    # explicit float override beats the card, applied uniformly to every class the card knows about
+    assert YoloObbDetectionModel(w, min_score=0.9).min_score == {n: 0.9 for n in NAMES}
+    # explicit dict override is used as-is
+    assert YoloObbDetectionModel(w, min_score={"ship": 0.7}).min_score == {"ship": 0.7}
+    # no card -> empty map; every lookup falls back to the documented default at call time
+    assert YoloObbDetectionModel(tmp_path / "no_card.pt").min_score == {}
+
+
+def test_legacy_single_conf_card_still_applies_uniformly(tmp_path):
+    """A card written before this per-class change (operating_point.conf, no per_class) still works,
+    applied uniformly to every class - so an old card on disk doesn't break inference."""
+    w = tmp_path / "geoseek.pt"
+    (tmp_path / "geoseek.card.json").write_text(json.dumps(
+        {"classes": list(NAMES), "weights_sha256": "abc", "architecture": "YOLO26s-OBB",
          "operating_point": {"conf": 0.42}}), encoding="utf-8")
     m = YoloObbDetectionModel(w)
-    assert m.min_score == 0.42 and m.class_names == NAMES and m._model is None
-    assert m.info["weights_sha256"] == "abc" and m.info["min_score_default"] == 0.42
-    assert YoloObbDetectionModel(w, min_score=0.9).min_score == 0.9              # explicit beats the card
-    assert YoloObbDetectionModel(tmp_path / "no_card.pt").min_score == 0.25      # no card -> documented default
+    assert m.min_score == {n: pytest.approx(0.42) for n in NAMES}
 
 
 def test_importing_geoseek_models_does_not_import_the_agpl_framework():

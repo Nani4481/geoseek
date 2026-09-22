@@ -34,6 +34,59 @@ WEIGHTS_NAME = "geoseek_obb_v15_yolo26s.pt"
 LICENSE = ("AGPL-3.0 (derivative of Ultralytics' AGPL-3.0 YOLO26s-OBB weights) AND academic-use-only / non-commercial "
            "(fine-tuned on DOTA v1.5; Google Earth imagery under Google's terms). Not for commercial use.")
 
+VEHICLE_CLASSES = CLASS_GROUPS["ground_vehicles"]  # ("small-vehicle", "large-vehicle") - tuned on xView, not DOTA monitor
+
+
+def build_operating_point(dota_eval: dict, xview_eval: dict | None) -> dict:
+    """PER-CLASS confidence thresholds (replaces the old single global cutoff - see the docstring below for why).
+
+    Vehicles (small-vehicle, large-vehicle) are tuned on xView: an independently-labelled dataset the detector was
+    NEVER trained on, giving a real held-out signal specifically for the classes a pipeline-parity test showed the
+    old global threshold most undertuned. Every other class is tuned on the DOTA MONITOR split (never the official
+    val, never Van Nuys - Van Nuys stays untouched for evaluation only). Each entry's own best-F1 threshold over its
+    full PR curve is used, not one value compromising across all 8 classes together.
+    """
+    per_class: dict[str, dict] = {}
+    for cls in VEHICLE_CLASSES:
+        if xview_eval is None:
+            raise RuntimeError(f"no xView eval results - cannot set a per-class threshold for {cls!r}")
+        op = xview_eval["hbb_fair"]["operating_point"][cls]
+        per_class[cls] = {
+            "conf": op["best_f1_threshold"], "f1": op["f1"], "precision": op["precision"], "recall": op["recall"],
+            "chosen_on": "xView (846 images, 214,612+ GT instances) - independent test set, never trained on",
+            "protocol": ("full-image evaluation, prediction's own enclosing axis-aligned box vs xView's axis-aligned "
+                        "GT (hbb_fair - removes the tight-OBB-vs-loose-HBB IoU bias), best-F1 threshold over the PR curve"),
+            "source": "data/detect_eval/xview/eval_results.json",
+        }
+    for cls, entry in dota_eval["operating_point"]["per_class_best"].items():
+        if cls in VEHICLE_CLASSES:
+            continue
+        per_class[cls] = {
+            "conf": entry["conf"], "f1": entry["f1"],
+            "chosen_on": "DOTA monitor split (class-stratified holdout of TRAIN source images)",
+            "protocol": "full-image DOTA-protocol evaluation (geoseek.detect.evaluate), best-F1 threshold over the PR curve",
+            "source": "data/detect_eval/eval_results.json",
+        }
+    missing = set(KEPT_CLASSES) - set(per_class)
+    if missing:
+        raise RuntimeError(f"no per-class threshold available for {sorted(missing)}")
+    return {
+        "schema": "per_class",
+        "note": ("Each class has its OWN confidence threshold - see per_class[<class>].chosen_on / .protocol for "
+                "how each was picked. Supersedes deprecated_global_operating_point below: a single threshold "
+                "chosen for macro-F1 across all 8 classes together was confirmed too conservative for vehicles "
+                "specifically - on a fixed 10-crop Van Nuys audit, correcting small-vehicle's threshold alone "
+                "(0.525 -> its own best-F1 value) recovered 4x more detections on the identical imagery, though "
+                "that alone did not close the full gap to xView's recall (see docs/PHASE8F3A.md)."),
+        "per_class": per_class,
+        "deprecated_global_operating_point": {
+            "conf": dota_eval["operating_point"]["conf"], "chosen_on": "monitor (macro-F1 across all 8 classes together)",
+            "macro_f1_on_monitor": dota_eval["operating_point"]["macro_f1_on_monitor"],
+            "superseded_reason": ("A single cutoff tuned across all 8 classes together undertunes vehicles "
+                                  "specifically - see the 'note' above and docs/PHASE8F3A.md."),
+        },
+    }
+
 
 def sha256(p: Path) -> str:
     return hashlib.sha256(p.read_bytes()).hexdigest()
@@ -110,6 +163,8 @@ def main() -> None:
 
     eval_path = settings.data_dir / "detect_eval" / "eval_results.json"
     ev = json.loads(eval_path.read_text(encoding="utf-8")) if eval_path.is_file() else None
+    xview_eval_path = settings.data_dir / "detect_eval" / "xview" / "eval_results.json"
+    xview_ev = json.loads(xview_eval_path.read_text(encoding="utf-8")) if xview_eval_path.is_file() else None
 
     card = {
         "name": "geoseek-obb-v15-yolo26s",
@@ -173,8 +228,7 @@ def main() -> None:
         "license": LICENSE,
     }
     if ev:
-        card["operating_point"] = {"conf": ev["operating_point"]["conf"], "chosen_on": ev["operating_point"]["chosen_on"],
-                                   "macro_f1_on_monitor": ev["operating_point"]["macro_f1_on_monitor"]}
+        card["operating_point"] = build_operating_point(ev, xview_ev)
         card["evaluation_summary"] = {
             "official_val_full_image_v15": {g: {k: v for k, v in s.items() if k.startswith("macro_")} for g, s in ev["val_full_image_v15"]["groups"].items()},
             "per_class_AP50_v15": {n: ev["val_full_image_v15"]["per_class"][n]["AP50"] for n in KEPT_CLASSES},
