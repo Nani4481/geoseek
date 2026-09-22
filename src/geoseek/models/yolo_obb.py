@@ -118,7 +118,24 @@ class YoloObbDetectionModel(ObjectDetectionModel):
             "weights_sha256": (self.card or {}).get("weights_sha256"), "architecture": (self.card or {}).get("architecture"),
             "classes": list(self.class_names), "min_score_default": dict(self.min_score), "nms_iou": self.iou,
             "max_det": self.max_det, "imgsz": self.imgsz, "upscale": self.upscale,
+            "caveats": self._low_precision_caveats(),
         }
+
+    def _low_precision_caveats(self, threshold: float = 0.5) -> list[str]:
+        """Data-driven, not hardcoded: any class whose card-recorded precision (at its own operating point) is
+        below ``threshold`` gets a plain-language warning here - this travels with every detections.geojson
+        (embedded as properties.model) and the catalog's DerivedProduct, so it reaches any downstream consumer
+        (UI, QGIS, an analyst) without needing a dedicated display component. e.g. large-vehicle's 0.105
+        threshold runs at ~44% measured precision on xView - expect roughly 1 in 2 large-vehicle detections to
+        be wrong at the default operating point."""
+        per_class = ((self.card or {}).get("operating_point") or {}).get("per_class") or {}
+        out = []
+        for cls, entry in per_class.items():
+            p = entry.get("precision")
+            if p is not None and p < threshold:
+                out.append(f"{cls}: measured precision ~{p:.0%} at its operating point (conf={entry.get('conf'):.3f}) "
+                           f"- roughly {1 - p:.0%} of {cls} detections are expected to be wrong at the default threshold")
+        return out
 
     def _effective_min_score_map(self, override: float | dict[str, float] | None) -> dict[str, float]:
         """A complete {class_name: threshold} map for one call, filling any gap with DEFAULT_MIN_SCORE."""

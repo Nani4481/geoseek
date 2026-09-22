@@ -181,7 +181,8 @@ def main() -> None:
         repo.upsert_derived(DerivedProduct(
             derived_id=f"detection:{obs.observation_id}", kind="detection", path=str(gj), observation_id=obs.observation_id,
             params={"model_sha256": model.info.get("weights_sha256"), "min_score": model.min_score, "n_detections": len(feats),
-                    "classes": list(model.class_names)}, created_at=datetime.now(timezone.utc).isoformat()))
+                    "classes": list(model.class_names), "caveats": model.info.get("caveats", [])},
+            created_at=datetime.now(timezone.utc).isoformat()))
         report["observations"][obs.observation_id] = {"aoi": label, "role": (obs.metadata or {}).get("role"),
                                                         **{k: v for k, v in summary.items() if k != "per_tile"},
                                                         "geojson": str(gj), "samples": sample_paths}

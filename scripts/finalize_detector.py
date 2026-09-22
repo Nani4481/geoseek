@@ -37,7 +37,7 @@ LICENSE = ("AGPL-3.0 (derivative of Ultralytics' AGPL-3.0 YOLO26s-OBB weights) A
 VEHICLE_CLASSES = CLASS_GROUPS["ground_vehicles"]  # ("small-vehicle", "large-vehicle") - tuned on xView, not DOTA monitor
 
 
-def build_operating_point(dota_eval: dict, xview_eval: dict | None) -> dict:
+def build_operating_point(dota_eval: dict, xview_tune_test: dict | None) -> dict:
     """PER-CLASS confidence thresholds (replaces the old single global cutoff - see the docstring below for why).
 
     Vehicles (small-vehicle, large-vehicle) are tuned on xView: an independently-labelled dataset the detector was
@@ -45,18 +45,30 @@ def build_operating_point(dota_eval: dict, xview_eval: dict | None) -> dict:
     old global threshold most undertuned. Every other class is tuned on the DOTA MONITOR split (never the official
     val, never Van Nuys - Van Nuys stays untouched for evaluation only). Each entry's own best-F1 threshold over its
     full PR curve is used, not one value compromising across all 8 classes together.
+
+    Vehicle thresholds are chosen and reported on DISJOINT halves of xView (scripts/tune_xview_thresholds.py):
+    the threshold is picked on a seeded TUNE half and every reported metric (AP50, AP50:95, precision, recall) comes
+    from the TEST half alone - the first pass tuned and reported on the SAME (full) xView set, an optimistic-bias
+    leak this closes. In practice the correction moved little (a well-populated ~423-image test half already gives
+    a stable estimate), but the TEST-only numbers are the ones that are actually valid to report.
     """
     per_class: dict[str, dict] = {}
     for cls in VEHICLE_CLASSES:
-        if xview_eval is None:
-            raise RuntimeError(f"no xView eval results - cannot set a per-class threshold for {cls!r}")
-        op = xview_eval["hbb_fair"]["operating_point"][cls]
+        if xview_tune_test is None:
+            raise RuntimeError(f"no xView tune/test results - cannot set a per-class threshold for {cls!r}")
+        op = xview_tune_test["per_class"][cls]
+        split = xview_tune_test["split"]
         per_class[cls] = {
-            "conf": op["best_f1_threshold"], "f1": op["f1"], "precision": op["precision"], "recall": op["recall"],
-            "chosen_on": "xView (846 images, 214,612+ GT instances) - independent test set, never trained on",
+            "conf": op["threshold"], "f1": op["test_f1_at_threshold"],
+            "precision": op["test_precision_at_threshold"], "recall": op["test_recall_at_threshold"],
+            "AP50": op["test_AP50"], "AP50_95": op["test_AP50_95"],
+            "chosen_on": (f"xView TUNE half ({split['n_images_tune']}/{split['n_images_total']} images, seed="
+                         f"{split['seed']}) - independent test set, never trained on; ALL METRICS ABOVE ARE FROM "
+                         f"THE DISJOINT TEST HALF ({split['n_images_test']} images), never used to pick the threshold"),
             "protocol": ("full-image evaluation, prediction's own enclosing axis-aligned box vs xView's axis-aligned "
-                        "GT (hbb_fair - removes the tight-OBB-vs-loose-HBB IoU bias), best-F1 threshold over the PR curve"),
-            "source": "data/detect_eval/xview/eval_results.json",
+                        "GT (hbb_fair - removes the tight-OBB-vs-loose-HBB IoU bias); threshold = best-F1 on TUNE, "
+                        "every reported number = TEST only"),
+            "source": "data/detect_eval/xview/tune_test_results.json",
         }
     for cls, entry in dota_eval["operating_point"]["per_class_best"].items():
         if cls in VEHICLE_CLASSES:
@@ -163,8 +175,8 @@ def main() -> None:
 
     eval_path = settings.data_dir / "detect_eval" / "eval_results.json"
     ev = json.loads(eval_path.read_text(encoding="utf-8")) if eval_path.is_file() else None
-    xview_eval_path = settings.data_dir / "detect_eval" / "xview" / "eval_results.json"
-    xview_ev = json.loads(xview_eval_path.read_text(encoding="utf-8")) if xview_eval_path.is_file() else None
+    xview_tune_test_path = settings.data_dir / "detect_eval" / "xview" / "tune_test_results.json"
+    xview_tune_test = json.loads(xview_tune_test_path.read_text(encoding="utf-8")) if xview_tune_test_path.is_file() else None
 
     card = {
         "name": "geoseek-obb-v15-yolo26s",
@@ -228,7 +240,7 @@ def main() -> None:
         "license": LICENSE,
     }
     if ev:
-        card["operating_point"] = build_operating_point(ev, xview_ev)
+        card["operating_point"] = build_operating_point(ev, xview_tune_test)
         card["evaluation_summary"] = {
             "official_val_full_image_v15": {g: {k: v for k, v in s.items() if k.startswith("macro_")} for g, s in ev["val_full_image_v15"]["groups"].items()},
             "per_class_AP50_v15": {n: ev["val_full_image_v15"]["per_class"][n]["AP50"] for n in KEPT_CLASSES},

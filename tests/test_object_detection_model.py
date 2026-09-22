@@ -272,6 +272,23 @@ def test_operating_point_and_classes_come_from_the_model_card_without_loading_ul
     assert YoloObbDetectionModel(tmp_path / "no_card.pt").min_score == {}
 
 
+def test_info_surfaces_a_low_precision_caveat_for_any_class_below_50_percent(tmp_path):
+    w = tmp_path / "geoseek.pt"
+    (tmp_path / "geoseek.card.json").write_text(json.dumps({
+        "classes": list(NAMES), "weights_sha256": "abc", "architecture": "YOLO26s-OBB",
+        "operating_point": {"per_class": {
+            "small-vehicle": {"conf": 0.343, "precision": 0.612},   # >= 50% -> no caveat
+            "large-vehicle": {"conf": 0.105, "precision": 0.445},   # < 50% -> caveat
+            "ship": {"conf": 0.686, "precision": 0.9},
+        }},
+    }), encoding="utf-8")
+    m = YoloObbDetectionModel(w)
+    caveats = m.info["caveats"]
+    assert len(caveats) == 1 and caveats[0].startswith("large-vehicle:")
+    assert "44%" in caveats[0] or "45%" in caveats[0]         # ~44-45% depending on rounding
+    assert "small-vehicle" not in "".join(caveats) and "ship" not in "".join(caveats)
+
+
 def test_legacy_single_conf_card_still_applies_uniformly(tmp_path):
     """A card written before this per-class change (operating_point.conf, no per_class) still works,
     applied uniformly to every class - so an old card on disk doesn't break inference."""

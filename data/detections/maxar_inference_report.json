@@ -23,8 +23,8 @@
    "bridge"
   ],
   "min_score_default": {
-   "small-vehicle": 0.357666015625,
-   "large-vehicle": 0.1048583984375,
+   "small-vehicle": 0.34326171875,
+   "large-vehicle": 0.105224609375,
    "ship": 0.68603515625,
    "plane": 0.78662109375,
    "helicopter": 0.4609375,
@@ -35,11 +35,14 @@
   "nms_iou": 0.7,
   "max_det": 1000,
   "imgsz": 1024,
-  "upscale": 1.0
+  "upscale": 1.0,
+  "caveats": [
+   "large-vehicle: measured precision ~44% at its operating point (conf=0.105) - roughly 56% of large-vehicle detections are expected to be wrong at the default threshold"
+  ]
  },
  "min_score": {
-  "small-vehicle": 0.357666015625,
-  "large-vehicle": 0.1048583984375,
+  "small-vehicle": 0.34326171875,
+  "large-vehicle": 0.105224609375,
   "ship": 0.68603515625,
   "plane": 0.78662109375,
   "helicopter": 0.4609375,
@@ -60,7 +63,7 @@
     "large-vehicle": 3,
     "bridge": 1
    },
-   "tile_seconds_mean": 0.061,
+   "tile_seconds_mean": 0.081,
    "score_quantiles": {
     "0.1": 0.233,
     "0.5": 0.498,
@@ -91,7 +94,7 @@
     "helicopter": 1,
     "large-vehicle": 1
    },
-   "tile_seconds_mean": 0.056,
+   "tile_seconds_mean": 0.075,
    "score_quantiles": {
     "0.1": 0.173,
     "0.5": 0.389,
@@ -122,7 +125,7 @@
     "helicopter": 2,
     "large-vehicle": 1
    },
-   "tile_seconds_mean": 0.052,
+   "tile_seconds_mean": 0.07,
    "score_quantiles": {
     "0.1": 0.237,
     "0.5": 0.514,
@@ -147,32 +150,32 @@
    "role": "single (dense-vehicle resolution/density demo; no matching second-date footprint, no change pair)",
    "observation_id": "103001010C12B000_031311102120",
    "n_tiles": 289,
-   "n_tiles_with_detections": 271,
-   "n_detections": 2978,
+   "n_tiles_with_detections": 273,
+   "n_detections": 3222,
    "by_class": {
-    "small-vehicle": 2592,
+    "small-vehicle": 2836,
     "plane": 188,
     "large-vehicle": 180,
     "ship": 9,
     "storage-tank": 8,
     "helicopter": 1
    },
-   "tile_seconds_mean": 0.065,
+   "tile_seconds_mean": 0.086,
    "score_quantiles": {
-    "0.1": 0.365,
-    "0.5": 0.449,
-    "0.9": 0.649
+    "0.1": 0.352,
+    "0.5": 0.438,
+    "0.9": 0.632
    },
    "detections_per_tile": {
-    "mean": 10.3,
-    "max": 89,
+    "mean": 11.15,
+    "max": 98,
     "n_clear_tiles": 289
    },
    "geojson": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\103001010C12B000_031311102120\\detections.geojson",
    "samples": [
     "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__top__r007_c005.png",
     "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__top__r015_c008.png",
-    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__top__r010_c006.png",
+    "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__top__r006_c005.png",
     "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__random__r012_c014.png",
     "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\detections\\samples\\103001010C12B000_031311102120__random__r016_c007.png"
    ]

@@ -7,7 +7,7 @@
   "helicopter": 2,
   "large-vehicle": 1
  },
- "tile_seconds_mean": 0.052,
+ "tile_seconds_mean": 0.07,
  "score_quantiles": {
   "0.1": 0.237,
   "0.5": 0.514,
