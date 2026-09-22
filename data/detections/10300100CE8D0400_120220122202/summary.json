@@ -1,19 +1,18 @@
 {
  "observation_id": "10300100CE8D0400_120220122202",
  "n_tiles": 289,
- "n_tiles_with_detections": 4,
- "n_detections": 5,
+ "n_tiles_with_detections": 6,
+ "n_detections": 7,
  "by_class": {
-  "storage-tank": 2,
-  "small-vehicle": 1,
-  "bridge": 1,
-  "large-vehicle": 1
+  "small-vehicle": 3,
+  "large-vehicle": 3,
+  "bridge": 1
  },
- "tile_seconds_mean": 0.071,
+ "tile_seconds_mean": 0.061,
  "score_quantiles": {
-  "0.1": 0.541,
-  "0.5": 0.691,
-  "0.9": 0.699
+  "0.1": 0.233,
+  "0.5": 0.498,
+  "0.9": 0.611
  },
  "detections_per_tile": {
   "mean": 0.02,
@@ -394,11 +393,11 @@
    "tile_id": "10300100CE8D0400_120220122202_r002_c007",
    "row": 2,
    "col": 7,
-   "n_detections": 1,
+   "n_detections": 2,
    "by_class": {
-    "small-vehicle": 1
+    "small-vehicle": 2
    },
-   "mean_score": 0.551,
+   "mean_score": 0.5,
    "cloud_fraction": 0.0
   },
   {
@@ -1174,9 +1173,11 @@
    "tile_id": "10300100CE8D0400_120220122202_r007_c008",
    "row": 7,
    "col": 8,
-   "n_detections": 0,
-   "by_class": {},
-   "mean_score": null,
+   "n_detections": 1,
+   "by_class": {
+    "large-vehicle": 1
+   },
+   "mean_score": 0.162,
    "cloud_fraction": 0.0
   },
   {
@@ -1345,9 +1346,11 @@
    "tile_id": "10300100CE8D0400_120220122202_r008_c010",
    "row": 8,
    "col": 10,
-   "n_detections": 0,
-   "by_class": {},
-   "mean_score": null,
+   "n_detections": 1,
+   "by_class": {
+    "large-vehicle": 1
+   },
+   "mean_score": 0.28,
    "cloud_fraction": 0.0
   },
   {
@@ -2407,20 +2410,20 @@
    "tile_id": "10300100CE8D0400_120220122202_r015_c009",
    "row": 15,
    "col": 9,
-   "n_detections": 0,
-   "by_class": {},
-   "mean_score": null,
+   "n_detections": 1,
+   "by_class": {
+    "small-vehicle": 1
+   },
+   "mean_score": 0.498,
    "cloud_fraction": 0.0
   },
   {
    "tile_id": "10300100CE8D0400_120220122202_r015_c010",
    "row": 15,
    "col": 10,
-   "n_detections": 2,
-   "by_class": {
-    "storage-tank": 2
-   },
-   "mean_score": 0.693,
+   "n_detections": 0,
+   "by_class": {},
+   "mean_score": null,
    "cloud_fraction": 0.0
   },
   {
