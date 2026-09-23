@@ -15,6 +15,7 @@
     <button data-route="queue">Review Queue</button>
     <button data-route="detail">Candidate Detail</button>
     <button data-route="discovery">Discovery</button>
+    <button data-route="detect">Object Detection</button>
     <button data-route="watch">Watch Areas<span class="navbadge hidden" id="watch_navbadge">0</span></button>
   </nav>
   <div class="spacer"></div>
@@ -259,6 +260,64 @@
       </div>
     </div>
     </section>
+
+  <!-- ============ OBJECT DETECTION (Phase 8F) ============ -->
+  <section class="view" id="view-detect">
+    <div class="panel hidden" id="dt_caveatpanel">
+      <div class="body"><div class="dt-caveat" id="dt_caveats"></div></div>
+    </div>
+
+    <div class="panel">
+      <h3>Detector &mdash; xView held-out test metrics <span class="muted small">(TEST half, never used to tune)</span></h3>
+      <div class="body"><div class="evgrid" id="dt_metrics"><span class="spinner"></span></div></div>
+    </div>
+
+    <div class="filters">
+      <label class="grow">Maxar observation
+        <select id="dt_obs"><option>loading&hellip;</option></select>
+      </label>
+      <label class="grow">tile <span class="muted small">(sorted by detection count)</span>
+        <select id="dt_tile"></select>
+      </label>
+    </div>
+    <div class="filters">
+      <label>classes shown
+        <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:10px" id="dt_classes"></div>
+      </label>
+    </div>
+    <div class="filters">
+      <label class="grow">confidence margin above each class's own operating point
+        <input type="range" id="dt_margin" min="0" max="100" value="0">
+      </label>
+      <span class="chip" id="dt_marginlabel">showing everything stored</span>
+      <span class="chip" id="dt_hover">&nbsp;</span>
+    </div>
+
+    <div class="split">
+      <div class="panel">
+        <h3>Tile <span id="dt_tilelabel" class="muted small"></span></h3>
+        <div class="body">
+          <div class="dt-canvaswrap"><canvas id="dt_canvas" width="1024" height="1024"></canvas></div>
+          <div class="maplegend" id="dt_legend"></div>
+          <div class="mapnote">Every box is a REAL stored detection from <code>scripts/detect_maxar.py</code>'s
+            output (the catalog's <code>DerivedProduct</code> record), reprojected from its saved EPSG:4326
+            footprint back to this tile's pixel grid on the server &mdash; no live re-run, no illustrative boxes.
+            Hover a box for its class and confidence.</div>
+        </div>
+      </div>
+      <div>
+        <div class="panel"><h3>Per-class counts &mdash; this tile</h3>
+          <div class="body"><div class="tablewrap" style="max-height:220px"><table id="dt_counts">
+            <thead><tr><th>class</th><th>count</th><th>op. threshold</th></tr></thead>
+            <tbody></tbody>
+          </table></div></div>
+        </div>
+        <div class="panel"><h3>Observation totals</h3>
+          <div class="body"><div class="kvline" id="dt_obstotals"></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <!-- ============ WATCH AREAS (Phase 8 Step C) ============ -->
   <section class="view" id="view-watch">

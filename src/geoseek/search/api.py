@@ -442,6 +442,49 @@ def discovery_similar(
     return res
 
 
+# ==========================================================================
+# Object Detection tab (Phase 8F) - real stored detections, never re-run
+# ==========================================================================
+
+
+@app.get("/detect/model-info")
+def detect_model_info():
+    """Per-class operating points (conf/precision/recall/AP50, each with how it
+    was chosen) and low-precision caveats - drives the tab's metrics panel and
+    caveat banner."""
+    return _get_analyst().detector_model_info()
+
+
+@app.get("/detect/observations")
+def detect_observations():
+    return {"observations": _get_analyst().list_detection_observations()}
+
+
+@app.get("/detect/observations/{observation_id}/tiles")
+def detect_tiles(observation_id: str):
+    try:
+        return {"tiles": _get_analyst().list_detection_tiles(observation_id)}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"no detections for observation {observation_id!r}")
+
+
+@app.get("/detect/observations/{observation_id}/tiles/{row}/{col}")
+def detect_tile_detections(observation_id: str, row: int, col: int):
+    try:
+        return _get_analyst().tile_detections(observation_id, row, col)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"no observation {observation_id!r}")
+
+
+@app.get("/detect/observations/{observation_id}/tiles/{row}/{col}/image.png")
+def detect_tile_image(observation_id: str, row: int, col: int):
+    try:
+        png = _get_analyst().tile_image_png(observation_id, row, col)
+    except KeyError:
+        raise HTTPException(status_code=404, detail=f"no observation {observation_id!r}")
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
 # the offline single-page frontend - served by this same process, no CDN.
 if _WEB_DIR.is_dir():
     app.mount("/app", StaticFiles(directory=str(_WEB_DIR), html=True), name="analyst-web")
@@ -455,4 +498,7 @@ def _root():
                           "/export", "/health", "/stats", "/presentation/summary", "/regions",
                           "/discovery/clusters", "/discovery/similar", "/candidates/{id}/similar",
                           "/watch-areas", "/watch-areas/{id}", "/notifications",
-                          "/notifications/{id}/seen", "/sector-brief"]}
+                          "/notifications/{id}/seen", "/sector-brief", "/detect/model-info",
+                          "/detect/observations", "/detect/observations/{id}/tiles",
+                          "/detect/observations/{id}/tiles/{row}/{col}",
+                          "/detect/observations/{id}/tiles/{row}/{col}/image.png"]}
