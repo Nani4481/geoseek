@@ -680,6 +680,30 @@ class AnalystService:
             r["cluster"] = self.cluster_for_tile(r["tile_id"])
         return res
 
+    # -- object detection pass-through (Phase 8F) --------------------------
+    # Thin wrappers over geoseek.analyst.detections - real stored oriented-box
+    # detections (scripts/detect_maxar.py's output), never re-run inference.
+
+    def detector_model_info(self) -> dict:
+        from geoseek.analyst.detections import model_info
+        return model_info()
+
+    def list_detection_observations(self) -> list[dict]:
+        from geoseek.analyst.detections import list_observations
+        return list_observations(self.repo)
+
+    def list_detection_tiles(self, observation_id: str) -> list[dict]:
+        from geoseek.analyst.detections import list_tiles_with_detections
+        return list_tiles_with_detections(observation_id)
+
+    def tile_detections(self, observation_id: str, row: int, col: int) -> dict:
+        from geoseek.analyst.detections import tile_detections
+        return tile_detections(self.repo, observation_id, row, col)
+
+    def tile_image_png(self, observation_id: str, row: int, col: int) -> bytes:
+        from geoseek.analyst.detections import tile_image_png
+        return tile_image_png(self.repo, observation_id, row, col)
+
     # -- export ----------------------------------------------------
 
     def _resolve_for_export(self, candidate_ids, filters) -> list[dict]:

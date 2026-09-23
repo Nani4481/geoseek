@@ -230,7 +230,7 @@ function legend(elId, types) {
 }
 
 /* ---------------------------------------------------------------- routing */
-const views = ["overview", "search", "queue", "detail", "discovery", "watch"];
+const views = ["overview", "search", "queue", "detail", "discovery", "detect", "watch"];
 function go(route) { location.hash = "#/" + route; }
 function router() {
   const parts = (location.hash || "#/overview").slice(2).split("/");
@@ -241,6 +241,7 @@ function router() {
   if (route === "search") ensureSearch();
   if (route === "queue") ensureQueue();
   if (route === "discovery") ensureDiscovery();
+  if (route === "detect") ensureDetect();
   if (route === "watch") ensureWatch();
   if (route === "detail" && parts[1]) openDetail(decodeURIComponent(parts[1]));
 }
@@ -778,6 +779,168 @@ async function runDiscovery() {
         </div></div>`).join("") || `<span class="muted">no neighbours</span>`;
     $$("#disc_results .card").forEach(c => c.addEventListener("click", () => { $("#disc_seed").value = c.dataset.tile; runDiscovery(); }));
   } catch (e) { $("#disc_results").innerHTML = `<span class="muted">${esc(e.message)}</span>`; }
+}
+
+/* ---------------------------------------------------------------- OBJECT DETECTION (Phase 8F)
+   REAL stored oriented-box detections (scripts/detect_maxar.py's output, read
+   through the catalog's DerivedProduct + detections.geojson) drawn on the
+   REAL Maxar tile they were found on - nothing here re-runs the detector.
+   The backend reprojects each stored EPSG:4326 footprint back to tile pixels;
+   this file only draws already-pixel-space polygons on a canvas. */
+const DET_CLASS_COLOR = {
+  "small-vehicle": "#3fb950", "large-vehicle": "#d98324", ship: "#1f6feb",
+  plane: "#c93c37", helicopter: "#8a5a2b", "storage-tank": "#7b3fbf",
+  harbor: "#0aa1a3", bridge: "#b5850b",
+};
+let detInit = false;
+const detState = {
+  modelInfo: null, observations: [], tiles: [], tileData: null, img: null,
+  obsId: null, selectedClasses: new Set(), visible: [],
+};
+
+function ensureDetect() {
+  if (detInit) return; detInit = true;
+  $("#dt_margin").addEventListener("input", () => { updateDetMarginLabel(); drawDetectCanvas(); });
+  $("#dt_obs").addEventListener("change", (e) => loadDetectObservation(e.target.value));
+  $("#dt_tile").addEventListener("change", (e) => loadDetectTile(e.target.value));
+  $("#dt_canvas").addEventListener("mousemove", onDetectHover);
+  $("#dt_canvas").addEventListener("mouseleave", () => $("#dt_hover").textContent = " ");
+  updateDetMarginLabel();
+  loadDetectModelInfo();
+  loadDetectObservations();
+}
+
+async function loadDetectModelInfo() {
+  try {
+    detState.modelInfo = await api("/detect/model-info");
+    renderDetCaveats(detState.modelInfo.caveats);
+    renderDetMetrics(detState.modelInfo.operating_points);
+    renderDetClassFilter(detState.modelInfo.classes);
+  } catch (e) { toast(e.message); }
+}
+function renderDetCaveats(caveats) {
+  const panel = $("#dt_caveatpanel");
+  if (!caveats || !caveats.length) { panel.classList.add("hidden"); return; }
+  panel.classList.remove("hidden");
+  $("#dt_caveats").innerHTML = caveats.map(c => `<div>&#9888;&nbsp; ${esc(c)}</div>`).join("");
+}
+function renderDetMetrics(op) {
+  const rows = ["small-vehicle", "large-vehicle"].filter(c => op[c]);
+  $("#dt_metrics").innerHTML = rows.map(c => {
+    const o = op[c];
+    return `<div class="ev">
+      <div class="lbl">${esc(c)} &mdash; xView TEST-half AP50</div>
+      <div class="val">${(o.AP50 * 100).toFixed(1)}%</div>
+      <div class="sub">AP50:95 ${(o.AP50_95 * 100).toFixed(1)}% &middot; precision ${(o.precision * 100).toFixed(0)}%
+        &middot; recall ${(o.recall * 100).toFixed(0)}% &middot; operating threshold ${num(o.conf, 3)}</div>
+    </div>`;
+  }).join("") || `<span class="muted">no vehicle operating points on the model card</span>`;
+}
+function renderDetClassFilter(classes) {
+  detState.selectedClasses = new Set(classes);
+  $("#dt_classes").innerHTML = classes.map(c => `
+    <label><input type="checkbox" data-cls="${esc(c)}" checked>
+      <i style="background:${DET_CLASS_COLOR[c] || "#888"}"></i>${esc(c)}</label>`).join("");
+  $$("#dt_classes input[type=checkbox]").forEach(cb => cb.addEventListener("change", () => {
+    if (cb.checked) detState.selectedClasses.add(cb.dataset.cls); else detState.selectedClasses.delete(cb.dataset.cls);
+    drawDetectCanvas();
+  }));
+}
+
+async function loadDetectObservations() {
+  try {
+    const { observations } = await api("/detect/observations");
+    detState.observations = observations;
+    $("#dt_obs").innerHTML = observations.map(o =>
+      `<option value="${esc(o.observation_id)}">${esc(o.aoi_name || o.observation_id)} &mdash; ${o.n_detections} detections</option>`).join("")
+      || `<option value="">no Maxar detections staged</option>`;
+    if (observations.length) await loadDetectObservation(observations[0].observation_id);
+  } catch (e) { toast(e.message); }
+}
+async function loadDetectObservation(obsId) {
+  if (!obsId) return;
+  detState.obsId = obsId;
+  $("#dt_obs").value = obsId;
+  const o = detState.observations.find(x => x.observation_id === obsId);
+  $("#dt_obstotals").innerHTML = o ? Object.entries(o.by_class || {}).map(([k, v]) =>
+    `<span><i style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${DET_CLASS_COLOR[k] || "#888"};margin-right:4px"></i><b>${v}</b> ${esc(k)}</span>`
+  ).join("") + `<span class="muted">${o.n_tiles_with_detections}/${o.n_tiles} tiles with a detection</span>` : "";
+  const { tiles } = await api(`/detect/observations/${encodeURIComponent(obsId)}/tiles`);
+  detState.tiles = tiles;
+  $("#dt_tile").innerHTML = tiles.map(t =>
+    `<option value="${t.row},${t.col}">r${String(t.row).padStart(3, "0")}_c${String(t.col).padStart(3, "0")} &mdash; ${t.n_detections} detections</option>`).join("")
+    || `<option value="">no tile has a detection</option>`;
+  if (tiles.length) await loadDetectTile(`${tiles[0].row},${tiles[0].col}`);
+  else { detState.tileData = null; detState.img = null; drawDetectCanvas(); renderDetCounts(null); }
+}
+async function loadDetectTile(rowcol) {
+  if (!rowcol) return;
+  const [row, col] = rowcol.split(",").map(Number);
+  $("#dt_tile").value = rowcol;
+  $("#dt_tilelabel").textContent = `r${String(row).padStart(3, "0")}_c${String(col).padStart(3, "0")}`;
+  const obsId = detState.obsId;
+  const data = await api(`/detect/observations/${encodeURIComponent(obsId)}/tiles/${row}/${col}`);
+  if (obsId !== detState.obsId) return;      // observation changed while this was in flight
+  detState.tileData = data;
+  renderDetCounts(data);
+  const img = new Image();
+  img.onload = () => { if (detState.tileData === data) { detState.img = img; drawDetectCanvas(); } };
+  img.src = `/detect/observations/${encodeURIComponent(obsId)}/tiles/${row}/${col}/image.png`;
+}
+function detEffectiveThreshold(cls) {
+  const op = (detState.modelInfo && detState.modelInfo.operating_points[cls]) || {};
+  const base = op.conf != null ? op.conf : 0;
+  const frac = (+$("#dt_margin").value || 0) / 100;
+  return base + frac * (1 - base);
+}
+function updateDetMarginLabel() {
+  const frac = (+$("#dt_margin").value || 0) / 100;
+  $("#dt_marginlabel").textContent = frac === 0
+    ? "showing everything stored (each class's own operating point)"
+    : `showing only the top ${(100 * (1 - frac)).toFixed(0)}% of each class's confidence range above its floor`;
+}
+function drawDetectCanvas() {
+  const c = $("#dt_canvas"), ctx = c.getContext("2d");
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (detState.img) ctx.drawImage(detState.img, 0, 0, c.width, c.height);
+  const dets = (detState.tileData && detState.tileData.detections) || [];
+  detState.visible = dets.filter(d => detState.selectedClasses.has(d.class) && d.score >= detEffectiveThreshold(d.class));
+  for (const d of detState.visible) {
+    ctx.strokeStyle = DET_CLASS_COLOR[d.class] || "#fff";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    d.polygon_px.forEach(([x, y], i) => i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y));
+    ctx.closePath(); ctx.stroke();
+  }
+  $("#dt_legend").innerHTML = Array.from(detState.selectedClasses).map(cl =>
+    `<span><i style="background:${DET_CLASS_COLOR[cl] || "#888"}"></i>${esc(cl)}</span>`).join("") +
+    `<span class="muted">${detState.visible.length} of ${dets.length} stored detections shown</span>`;
+}
+function renderDetCounts(data) {
+  const counts = {};
+  for (const d of (data ? data.detections : [])) counts[d.class] = (counts[d.class] || 0) + 1;
+  const op = (detState.modelInfo && detState.modelInfo.operating_points) || {};
+  const rows = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  $("#dt_counts tbody").innerHTML = rows.map(([k, v]) =>
+    `<tr><td><i style="background:${DET_CLASS_COLOR[k] || "#888"};margin-right:5px"></i>${esc(k)}</td><td>${v}</td>` +
+    `<td class="small muted">${op[k] ? num(op[k].conf, 3) : "–"}</td></tr>`
+  ).join("") || `<tr><td colspan="3" class="muted">no detections on this tile</td></tr>`;
+}
+function detPointInPoly(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [xi, yi] = poly[i], [xj, yj] = poly[j];
+    if (((yi > y) !== (yj > y)) && (x < (xj - xi) * (y - yi) / (yj - yi) + xi)) inside = !inside;
+  }
+  return inside;
+}
+function onDetectHover(e) {
+  const c = $("#dt_canvas"), r = c.getBoundingClientRect();
+  const x = (e.clientX - r.left) * (c.width / r.width), y = (e.clientY - r.top) * (c.height / r.height);
+  const hit = (detState.visible || []).find(d => detPointInPoly(x, y, d.polygon_px));
+  $("#dt_hover").textContent = hit
+    ? `${hit.class}  conf ${num(hit.score, 3)}${hit.long_side_px ? "  " + hit.long_side_px.toFixed(1) + "px" : ""}`
+    : " ";
 }
 
 /* ---------------------------------------------------------------- WATCH AREAS
