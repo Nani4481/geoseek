@@ -49,6 +49,35 @@ HUMAN_CHANGE_TYPE = {
 }
 _REGION_DROP_TOKENS = {"diverse", "scaled", "82km", ""}
 
+# --- restricted-zone cross-reference (demo) ---------------------------------
+# Hardcoded sensitive-area bounding boxes for the demo build. Coordinates are
+# chosen to overlap real synthetic candidate centroids in the Ayodhya AOI
+# (data/change_model/ayodhya_change_ranked_detail.json) so the alert actually
+# fires against live pipeline output, not a fabricated example.
+RESTRICTED_ZONES = [
+    {"name": "Forward Operating Base Alpha", "level": "critical",
+     "min_lon": 82.235, "max_lon": 82.271, "min_lat": 26.620, "max_lat": 26.652},
+    {"name": "Ammunition Storage Facility", "level": "critical",
+     "min_lon": 82.660, "max_lon": 82.691, "min_lat": 26.556, "max_lat": 26.585},
+    {"name": "Border Observation Post Bravo", "level": "warning",
+     "min_lon": 82.286, "max_lon": 82.315, "min_lat": 27.090, "max_lat": 27.118},
+    {"name": "Classified Installation Sector-7", "level": "warning",
+     "min_lon": 82.810, "max_lon": 82.840, "min_lat": 26.553, "max_lat": 26.582},
+]
+
+
+def check_restricted_zones(lat: float | None, lon: float | None) -> dict:
+    """Whether ``(lat, lon)`` falls inside one of the hardcoded
+    :data:`RESTRICTED_ZONES` bounding boxes - a cheap point-in-bbox test, no
+    external gazetteer. Returns the first match (zones don't overlap in the
+    demo data)."""
+    if lat is None or lon is None:
+        return {"inside": False, "zone_name": None, "alert_level": None}
+    for zone in RESTRICTED_ZONES:
+        if zone["min_lon"] <= lon <= zone["max_lon"] and zone["min_lat"] <= lat <= zone["max_lat"]:
+            return {"inside": True, "zone_name": zone["name"], "alert_level": zone["level"]}
+    return {"inside": False, "zone_name": None, "alert_level": None}
+
 
 def _region_of(aoi_name: str | None) -> str:
     """Collapse an observation ``aoi_name`` (``kerala_backwaters_43PFL_diverse``)
@@ -174,8 +203,12 @@ class AnalystService:
     def list_candidates(
         self, *, bbox=None, date_start=None, date_end=None, change_type=None, min_confidence=None,
         sensor=None, persistence=None, decision=None, sort="queue_score", limit=100, offset=0,
-        candidate_ids=None,
+        candidate_ids=None, year=None,
     ) -> dict:
+        if year:
+            year = str(year)
+            date_start = date_start or f"{year}-01-01"
+            date_end = date_end or f"{year}-12-31"
         verdicts = self._current_verdicts()
         ids_filter = set(candidate_ids) if candidate_ids else None
         rows = []
@@ -224,7 +257,8 @@ class AnalystService:
             "sort": sort,
             "filters": {"bbox": bbox, "date_start": date_start, "date_end": date_end,
                         "change_type": change_type, "min_confidence": min_confidence,
-                        "sensor": sensor, "persistence": persistence, "decision": decision},
+                        "sensor": sensor, "persistence": persistence, "decision": decision,
+                        "year": year},
             "candidates": [self._summary(c, v) for c, v in page],
         }
 
@@ -251,6 +285,10 @@ class AnalystService:
         out["sar"] = ({"available": True, "vv_median_db": sar.get("vv_median_db"),
                        "verdict": sar.get("verdict"), "factor": sar.get("factor")}
                       if sar.get("available") else {"available": False})
+        lon, lat = (c.get("centroid_lonlat") or [None, None])
+        zone = check_restricted_zones(lat, lon)
+        out["restricted_zone"] = ({"name": zone["zone_name"], "alert_level": zone["alert_level"]}
+                                  if zone["inside"] else None)
         return out
 
     # -- detail + provenance ------------------------------------------
@@ -263,6 +301,10 @@ class AnalystService:
         base = {k: v for k, v in c.items() if not k.startswith("_")}
         base["geometry"] = c["_geometry"]
         base["provenance"] = self.provenance_for(c)
+        lon, lat = (c.get("centroid_lonlat") or [None, None])
+        zone = check_restricted_zones(lat, lon)
+        base["restricted_zone"] = ({"name": zone["zone_name"], "alert_level": zone["alert_level"]}
+                                   if zone["inside"] else None)
         base["decisions"] = decisions
         base["current_decision"] = decisions[-1] if decisions else None
         base["effective_decision"] = self._effective_decision(
@@ -620,6 +662,13 @@ class AnalystService:
             if c.get("confidence") is not None:
                 conf_vals.append(float(c["confidence"]))
         high_conf = sum(1 for v in conf_vals if v >= 0.85)
+        n_restricted = 0
+        for c in self.details:
+            lon, lat = c.get("centroid_lonlat") or [None, None]
+            if check_restricted_zones(lat, lon)["inside"]:
+                n_restricted += 1
+        n_decided = len(self._current_verdicts())
+        review_rate = round(100.0 * n_decided / len(self.details), 1) if self.details else 0.0
 
         featured = self._pick_featured(4)
         by_q = sorted(self.details, key=lambda x: x.get("queue_score") or 0.0, reverse=True)
@@ -640,6 +689,9 @@ class AnalystService:
                 "high_confidence": high_conf,
                 "analyst_decisions": len(self.repo.list_analyst_decisions()),
                 "unseen_notifications": self.unseen_notification_count(),
+                "restricted_zone_alerts": n_restricted,
+                "review_rate_pct": review_rate,
+                "watch_areas": len(self.repo.list_watch_areas()),
             },
             "latest_alerts": self.list_notifications()[:5],
             "regions": regions,

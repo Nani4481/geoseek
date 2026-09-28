@@ -14,6 +14,10 @@
 <link rel="stylesheet" href="css/screens/detect.css">
 <link rel="stylesheet" href="css/screens/discovery.css">
 <link rel="stylesheet" href="css/screens/watch.css">
+<link rel="stylesheet" href="css/alert-banner.css">
+<link rel="stylesheet" href="css/year-tabs.css">
+<link rel="stylesheet" href="css/shortcut-help.css">
+<link rel="stylesheet" href="css/activity-feed.css">
 </head>
 <body>
 <div id="root">
@@ -32,7 +36,7 @@
   <div id="app-body">
     <div id="rail">
       <nav id="rail-nav" aria-label="Screens"></nav>
-      <div id="rail-legend">1-7 SWITCH<br>C CONFIRM<br>X REJECT</div>
+      <div id="rail-legend">1-7 SWITCH<br>C CONFIRM<br>X REJECT<br>? HELP</div>
     </div>
 
     <main id="screens-host" style="min-height:0; overflow:hidden;">
@@ -48,6 +52,8 @@
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
+
+<div id="shortcut-overlay" class="shortcut-overlay hidden" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts"></div>
 
 <script type="module" src="js/main.js"></script>
 </body>

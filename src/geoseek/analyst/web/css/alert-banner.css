@@ -1,0 +1,47 @@
+/* Restricted-zone alert banner - Candidate Detail's single most urgent
+   visual. Deliberately louder than the rest of the analyst-facing chrome. */
+
+.alert-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 13px 18px;
+  background: var(--alert-critical-bg);
+  border-left: 3px solid var(--alert-critical-border);
+  animation: alertPulseBg 2.4s ease-in-out infinite;
+}
+.alert-banner.warning {
+  background: var(--alert-warning-bg);
+  border-left-color: var(--amber);
+  animation: none;
+}
+.alert-banner-icon {
+  flex-shrink: 0;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--alert-critical-border);
+  margin-top: 1px;
+}
+.alert-banner.warning .alert-banner-icon { color: var(--amber); }
+.alert-banner-text { min-width: 0; }
+.alert-banner-title {
+  font: 700 13px/1.3 var(--font-sans);
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.alert-banner-sub {
+  font: 500 10px/1.4 var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  margin-top: 4px;
+}
+
+@keyframes alertPulseBg {
+  0%, 100% { background-color: var(--alert-critical-bg); }
+  50% { background-color: rgba(232,106,74,0.22); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .alert-banner { animation: none; }
+}

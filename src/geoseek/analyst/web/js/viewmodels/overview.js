@@ -40,8 +40,11 @@ export function toOverviewViewModel(presentation, candidatesBody, regions, stats
       sarAvailable: !!(c.sar && c.sar.available),
       sarVerdict: c.sar ? c.sar.verdict : null,
       thumbUrl,
+      restrictedZone: c.restricted_zone || null,
     };
   });
+
+  const years = Array.from(new Set((presentation.observation_dates || []).map((d) => d.slice(0, 4)))).sort();
 
   return {
     aoiName: presentation.aoi,
@@ -51,8 +54,12 @@ export function toOverviewViewModel(presentation, candidatesBody, regions, stats
       regions: presentation.counters.regions,
       decided: presentation.counters.analyst_decisions,
       highConfidence: presentation.counters.high_confidence,
+      watchAreas: presentation.counters.watch_areas ?? 0,
+      restrictedZoneAlerts: presentation.counters.restricted_zone_alerts ?? 0,
+      reviewRatePct: presentation.counters.review_rate_pct ?? 0,
     },
     tilesIndexed: stats?.index?.tiles,
+    years,
     featured,
     findings,
   };

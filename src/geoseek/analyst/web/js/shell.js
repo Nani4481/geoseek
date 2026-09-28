@@ -148,12 +148,61 @@ function isTypingTarget(el) {
   return el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable);
 }
 
+const SHORTCUTS = [
+  ["1 – 7", "Switch screens"],
+  ["C", "Confirm candidate"],
+  ["X", "Reject candidate"],
+  ["← / →", "Navigate candidates"],
+  ["Esc", "Back to overview / close this"],
+  ["?", "Show this list"],
+];
+
+function renderShortcutOverlay() {
+  const el = document.getElementById("shortcut-overlay");
+  el.innerHTML = `
+    <div class="shortcut-modal">
+      <div class="shortcut-modal-header">
+        <span class="t-panel-title">Keyboard shortcuts</span>
+        <button class="btn" id="shortcut-close" aria-label="Close">✕</button>
+      </div>
+      <div class="shortcut-modal-body">
+        ${SHORTCUTS.map(([key, desc]) => `
+          <div class="shortcut-row">
+            <span class="shortcut-key">${key}</span>
+            <span class="shortcut-desc">${desc}</span>
+          </div>`).join("")}
+      </div>
+    </div>`;
+  el.querySelector("#shortcut-close").addEventListener("click", closeShortcutOverlay);
+}
+
+function openShortcutOverlay() {
+  const el = document.getElementById("shortcut-overlay");
+  if (!el.innerHTML) renderShortcutOverlay();
+  el.classList.remove("hidden");
+}
+
+function closeShortcutOverlay() {
+  document.getElementById("shortcut-overlay").classList.add("hidden");
+}
+
+function shortcutOverlayOpen() {
+  return !document.getElementById("shortcut-overlay").classList.contains("hidden");
+}
+
 export function initKeyboardNav({ onConfirm, onReject } = {}) {
+  const overlay = document.getElementById("shortcut-overlay");
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeShortcutOverlay(); });
   document.addEventListener("keydown", (e) => {
     if (isTypingTarget(document.activeElement)) return;
+    if (e.key === "?") { openShortcutOverlay(); return; }
+    if (e.key === "Escape") {
+      if (shortcutOverlayOpen()) { closeShortcutOverlay(); return; }
+      go("overview"); return;
+    }
+    if (shortcutOverlayOpen()) return;
     const rail = RAIL_ITEMS.find((it) => it.key === e.key);
     if (rail) { go(rail.screen); return; }
-    if (e.key === "Escape") { go("overview"); return; }
     if ((e.key === "c" || e.key === "C") && onConfirm) { onConfirm(); return; }
     if ((e.key === "x" || e.key === "X") && onReject) { onReject(); return; }
   });

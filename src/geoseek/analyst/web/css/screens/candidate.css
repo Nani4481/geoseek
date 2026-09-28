@@ -41,7 +41,23 @@
   padding: 16px 18px;
   min-height: 0;
 }
-.cd-evidence-head { display: flex; align-items: center; justify-content: space-between; }
+.cd-evidence-head { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.cd-year-tabs { display: flex; align-items: center; }
+
+.cd-evidence .compare-surface { min-height: 65vh; }
+.cd-evidence .compare-surface .compare-base,
+.cd-evidence .compare-surface .compare-after-wrap { overflow: hidden; }
+.cd-evidence .compare-surface img {
+  transition: transform 0.35s ease;
+}
+.cd-evidence .compare-surface:hover img {
+  transform: scale(1.05);
+}
+.cd-resolution-caption { color: var(--ink-faint); margin-top: -3px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-evidence .compare-surface img { transition: none; }
+}
 
 .cd-timeline {
   padding: 12px 18px 16px;

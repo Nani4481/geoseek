@@ -46,3 +46,43 @@ export function classToGroupName(cls) {
   return "Other";
 }
 export function groupColor(name) { return GROUP_COLOR[name] || "var(--ink-dim)"; }
+
+// -- contextual one-liners --------------------------------------------------
+// Hardcoded logic rules over the real per-tile detection geometry (pixel
+// centroids, real class labels) - no invented counts or positions. A "convoy"
+// is a plain single-link clustering of small-vehicle centroids within 120px
+// of each other in the tile's native resolution; the threshold is a fixed
+// rule of thumb, not a measured/tuned parameter.
+const CONVOY_PX_RADIUS = 120;
+const CONVOY_MIN_SIZE = 3;
+
+function boxCentroidPx(d) {
+  const xs = d.polygon_px.map((p) => p[0]);
+  const ys = d.polygon_px.map((p) => p[1]);
+  return [(Math.min(...xs) + Math.max(...xs)) / 2, (Math.min(...ys) + Math.max(...ys)) / 2];
+}
+
+function pxDist(a, b) { return Math.hypot(a[0] - b[0], a[1] - b[1]); }
+
+export function contextualNotes(detections) {
+  const notes = [];
+  const smallVehicles = detections.filter((d) => d.class === "small-vehicle");
+  const centroids = smallVehicles.map(boxCentroidPx);
+  const used = new Array(smallVehicles.length).fill(false);
+  for (let i = 0; i < smallVehicles.length; i++) {
+    if (used[i]) continue;
+    const group = [i];
+    for (let j = i + 1; j < smallVehicles.length; j++) {
+      if (!used[j] && pxDist(centroids[i], centroids[j]) < CONVOY_PX_RADIUS) { group.push(j); used[j] = true; }
+    }
+    if (group.length >= CONVOY_MIN_SIZE) {
+      notes.push(`${group.length} small vehicles clustered — possible convoy`);
+    }
+    used[i] = true;
+  }
+  const largeVehicles = detections.filter((d) => d.class === "large-vehicle");
+  if (largeVehicles.length) {
+    notes.push(`${largeVehicles.length} large vehicle${largeVehicles.length > 1 ? "s" : ""} detected — possible logistics movement`);
+  }
+  return notes;
+}

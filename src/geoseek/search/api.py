@@ -216,13 +216,26 @@ def list_candidates(
     offset: int = Query(0, ge=0),
     candidate_ids: Optional[str] = Query(None, description="comma-separated candidate_id list - "
                                          "restricts to exactly these (e.g. from a watch notification)"),
+    year: Optional[str] = Query(None, description="e.g. '2024' - shorthand for "
+                                "date_start=YEAR-01-01 & date_end=YEAR-12-31 "
+                                "(ignored where date_start/date_end are already given)"),
 ):
     return _get_analyst().list_candidates(
         bbox=_parse_bbox(bbox), date_start=date_start, date_end=date_end, change_type=change_type,
         min_confidence=min_confidence, sensor=sensor, persistence=persistence, decision=decision,
         sort=sort, limit=limit, offset=offset,
         candidate_ids=[c.strip() for c in candidate_ids.split(",") if c.strip()] if candidate_ids else None,
+        year=year,
     )
+
+
+@app.get("/restricted-zones")
+def restricted_zones():
+    """The hardcoded sensitive-area bounding boxes cross-referenced against
+    candidate locations - backs the Overview map's restricted-zone overlay."""
+    from geoseek.analyst.service import RESTRICTED_ZONES
+
+    return {"zones": RESTRICTED_ZONES}
 
 
 @app.get("/candidates/{candidate_id}")

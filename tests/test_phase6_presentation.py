@@ -14,12 +14,36 @@ from __future__ import annotations
 
 import pytest
 
-from geoseek.analyst.service import _confidence_band, _region_of
+from geoseek.analyst.service import RESTRICTED_ZONES, _confidence_band, _region_of, check_restricted_zones
 
 
 # --------------------------------------------------------------------------
 # pure helpers - no fixtures needed
 # --------------------------------------------------------------------------
+
+
+def test_restricted_zones_do_not_overlap_each_other():
+    """check_restricted_zones() returns the first match on the assumption the
+    demo zones are disjoint - guard that assumption directly."""
+    for i, a in enumerate(RESTRICTED_ZONES):
+        for b in RESTRICTED_ZONES[i + 1:]:
+            overlaps_lon = a["min_lon"] <= b["max_lon"] and b["min_lon"] <= a["max_lon"]
+            overlaps_lat = a["min_lat"] <= b["max_lat"] and b["min_lat"] <= a["max_lat"]
+            assert not (overlaps_lon and overlaps_lat), f"{a['name']} overlaps {b['name']}"
+
+
+def test_check_restricted_zones_hits_and_misses():
+    zone = RESTRICTED_ZONES[0]
+    inside_lon = (zone["min_lon"] + zone["max_lon"]) / 2
+    inside_lat = (zone["min_lat"] + zone["max_lat"]) / 2
+    hit = check_restricted_zones(inside_lat, inside_lon)
+    assert hit == {"inside": True, "zone_name": zone["name"], "alert_level": zone["level"]}
+
+    miss = check_restricted_zones(0.0, 0.0)
+    assert miss == {"inside": False, "zone_name": None, "alert_level": None}
+
+    absent = check_restricted_zones(None, None)
+    assert absent["inside"] is False
 
 
 @pytest.mark.parametrize("aoi,region", [
@@ -168,6 +192,54 @@ def test_imagery_scale_param_upsamples_and_default_is_unchanged(client):
     assert one.content == base.content
     assert client.get(f"/candidates/{cid}/imagery",
                       params={"date": "2019", "scale": 9}).status_code == 422
+
+
+def test_restricted_zones_endpoint_and_candidate_wiring(client):
+    zones = client.get("/restricted-zones").json()["zones"]
+    assert len(zones) >= 3
+    assert {"name", "min_lat", "max_lat", "min_lon", "max_lon", "level"} <= zones[0].keys()
+
+    # at least one real candidate must actually fall inside a demo zone, or
+    # the "wow feature" never fires in the live demo - proves the hardcoded
+    # bboxes were placed against real data, not just plausible-looking ones.
+    hits = client.get("/candidates", params={"limit": 5000}).json()["candidates"]
+    flagged = [c for c in hits if c.get("restricted_zone")]
+    assert flagged, "no candidate falls inside any restricted zone - demo alert would never fire"
+    for c in flagged:
+        assert c["restricted_zone"]["alert_level"] in ("critical", "warning")
+
+    cid = flagged[0]["candidate_id"]
+    detail = client.get(f"/candidates/{cid}").json()
+    assert detail["restricted_zone"]["name"] == flagged[0]["restricted_zone"]["name"]
+
+    unflagged = next(c for c in hits if not c.get("restricted_zone"))
+    assert client.get(f"/candidates/{unflagged['candidate_id']}").json()["restricted_zone"] is None
+
+
+def test_candidates_year_filter(client):
+    obs_dates = client.get("/presentation/summary").json()["observation_dates"]
+    year = obs_dates[0][:4]
+    by_year = client.get("/candidates", params={"year": year, "limit": 5000}).json()
+    by_hand = client.get("/candidates", params={
+        "date_start": f"{year}-01-01", "date_end": f"{year}-12-31", "limit": 5000}).json()
+    assert by_year["total"] == by_hand["total"] > 0
+    assert by_year["filters"]["year"] == year
+
+    all_total = client.get("/candidates", params={"limit": 1}).json()["total"]
+    assert by_year["total"] <= all_total
+
+    # an explicit date_start/date_end still wins over year
+    explicit = client.get("/candidates", params={
+        "year": year, "date_start": "1900-01-01", "date_end": "2100-01-01", "limit": 1}).json()
+    assert explicit["total"] == all_total
+
+
+def test_presentation_summary_restricted_zone_and_review_rate_counters(client):
+    s = client.get("/presentation/summary").json()
+    c = s["counters"]
+    assert c["restricted_zone_alerts"] >= 1
+    assert 0.0 <= c["review_rate_pct"] <= 100.0
+    assert c["watch_areas"] >= 0
 
 
 def test_existing_analyst_endpoints_unaffected(client):

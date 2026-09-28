@@ -10,6 +10,7 @@ let currentId = null;
 let currentVm = null;
 let currentIds = []; // the browsing order set by whatever screen deep-linked here
 let sliderCtl = null;
+let selectedBeforeYear = null;
 
 function mount() {
   root = document.getElementById("screen-candidate");
@@ -53,6 +54,32 @@ function reasonRowsHtml(reasons) {
     </div>`).join("");
 }
 
+function alertBannerHtml(vm) {
+  if (!vm.restrictedZone) return "";
+  const isCritical = vm.restrictedZone.alert_level === "critical";
+  return `
+    <div class="alert-banner fixed ${isCritical ? "" : "warning"}">
+      <span class="alert-banner-icon">⚠</span>
+      <div class="alert-banner-text">
+        <div class="alert-banner-title">RESTRICTED ZONE ALERT — ${vm.changeTypeLabel} detected inside ${vm.restrictedZone.name}</div>
+        <div class="alert-banner-sub">Alert level: ${vm.restrictedZone.alert_level.toUpperCase()} · Flagged for immediate review</div>
+      </div>
+    </div>`;
+}
+
+function yearTabsHtml(vm) {
+  const years = vm.imagery.beforeYears;
+  if (!years.length) return "";
+  const active = selectedBeforeYear || vm.imagery.defaultBeforeYear;
+  return `
+    <div class="cd-year-tabs">
+      <span class="t-micro" style="margin-right:8px;">Compare from</span>
+      <div class="year-tabs">
+        ${years.map((y) => `<button class="year-tab ${y === active ? "active" : ""}" data-year="${y}">${y}</button>`).join("")}
+      </div>
+    </div>`;
+}
+
 function timelineHtml(timeline) {
   return timeline.map((t) => `
     <div class="cd-timeline-bar cd-timeline-${t.state}" title="${t.date} · ${t.state === "present" ? "change present" : t.state === "entering" ? "change window" : "before change"}">
@@ -84,8 +111,12 @@ function decisionFooterHtml(vm) {
 }
 
 function render(vm) {
+  const beforeYear = selectedBeforeYear || vm.imagery.defaultBeforeYear;
+  const beforeUrl = api.candidateImageryUrl(vm.id, { date: beforeYear, view: "rgb" });
+
   root.innerHTML = `
     <div class="cd-left scroll-pane">
+      ${alertBannerHtml(vm)}
       <div class="cd-header fixed">
         <button class="btn" id="cd-back">← MAP</button>
         <div class="cd-header-title">
@@ -114,14 +145,16 @@ function render(vm) {
       <div class="cd-evidence">
         <div class="cd-evidence-head">
           <span class="t-section-title">Visual evidence &middot; drag to compare</span>
+          ${yearTabsHtml(vm)}
         </div>
         <hr class="hairline-rule">
         ${compareSurfaceHtml({
-          baseHtml: `<img src="${vm.imagery.beforeUrl}" alt="Before imagery">`,
+          baseHtml: `<img src="${beforeUrl}" alt="Before imagery">`,
           afterHtml: `<img src="${vm.imagery.afterUrl}" alt="After imagery with change overlay">`,
           cornerTL: `AFTER &middot; ${vm.afterDate}`,
           cornerTR: `BEFORE &middot; ${vm.beforeDate}`,
         })}
+        <div class="cd-resolution-caption t-small">Resolution: 0.5m/px (Maxar WorldView-3)</div>
       </div>
 
       <div class="cd-timeline fixed">
@@ -194,6 +227,12 @@ function render(vm) {
   if (confirmBtn) confirmBtn.addEventListener("click", () => submitDecision("confirm"));
   if (rejectBtn) rejectBtn.addEventListener("click", () => submitDecision("reject"));
   if (reopenBtn) reopenBtn.addEventListener("click", () => submitDecision("reopen"));
+
+  root.querySelectorAll(".cd-year-tabs .year-tab").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      selectedBeforeYear = btn.dataset.year;
+      render(vm);
+    }));
 }
 
 async function submitDecision(decision) {
@@ -230,6 +269,7 @@ async function show(id) {
     return;
   }
   currentId = id;
+  selectedBeforeYear = null;
   root.innerHTML = `<div class="loading-state">Loading candidate ${id} from the local index…</div>`;
   try {
     const [detail, regions] = await Promise.all([api.getCandidate(id), loadRegions(api)]);

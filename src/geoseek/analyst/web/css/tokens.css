@@ -132,6 +132,19 @@
   --ct-clearance: var(--yellow);
   --ct-road: var(--ink-dim);
   --ct-other: var(--violet);
+
+  /* restricted-zone alerts / activity feed / year tabs */
+  --alert-critical-bg: rgba(232,106,74,0.12);
+  --alert-critical-border: var(--red);
+  --alert-warning-bg: rgba(240,160,48,0.10);
+  --restricted-zone-fill: rgba(232,106,74,0.08);
+  --restricted-zone-stroke: var(--red);
+  --tab-active: var(--cyan);
+  --tab-inactive: var(--bg-input);
+  --feed-timestamp: var(--ink-faint);
+  --feed-critical: var(--red);
+  --feed-normal: var(--green);
+  --feed-attention: var(--amber);
 }
 
 * { box-sizing: border-box; }
