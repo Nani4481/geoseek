@@ -3,8 +3,15 @@
 .od-header { display: flex; justify-content: space-between; align-items: flex-start; }
 .od-chips { display: flex; gap: 6px; }
 .od-select { background: var(--bg-input); color: var(--ink); border: 1px solid var(--border-soft); padding: 6px 8px; font: 500 11px var(--font-mono); align-self: flex-start; }
-.od-scene { flex: 1; min-height: 0; display: flex; }
-.od-scene .compare-surface { flex: 1; }
+.od-scene { flex: 1; min-height: 58vh; display: flex; justify-content: center; align-items: stretch; background: var(--bg-void); }
+.od-scene .compare-surface { height: 100%; max-width: 100%; }
+.od-scene .compare-surface img,
+.od-scene .compare-surface .compare-layer {
+  object-fit: contain;
+  background: var(--bg-void);
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+}
 .od-annotation-layer { position: absolute; inset: 0; }
 .od-box { position: absolute; border: 1.5px solid; background: transparent; pointer-events: none; }
 .od-box-label { position: absolute; top: -14px; left: 0; font: 500 7px var(--font-mono); background: var(--bg-badge); padding: 1px 3px; white-space: nowrap; }

@@ -43,6 +43,7 @@ async function loadTile(obsId, row, col) {
       cornerTR: "IMAGERY ONLY",
     });
     const surface = host.querySelector(".compare-surface");
+    surface.style.aspectRatio = `${detail.width} / ${detail.height}`;
     if (sliderCtl) sliderCtl.destroy();
     sliderCtl = mountCompareSlider(surface, { initial: 62, ariaLabel: "Compare imagery and detections" });
     renderLegend(detail.detections);

@@ -59,6 +59,34 @@
   .cd-evidence .compare-surface img { transition: none; }
 }
 
+.cd-terrain-section {
+  margin: 4px 18px 0;
+  padding: 14px 16px;
+  background: var(--bg-panel);
+  border: 1px solid var(--border-soft);
+}
+.cd-terrain-canvas-wrap {
+  position: relative;
+  margin: 10px 0 8px;
+}
+.cd-terrain-canvas-wrap canvas {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 500 / 320;
+  display: block;
+  background: transparent;
+}
+.cd-terrain-axis {
+  position: absolute;
+  bottom: 4px;
+  font: 500 10px var(--font-mono);
+  color: var(--ink-faint);
+  letter-spacing: 0.04em;
+}
+.cd-terrain-axis.left { left: 4px; }
+.cd-terrain-axis.right { right: 4px; }
+.terrain-summary { color: var(--ink-dim); font-family: var(--font-mono); }
+
 .cd-timeline {
   padding: 12px 18px 16px;
   border-top: 1px solid var(--hairline);

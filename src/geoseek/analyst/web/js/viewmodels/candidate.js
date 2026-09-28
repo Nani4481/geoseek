@@ -110,6 +110,30 @@ function verdictSentence(detail, before, after, locationName) {
   return `Between ${before} and ${after}, ${phrase} appeared at ${locationName}, covering about ${ha} hectares.`;
 }
 
+// Anomaly thresholds the classifier itself uses (src/geoseek/change/classify.py):
+// hitting the threshold is "this is a real signal"; we use 2x threshold as the
+// point where the terrain visualization should read as maximally pronounced.
+const ANOMALY_THRESHOLD = {
+  water_gain: 0.15, water_loss: 0.15, construction: 0.05, road: 0.05, clearance: 0.08, other: 0.1,
+};
+const ANOMALY_KEY = {
+  water_gain: "ndwi_anomaly", water_loss: "ndwi_anomaly",
+  construction: "ndbi_anomaly", road: "ndbi_anomaly",
+  clearance: "ndvi_anomaly", other: null,
+};
+
+function terrainMagnitude(detail) {
+  const ev = (detail.classification || {}).evidence || {};
+  const changeType = detail.change_type;
+  const key = ANOMALY_KEY[changeType];
+  const threshold = ANOMALY_THRESHOLD[changeType] || ANOMALY_THRESHOLD.other;
+  const anomaly = key ? Math.abs(ev[key] || 0)
+    : (Math.abs(ev.ndvi_anomaly || 0) + Math.abs(ev.ndbi_anomaly || 0) + Math.abs(ev.ndwi_anomaly || 0)) / 3;
+  const fromEvidence = Math.min(1, anomaly / (threshold * 2));
+  const confidence = detail.confidence || 0;
+  return Math.max(0.15, Math.min(1, fromEvidence * 0.7 + confidence * 0.3));
+}
+
 function sarBlock(sar) {
   if (!sar || !sar.available) {
     return { state: "unavailable",
@@ -172,6 +196,7 @@ export function toCandidateDetailViewModel(detail, regions, api) {
       defaultBeforeYear: imgBeforeYear,
     },
     timeline: buildTimeline(detail),
+    terrain: { changeType: detail.change_type, magnitude: terrainMagnitude(detail) },
     effectiveDecision: detail.effective_decision || "undecided",
     currentDecision: detail.current_decision || null,
     restrictedZone: detail.restricted_zone || null,
