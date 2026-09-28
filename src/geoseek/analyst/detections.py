@@ -72,6 +72,7 @@ def list_observations(repo) -> list[dict]:
             "n_tiles": s.get("n_tiles"), "n_tiles_with_detections": s.get("n_tiles_with_detections"),
             "n_detections": s.get("n_detections"), "by_class": s.get("by_class"),
         })
+    out.sort(key=lambda o: -(o["n_detections"] or 0))
     return out
 
 

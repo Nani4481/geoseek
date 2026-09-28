@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>geoseek — Maxar vehicle OBB labelling</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, Segoe UI, Arial, sans-serif; background: #14161a; color: #dfe3e8; height: 100vh; overflow: hidden; }
+  #app { display: grid; grid-template-columns: 240px 1fr 220px; grid-template-rows: 48px 1fr 96px; height: 100vh; }
+  header { grid-column: 1 / 4; background: #1c1f26; border-bottom: 1px solid #2b2f38; display: flex; align-items: center; padding: 0 14px; gap: 16px; }
+  header h1 { font-size: 14px; font-weight: 600; margin: 0; color: #9fd3ff; }
+  header .stem { font-size: 13px; color: #f0c674; }
+  header .rationale { font-size: 12px; color: #8b93a1; flex: 1; }
+  #sidebar { background: #1a1c22; border-right: 1px solid #2b2f38; overflow-y: auto; }
+  #sidebar .item { padding: 8px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #23262d; display: flex; gap: 6px; align-items: center; }
+  #sidebar .item:hover { background: #23262d; }
+  #sidebar .item.active { background: #2a3a4d; }
+  #sidebar .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  #sidebar .dot.unlabeled { background: #6b7280; }
+  #sidebar .dot.labeled { background: #4ade80; }
+  #sidebar .item .cnt { margin-left: auto; color: #8b93a1; }
+  #canvasWrap { position: relative; overflow: hidden; background: #0a0b0d; cursor: crosshair; }
+  canvas { display: block; }
+  #rightPanel { background: #1a1c22; border-left: 1px solid #2b2f38; padding: 10px; font-size: 12px; overflow-y: auto; }
+  #rightPanel h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: #8b93a1; margin: 12px 0 6px; }
+  #rightPanel .row { display: flex; justify-content: space-between; padding: 2px 0; }
+  #footer { grid-column: 1 / 4; background: #1c1f26; border-top: 1px solid #2b2f38; display: flex; align-items: center; gap: 10px; padding: 8px 14px; font-size: 11px; color: #8b93a1; flex-wrap: wrap; }
+  button { background: #2a3a4d; color: #dfe3e8; border: 1px solid #3a4d63; border-radius: 4px; padding: 6px 12px; font-size: 12px; cursor: pointer; }
+  button:hover { background: #33465d; }
+  button.primary { background: #2f6f4f; border-color: #3f8f66; }
+  button.primary:hover { background: #38835c; }
+  kbd { background: #2b2f38; border: 1px solid #3a3f4a; border-radius: 3px; padding: 1px 5px; font-size: 11px; }
+  #toast { position: absolute; top: 10px; right: 10px; background: #2f6f4f; color: #fff; padding: 8px 14px; border-radius: 4px; font-size: 12px; opacity: 0; transition: opacity .3s; pointer-events: none; }
+  #toast.show { opacity: 1; }
+  .classSwatch { display: inline-block; width: 10px; height: 10px; margin-right: 5px; vertical-align: middle; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Maxar OBB labelling</h1>
+    <span class="stem" id="stemLabel">—</span>
+    <span class="rationale" id="rationaleLabel"></span>
+    <span id="progressLabel" style="font-size:12px;color:#8b93a1;"></span>
+  </header>
+  <div id="sidebar"></div>
+  <div id="canvasWrap">
+    <canvas id="cv"></canvas>
+    <div id="toast"></div>
+  </div>
+  <div id="rightPanel">
+    <h2>Selected box</h2>
+    <div id="selInfo">none selected</div>
+    <h2>Classes</h2>
+    <div class="row"><span><span class="classSwatch" style="background:#4ade80"></span>small-vehicle</span><kbd>1</kbd></div>
+    <div class="row"><span><span class="classSwatch" style="background:#f0a83e"></span>large-vehicle</span><kbd>2</kbd></div>
+    <h2>This image</h2>
+    <div class="row"><span>boxes</span><span id="boxCount">0</span></div>
+    <div class="row"><span>difficult</span><span id="diffCount">0</span></div>
+  </div>
+  <div id="footer">
+    <button class="primary" id="saveBtn">Save (Ctrl+S)</button>
+    <button id="prevBtn">&larr; Prev</button>
+    <button id="nextBtn">Next &rarr;</button>
+    <button id="nextUnlabeledBtn">Next unlabeled (N)</button>
+    <span>|</span>
+    <span>Drag empty space: new box &nbsp;|&nbsp; Drag corner: resize &nbsp;|&nbsp; Drag top handle: rotate &nbsp;|&nbsp; Drag body: move</span>
+    <span>|</span>
+    <span><kbd>1</kbd>/<kbd>2</kbd> class &nbsp; <kbd>Del</kbd> delete &nbsp; <kbd>D</kbd> difficult &nbsp; <kbd>[</kbd>/<kbd>]</kbd> rotate 1&deg; &nbsp; arrows nudge 1px &nbsp; <kbd>Ctrl+Z</kbd> undo &nbsp; wheel zoom &nbsp; right-drag pan</span>
+  </div>
+</div>
+<script>
+"use strict";
+
+// ---------- geometry helpers ----------
+const CLASSES = ["small-vehicle", "large-vehicle"];
+const CLASS_COLOR = { "small-vehicle": "#4ade80", "large-vehicle": "#f0a83e" };
+const MIN_ZOOM = 0.25, MAX_ZOOM = 12;
+
+function newBoxId() { return "b" + Math.random().toString(36).slice(2, 9); }
+
+function localToWorld(box, lx, ly) {
+  const c = Math.cos(box.angle), s = Math.sin(box.angle);
+  return { x: box.cx + lx * c - ly * s, y: box.cy + lx * s + ly * c };
+}
+function worldToLocal(box, wx, wy) {
+  const dx = wx - box.cx, dy = wy - box.cy;
+  const c = Math.cos(-box.angle), s = Math.sin(-box.angle);
+  return { x: dx * c - dy * s, y: dx * s + dy * c };
+}
+function boxCorners(box) {
+  const hw = box.w / 2, hh = box.h / 2;
+  return [
+    localToWorld(box, -hw, -hh), localToWorld(box, hw, -hh),
+    localToWorld(box, hw, hh), localToWorld(box, -hw, hh),
+  ];
+}
+function rotateHandleWorld(box, screenOffsetImgPx) {
+  return localToWorld(box, 0, -box.h / 2 - screenOffsetImgPx);
+}
+function pointsToBox(pts) {
+  // pts: 4 [x,y] in order around the quad (as produced by boxCorners / a human-drawn poly)
+  const [p1, p2, p3, p4] = pts;
+  const cx = (p1[0] + p2[0] + p3[0] + p4[0]) / 4, cy = (p1[1] + p2[1] + p3[1] + p4[1]) / 4;
+  const w = Math.hypot(p2[0] - p1[0], p2[1] - p1[1]);
+  const h = Math.hypot(p4[0] - p1[0], p4[1] - p1[1]);
+  const angle = Math.atan2(p2[1] - p1[1], p2[0] - p1[0]);
+  return { cx, cy, w, h, angle };
+}
+
+// ---------- state ----------
+let manifest = null;
+let currentStem = null;
+let img = new Image();
+let imgLoaded = false;
+let boxes = [];          // {id, cx, cy, w, h, angle, cls, difficult}
+let selectedId = null;
+let zoom = 2.0, panX = 0, panY = 0;   // image-space point at canvas (0,0) = (panX, panY)
+let lastCls = CLASSES[0];
+let dirty = false;
+let undoStack = [];
+
+const cv = document.getElementById("cv");
+const ctx = cv.getContext("2d");
+const canvasWrap = document.getElementById("canvasWrap");
+
+function resizeCanvas() {
+  cv.width = canvasWrap.clientWidth;
+  cv.height = canvasWrap.clientHeight;
+  draw();
+}
+window.addEventListener("resize", resizeCanvas);
+
+function worldToScreen(wx, wy) { return { x: (wx - panX) * zoom, y: (wy - panY) * zoom }; }
+function screenToWorld(sx, sy) { return { x: sx / zoom + panX, y: sy / zoom + panY }; }
+
+function pushUndo() { undoStack.push(JSON.stringify(boxes)); if (undoStack.length > 200) undoStack.shift(); }
+function undo() { if (!undoStack.length) return; boxes = JSON.parse(undoStack.pop()); markDirty(); draw(); }
+function markDirty() { dirty = true; updateCounts(); }
+
+function draw() {
+  ctx.clearRect(0, 0, cv.width, cv.height);
+  if (imgLoaded) {
+    const tl = worldToScreen(0, 0);
+    ctx.imageSmoothingEnabled = zoom < 1;
+    ctx.drawImage(img, tl.x, tl.y, img.naturalWidth * zoom, img.naturalHeight * zoom);
+  }
+  for (const b of boxes) drawBox(b, b.id === selectedId);
+}
+
+function drawBox(b, selected) {
+  const corners = boxCorners(b).map(p => worldToScreen(p.x, p.y));
+  ctx.beginPath();
+  corners.forEach((p, i) => i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y));
+  ctx.closePath();
+  ctx.lineWidth = selected ? 2.5 : 1.5;
+  ctx.strokeStyle = CLASS_COLOR[b.cls] || "#fff";
+  ctx.setLineDash(b.difficult ? [5, 4] : []);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  if (selected) {
+    ctx.fillStyle = "#fff";
+    for (const p of corners) { ctx.fillRect(p.x - 3, p.y - 3, 6, 6); }
+    const rh = worldToScreen(...Object.values(rotateHandleWorld(b, 14 / zoom)));
+    const topMid = worldToScreen(...Object.values(localToWorld(b, 0, -b.h / 2)));
+    ctx.beginPath(); ctx.moveTo(topMid.x, topMid.y); ctx.lineTo(rh.x, rh.y); ctx.strokeStyle = "#fff"; ctx.lineWidth = 1; ctx.stroke();
+    ctx.beginPath(); ctx.arc(rh.x, rh.y, 5, 0, 7); ctx.fillStyle = "#fff"; ctx.fill();
+  }
+}
+
+// ---------- hit testing ----------
+function hitTest(wx, wy) {
+  for (let i = boxes.length - 1; i >= 0; i--) {
+    const b = boxes[i];
+    const handlePxImg = 8 / zoom;
+    const rh = rotateHandleWorld(b, 14 / zoom);
+    if (Math.hypot(wx - rh.x, wy - rh.y) < handlePxImg * 1.4) return { box: b, mode: "rotate" };
+    const local = worldToLocal(b, wx, wy);
+    const corners = [[-b.w / 2, -b.h / 2], [b.w / 2, -b.h / 2], [b.w / 2, b.h / 2], [-b.w / 2, b.h / 2]];
+    for (let c = 0; c < 4; c++) {
+      if (Math.hypot(local.x - corners[c][0], local.y - corners[c][1]) < handlePxImg * 1.6) {
+        return { box: b, mode: "resize", corner: c };
+      }
+    }
+    if (Math.abs(local.x) <= b.w / 2 && Math.abs(local.y) <= b.h / 2) return { box: b, mode: "move" };
+  }
+  return null;
+}
+
+// ---------- mouse interaction ----------
+let drag = null; // {mode, box, ...}
+
+cv.addEventListener("contextmenu", e => e.preventDefault());
+
+cv.addEventListener("mousedown", e => {
+  const rect = cv.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const w = screenToWorld(sx, sy);
+
+  if (e.button === 2) { drag = { mode: "pan", startPanX: panX, startPanY: panY, startSx: sx, startSy: sy }; return; }
+  if (e.button !== 0) return;
+
+  const hit = hitTest(w.x, w.y);
+  if (hit) {
+    selectedId = hit.box.id;
+    pushUndo();
+    if (hit.mode === "move") {
+      drag = { mode: "move", box: hit.box, offX: w.x - hit.box.cx, offY: w.y - hit.box.cy };
+    } else if (hit.mode === "resize") {
+      const oppIdx = (hit.corner + 2) % 4;
+      const oppLocal = [[-hit.box.w / 2, -hit.box.h / 2], [hit.box.w / 2, -hit.box.h / 2], [hit.box.w / 2, hit.box.h / 2], [-hit.box.w / 2, hit.box.h / 2]][oppIdx];
+      const oppWorld = localToWorld(hit.box, oppLocal[0], oppLocal[1]);
+      drag = { mode: "resize", box: hit.box, angle0: hit.box.angle, oppWorld };
+    } else if (hit.mode === "rotate") {
+      drag = { mode: "rotate", box: hit.box, startMouseAngle: Math.atan2(w.y - hit.box.cy, w.x - hit.box.cx), startBoxAngle: hit.box.angle };
+    }
+  } else {
+    selectedId = null;
+    const nb = { id: newBoxId(), cx: w.x, cy: w.y, w: 0, h: 0, angle: 0, cls: lastCls, difficult: 0 };
+    pushUndo();
+    boxes.push(nb);
+    selectedId = nb.id;
+    drag = { mode: "draw", box: nb, startX: w.x, startY: w.y };
+  }
+  updateSelInfo();
+  draw();
+});
+
+window.addEventListener("mousemove", e => {
+  if (!drag) return;
+  const rect = cv.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const w = screenToWorld(sx, sy);
+
+  if (drag.mode === "pan") {
+    panX = drag.startPanX - (sx - drag.startSx) / zoom;
+    panY = drag.startPanY - (sy - drag.startSy) / zoom;
+  } else if (drag.mode === "draw") {
+    const b = drag.box;
+    b.cx = (drag.startX + w.x) / 2; b.cy = (drag.startY + w.y) / 2;
+    b.w = Math.abs(w.x - drag.startX); b.h = Math.abs(w.y - drag.startY);
+  } else if (drag.mode === "move") {
+    drag.box.cx = w.x - drag.offX; drag.box.cy = w.y - drag.offY;
+  } else if (drag.mode === "resize") {
+    const b = drag.box, angle = drag.angle0;
+    const dx = w.x - drag.oppWorld.x, dy = w.y - drag.oppWorld.y;
+    const c = Math.cos(-angle), s = Math.sin(-angle);
+    const ldx = dx * c - dy * s, ldy = dx * s + dy * c;
+    b.w = Math.abs(ldx); b.h = Math.abs(ldy);
+    const centerLocal = { x: ldx / 2, y: ldy / 2 };
+    const centerWorld = localToWorld({ cx: drag.oppWorld.x, cy: drag.oppWorld.y, angle }, centerLocal.x, centerLocal.y);
+    b.cx = centerWorld.x; b.cy = centerWorld.y;
+  } else if (drag.mode === "rotate") {
+    const b = drag.box;
+    const curAngle = Math.atan2(w.y - b.cy, w.x - b.cx);
+    b.angle = drag.startBoxAngle + (curAngle - drag.startMouseAngle);
+  }
+  markDirty();
+  updateSelInfo();
+  draw();
+});
+
+window.addEventListener("mouseup", () => {
+  if (drag && drag.mode === "draw") {
+    const b = drag.box;
+    if (b.w < 3 || b.h < 3) { boxes = boxes.filter(x => x.id !== b.id); undoStack.pop(); selectedId = null; }
+  }
+  drag = null;
+  updateCounts();
+  draw();
+});
+
+cv.addEventListener("wheel", e => {
+  e.preventDefault();
+  const rect = cv.getBoundingClientRect();
+  const sx = e.clientX - rect.left, sy = e.clientY - rect.top;
+  const before = screenToWorld(sx, sy);
+  const factor = Math.exp(-e.deltaY * 0.001);
+  zoom = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, zoom * factor));
+  const after = screenToWorld(sx, sy);
+  panX += before.x - after.x; panY += before.y - after.y;
+  draw();
+}, { passive: false });
+
+// ---------- keyboard ----------
+window.addEventListener("keydown", e => {
+  if (e.ctrlKey && e.key.toLowerCase() === "z") { e.preventDefault(); undo(); return; }
+  if (e.ctrlKey && e.key.toLowerCase() === "s") { e.preventDefault(); saveCurrent(); return; }
+  const b = boxes.find(x => x.id === selectedId);
+  if (e.key === "n" || e.key === "N") { goNextUnlabeled(); return; }
+  if (!b) return;
+  if (e.key === "1") { pushUndo(); b.cls = "small-vehicle"; lastCls = b.cls; }
+  else if (e.key === "2") { pushUndo(); b.cls = "large-vehicle"; lastCls = b.cls; }
+  else if (e.key === "d" || e.key === "D") { pushUndo(); b.difficult = b.difficult ? 0 : 1; }
+  else if (e.key === "Delete" || e.key === "Backspace") { pushUndo(); boxes = boxes.filter(x => x.id !== b.id); selectedId = null; }
+  else if (e.key === "[") { pushUndo(); b.angle -= Math.PI / 180; }
+  else if (e.key === "]") { pushUndo(); b.angle += Math.PI / 180; }
+  else if (e.key === "ArrowLeft") { pushUndo(); b.cx -= (e.shiftKey ? 5 : 1); }
+  else if (e.key === "ArrowRight") { pushUndo(); b.cx += (e.shiftKey ? 5 : 1); }
+  else if (e.key === "ArrowUp") { pushUndo(); b.cy -= (e.shiftKey ? 5 : 1); }
+  else if (e.key === "ArrowDown") { pushUndo(); b.cy += (e.shiftKey ? 5 : 1); }
+  else return;
+  markDirty(); updateSelInfo(); draw();
+});
+
+// ---------- UI panels ----------
+function updateSelInfo() {
+  const el = document.getElementById("selInfo");
+  const b = boxes.find(x => x.id === selectedId);
+  if (!b) { el.textContent = "none selected"; return; }
+  el.innerHTML = `class: <b style="color:${CLASS_COLOR[b.cls]}">${b.cls}</b><br>` +
+    `w: ${b.w.toFixed(1)}px  h: ${b.h.toFixed(1)}px<br>angle: ${(b.angle * 180 / Math.PI).toFixed(1)}&deg;<br>` +
+    `difficult: ${b.difficult ? "yes" : "no"}`;
+}
+function updateCounts() {
+  document.getElementById("boxCount").textContent = boxes.length;
+  document.getElementById("diffCount").textContent = boxes.filter(b => b.difficult).length;
+}
+function toast(msg) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.classList.add("show");
+  setTimeout(() => t.classList.remove("show"), 1400);
+}
+
+function renderSidebar() {
+  const el = document.getElementById("sidebar");
+  el.innerHTML = "";
+  for (const im of manifest.images) {
+    const row = document.createElement("div");
+    row.className = "item" + (im.stem === currentStem ? " active" : "");
+    row.innerHTML = `<span class="dot ${im.status === "labeled" ? "labeled" : "unlabeled"}"></span>` +
+      `<span>${im.stem}</span><span class="cnt">${im.n_instances || 0}</span>`;
+    row.title = im.rationale;
+    row.onclick = () => loadImage(im.stem);
+    el.appendChild(row);
+  }
+  const total = manifest.images.reduce((s, im) => s + (im.n_instances || 0), 0);
+  const done = manifest.images.filter(im => im.status === "labeled").length;
+  document.getElementById("progressLabel").textContent = `${done}/${manifest.images.length} images · ${total} instances total`;
+}
+
+function parseDota(text) {
+  const out = [];
+  for (const line of text.split("\n")) {
+    const parts = line.trim().split(/\s+/);
+    if (parts.length < 10) continue;
+    const nums = parts.slice(0, 8).map(Number);
+    const pts = [[nums[0], nums[1]], [nums[2], nums[3]], [nums[4], nums[5]], [nums[6], nums[7]]];
+    const box = pointsToBox(pts);
+    out.push({ id: newBoxId(), ...box, cls: parts[8], difficult: parts[9] === "1" ? 1 : 0 });
+  }
+  return out;
+}
+function serializeDota() {
+  let text = "imagesource:maxar-vannuys\ngsd:0.305\n";
+  for (const b of boxes) {
+    const c = boxCorners(b);
+    const coords = c.map(p => [p.x.toFixed(1), p.y.toFixed(1)]).flat().join(" ");
+    text += `${coords} ${b.cls} ${b.difficult}\n`;
+  }
+  return text;
+}
+
+async function loadImage(stem) {
+  currentStem = stem;
+  const meta = manifest.images.find(im => im.stem === stem);
+  document.getElementById("stemLabel").textContent = stem;
+  document.getElementById("rationaleLabel").textContent = meta.rationale;
+  imgLoaded = false;
+  img = new Image();
+  img.onload = () => { imgLoaded = true; fitZoom(); draw(); };
+  img.src = "/images/" + stem + ".png?t=" + Date.now();
+
+  const draftKey = "geoseek_label_draft_" + stem;
+  const labelResp = await fetch("/api/labels/" + stem);
+  const text = await labelResp.text();
+  const draft = localStorage.getItem(draftKey);
+  boxes = draft ? JSON.parse(draft) : parseDota(text);
+  selectedId = null;
+  undoStack = [];
+  dirty = false;
+  updateCounts(); updateSelInfo();
+  renderSidebar();
+}
+
+function fitZoom() {
+  const availW = canvasWrap.clientWidth, availH = canvasWrap.clientHeight;
+  zoom = Math.max(1.0, Math.min(availW / img.naturalWidth, availH / img.naturalHeight) * 1.4);
+  panX = (img.naturalWidth - availW / zoom) / 2;
+  panY = (img.naturalHeight - availH / zoom) / 2;
+}
+
+async function saveCurrent() {
+  const text = serializeDota();
+  const resp = await fetch("/api/labels/" + currentStem, { method: "POST", body: text });
+  const data = await resp.json();
+  const meta = manifest.images.find(im => im.stem === currentStem);
+  meta.status = "labeled"; meta.n_instances = data.n_instances;
+  localStorage.removeItem("geoseek_label_draft_" + currentStem);
+  dirty = false;
+  toast(`saved — ${data.n_instances} instances`);
+  renderSidebar();
+}
+
+function goRelative(delta) {
+  saveDraftIfDirty();
+  const idx = manifest.images.findIndex(im => im.stem === currentStem);
+  const next = manifest.images[(idx + delta + manifest.images.length) % manifest.images.length];
+  loadImage(next.stem);
+}
+function goNextUnlabeled() {
+  saveDraftIfDirty();
+  const idx = manifest.images.findIndex(im => im.stem === currentStem);
+  for (let k = 1; k <= manifest.images.length; k++) {
+    const im = manifest.images[(idx + k) % manifest.images.length];
+    if (im.status !== "labeled") { loadImage(im.stem); return; }
+  }
+  toast("all images labeled");
+}
+function saveDraftIfDirty() {
+  if (dirty && currentStem) localStorage.setItem("geoseek_label_draft_" + currentStem, JSON.stringify(boxes));
+}
+setInterval(saveDraftIfDirty, 4000);
+
+document.getElementById("saveBtn").onclick = saveCurrent;
+document.getElementById("prevBtn").onclick = () => goRelative(-1);
+document.getElementById("nextBtn").onclick = () => goRelative(1);
+document.getElementById("nextUnlabeledBtn").onclick = goNextUnlabeled;
+
+(async function init() {
+  resizeCanvas();
+  const resp = await fetch("/api/manifest");
+  manifest = await resp.json();
+  await loadImage(manifest.images[0].stem);
+})();
+</script>
+</body>
+</html>

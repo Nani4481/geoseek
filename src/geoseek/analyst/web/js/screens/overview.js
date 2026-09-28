@@ -24,7 +24,7 @@ function pctPos(lon, lat, bbox) {
 function markerHtml(f, bbox, idx) {
   if (f.lon == null || !bbox) return "";
   const { x, y } = pctPos(f.lon, f.lat, bbox);
-  const color = `var(--ct-${["water_gain","water_loss","construction","clearance","road"].includes(f.changeTypeLabel) ? f.changeTypeLabel : "other"})`;
+  const color = `var(--ct-${["water_gain","water_loss","construction","clearance","road"].includes(f.changeTypeCode) ? f.changeTypeCode : "other"})`;
   return `
     <button class="ov-marker" data-id="${f.id}" style="left:${x}%; top:${y}%;" title="${f.locationName} — ${f.changeTypeLabel}">
       <span class="ov-marker-ring" style="border-color:${color};"></span>
@@ -40,7 +40,9 @@ function inspectorRowHtml(f) {
   const sarLabel = !f.sarAvailable ? "NO RADAR" : (f.sarVerdict === "agree" || f.sarVerdict === "agrees") ? "RADAR AGREES" : "RADAR DIFFERS";
   return `
     <button class="ov-finding" data-id="${f.id}">
-      <div class="ov-finding-thumb"></div>
+      <div class="ov-finding-thumb">${f.thumbUrl
+        ? `<img src="${f.thumbUrl}" alt="" loading="lazy">`
+        : `<span class="ov-finding-thumb-empty">No preview</span>`}</div>
       <div class="min0" style="flex:1;">
         <div class="ov-finding-top">
           <span class="t-row-title">${f.changeTypeLabel}</span>
@@ -164,7 +166,7 @@ async function show() {
       api.stats(),
       api.listCandidates({ bbox: aoi ? aoi.bbox.join(",") : undefined, sort: "queue_score", limit: 9 }),
     ]);
-    const vm = toOverviewViewModel(presentation, candidatesBody, regions, stats);
+    const vm = toOverviewViewModel(presentation, candidatesBody, regions, stats, api);
     render(vm, aoi ? aoi.bbox : null);
   } catch (e) {
     root.innerHTML = `

@@ -17,7 +17,9 @@ const GROUPS = {
   "Fixed assets": ["storage-tank", "harbor", "bridge"],
 };
 
-const GROUP_COLOR = { Vehicles: "var(--yellow)", Aircraft: "var(--cyan)", Ships: "var(--green)", "Fixed assets": "var(--violet)" };
+// box stroke colour, not the semantic --green (gate-pass/confirmed) token -
+// kept distinct so a green detection box is never read as "confirmed"
+const GROUP_COLOR = { Vehicles: "var(--detect-box)", Aircraft: "var(--cyan)", Ships: "var(--green)", "Fixed assets": "var(--violet)" };
 
 export function toModelInfoViewModel(modelInfo) {
   const op = modelInfo.operating_points || {};

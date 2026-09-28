@@ -37,7 +37,12 @@
 }
 .rq-row:hover { background: var(--fill-soft); }
 .rq-row > div { min-width: 0; }
-.rq-thumb { width: 38px; height: 38px; background: var(--bg-empty); flex-shrink: 0; }
+.rq-thumb {
+  width: 38px; height: 38px; background: var(--bg-empty); flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.rq-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.rq-thumb-empty { font: 500 6px/1.2 var(--font-mono); letter-spacing: 0.04em; color: var(--ink-faint); text-align: center; }
 .rq-confidence { display: flex; align-items: center; gap: 6px; }
 
 .rq-footer { padding: 10px 22px; border-top: 1px solid var(--hairline); }

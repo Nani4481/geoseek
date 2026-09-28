@@ -24,7 +24,7 @@ const CHANGE_TYPE_PHRASE = {
   other: "a surface change",
 };
 
-const CHANGE_TYPE_LABEL = {
+export const CHANGE_TYPE_LABEL = {
   water_gain: "New open water",
   water_loss: "Water loss",
   construction: "New construction",
@@ -186,11 +186,19 @@ function buildTimeline(detail) {
   });
 }
 
-export function toCandidateSummaryViewModel(row, regions) {
+export function toCandidateSummaryViewModel(row, regions, api) {
   const [lon, lat] = row.centroid_lonlat || [null, null];
   const gates = GATE_LABELS.map(([rule, label]) => ({
     rule, label, pass: row.gates ? row.gates[rule] !== false : true,
   }));
+  const window = row.earliest_supported || [];
+  // real cropped tile imagery for the row's "after" date, not a fabricated
+  // preview - candidateImageryUrl is a pure URL builder (no fetch happens
+  // here), see the same pattern in toCandidateDetailViewModel. The imagery
+  // endpoint's `date` is a bare ingested-observation year ("2024"), not the
+  // full earliest_supported date ("2024-03-08"), so slice to the year.
+  const thumbYear = window[1] ? window[1].slice(0, 4) : null;
+  const thumbUrl = api && thumbYear ? api.candidateImageryUrl(row.candidate_id, { date: thumbYear, view: "rgb" }) : null;
   return {
     id: row.candidate_id,
     changeTypeLabel: CHANGE_TYPE_LABEL[row.change_type] || "Surface change",
@@ -199,10 +207,11 @@ export function toCandidateSummaryViewModel(row, regions) {
     confidencePct: confidencePct(row.confidence),
     band: confidenceBand(row.confidence),
     decision: row.decision || "undecided",
-    window: row.earliest_supported || [],
+    window,
     gates,
     queueScore: row.queue_score,
     sarAvailable: !!(row.sar && row.sar.available),
     sarVerdict: row.sar ? row.sar.verdict : null,
+    thumbUrl,
   };
 }
