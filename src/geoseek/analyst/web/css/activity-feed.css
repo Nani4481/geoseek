@@ -1,0 +1,52 @@
+/* Overview right-panel activity feed. */
+
+.feed-live {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 11px;
+  border-bottom: 1px solid var(--hairline-2);
+}
+.feed-live-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: feedLivePulse 1.6s ease-in-out infinite;
+}
+.feed-live-label {
+  font: 600 8px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--ink-faint);
+}
+@keyframes feedLivePulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
+.feed-list {
+  max-height: 260px;
+  overflow-y: auto;
+}
+.feed-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 11px;
+  border-bottom: 1px solid var(--hairline-3);
+  width: 100%;
+  text-align: left;
+}
+.feed-row:hover { background: var(--fill-soft); }
+.feed-dot { flex-shrink: 0; width: 7px; height: 7px; border-radius: 50%; margin-top: 4px; }
+.feed-dot.critical { background: var(--feed-critical); }
+.feed-dot.normal { background: var(--feed-normal); }
+.feed-dot.attention { background: var(--feed-attention); }
+.feed-body { min-width: 0; }
+.feed-text { font: 400 11px/1.35 var(--font-sans); color: var(--ink-2); }
+.feed-text.critical { color: var(--red); font-weight: 600; }
+.feed-timestamp { font: 500 9px/1.4 var(--font-mono); color: var(--feed-timestamp); }
+
+@media (prefers-reduced-motion: reduce) {
+  .feed-live-dot { animation: none; }
+}

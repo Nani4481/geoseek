@@ -1,6 +1,6 @@
 import { api } from "../api-client.js";
 import { registerScreen } from "../router.js";
-import { toModelInfoViewModel, classToGroupName, groupColor } from "../viewmodels/detection.js";
+import { toModelInfoViewModel, classToGroupName, groupColor, contextualNotes } from "../viewmodels/detection.js";
 import { mountCompareSlider, compareSurfaceHtml } from "../compare-slider.js";
 
 let root;
@@ -46,6 +46,7 @@ async function loadTile(obsId, row, col) {
     if (sliderCtl) sliderCtl.destroy();
     sliderCtl = mountCompareSlider(surface, { initial: 62, ariaLabel: "Compare imagery and detections" });
     renderLegend(detail.detections);
+    renderContextNotes(detail.detections);
   } catch (e) {
     host.innerHTML = `<div class="error-state"><div class="error-state-msg">Could not load this tile's detections.</div>
       <details><summary class="t-small">Details</summary><div class="error-detail">${e.message}</div></details></div>`;
@@ -56,6 +57,15 @@ function renderLegend(detections) {
   const groups = [...new Set(detections.map((d) => classToGroupName(d.class)))];
   document.getElementById("od-legend").innerHTML = groups.map((g) =>
     `<span class="od-legend-item"><span class="od-legend-swatch" style="border-color:${groupColor(g)};"></span>${g}</span>`).join("");
+}
+
+function renderContextNotes(detections) {
+  const notes = contextualNotes(detections);
+  const host = document.getElementById("od-context-notes");
+  if (!host) return;
+  host.innerHTML = notes.length
+    ? notes.map((n) => `<div class="od-context-note">${n}</div>`).join("")
+    : "";
 }
 
 async function renderRight(obsId) {
@@ -120,6 +130,7 @@ async function show() {
       <select id="od-observation-select" class="od-select"></select>
       <div class="od-scene" id="od-scene"></div>
       <div class="od-legend" id="od-legend"></div>
+      <div class="od-context-notes" id="od-context-notes"></div>
     </div>
     <div class="od-right scroll-pane" id="od-right"></div>`;
 

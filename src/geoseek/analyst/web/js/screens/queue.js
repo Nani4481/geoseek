@@ -6,7 +6,7 @@ import { setBrowseOrder } from "./candidate.js";
 import { refreshQueueBadge } from "../shell.js";
 
 let root;
-const state = { confBand: "all", status: "pending", sort: "priority", rows: [], counters: {} };
+const state = { confBand: "all", status: "pending", sort: "priority", year: null, rows: [], counters: {}, years: [] };
 
 const SORT_MAP = { priority: "queue_score", confidence: "confidence", size: "area_m2", newest: "-rank" };
 const STATUS_MAP = { pending: "undecided", confirmed: "confirm", rejected: "reject", all: null };
@@ -46,6 +46,13 @@ function headerHtml() {
       <div class="rq-filter-group">
         <span class="t-micro">Sort</span>
         ${["priority", "confidence", "size", "newest"].map((v) => filterChip("sort", v, v.toUpperCase(), state.sort === v)).join("")}
+      </div>
+      <div class="rq-filter-group">
+        <span class="t-micro">Year</span>
+        <div class="year-tabs">
+          <button class="year-tab ${!state.year ? "active" : ""}" data-year="">ALL</button>
+          ${state.years.map((y) => `<button class="year-tab ${state.year === y ? "active" : ""}" data-year="${y}">${y}</button>`).join("")}
+        </div>
       </div>
     </div>`;
 }
@@ -97,20 +104,24 @@ async function loadAndRender() {
   const rowsHost = document.getElementById("rq-rows");
   if (rowsHost) rowsHost.innerHTML = `<div class="loading-state">Loading candidates from the local index…</div>`;
   try {
+    if (!state.years.length) {
+      const pres = await api.presentationSummary();
+      state.years = Array.from(new Set((pres.observation_dates || []).map((d) => d.slice(0, 4)))).sort();
+    }
     const [regions, allDecided, body] = await Promise.all([
       loadRegions(api),
       api.listCandidates({ limit: 1, decision: "confirm" }),
       api.listCandidates({
         decision: STATUS_MAP[state.status] || undefined,
         min_confidence: state.confBand === "high" ? 0.75 : state.confBand === "medium" ? 0.52 : undefined,
-        sort: SORT_MAP[state.sort], limit: 100,
+        sort: SORT_MAP[state.sort], year: state.year || undefined, limit: 100,
       }),
     ]);
     const [confirmedTotal, rejectedTotal, undecidedTotal, highConfTotal] = await Promise.all([
-      api.listCandidates({ decision: "confirm", limit: 1 }).then((b) => b.total),
-      api.listCandidates({ decision: "reject", limit: 1 }).then((b) => b.total),
-      api.listCandidates({ decision: "undecided", limit: 1 }).then((b) => b.total),
-      api.listCandidates({ min_confidence: 0.75, limit: 1 }).then((b) => b.total),
+      api.listCandidates({ decision: "confirm", year: state.year || undefined, limit: 1 }).then((b) => b.total),
+      api.listCandidates({ decision: "reject", year: state.year || undefined, limit: 1 }).then((b) => b.total),
+      api.listCandidates({ decision: "undecided", year: state.year || undefined, limit: 1 }).then((b) => b.total),
+      api.listCandidates({ min_confidence: 0.75, year: state.year || undefined, limit: 1 }).then((b) => b.total),
     ]);
     document.getElementById("rq-c-pending").textContent = undecidedTotal;
     document.getElementById("rq-c-confirmed").textContent = confirmedTotal;
@@ -124,8 +135,10 @@ async function loadAndRender() {
     state.rows = vms;
     rowsHost.innerHTML = vms.length
       ? vms.map(rowHtml).join("")
-      : `<div class="empty-state"><div class="empty-state-title">Nothing matches these filters</div>
-          Checked: status "${state.status}", confidence "${state.confBand}". Try widening the status filter or clearing the confidence filter.</div>`;
+      : state.year
+        ? `<div class="empty-state"><div class="empty-state-title">No observations for ${state.year}</div>Data ingestion pending for this year.</div>`
+        : `<div class="empty-state"><div class="empty-state-title">Nothing matches these filters</div>
+            Checked: status "${state.status}", confidence "${state.confBand}". Try widening the status filter or clearing the confidence filter.</div>`;
     rowsHost.querySelectorAll(".rq-row").forEach((btn) =>
       btn.addEventListener("click", () => {
         setBrowseOrder(vms.map((v) => v.id));
@@ -153,6 +166,14 @@ function wireFilters() {
       if (group === "conf") state.confBand = value;
       if (group === "status") state.status = value;
       if (group === "sort") state.sort = value;
+      root.querySelector(".rq-filters").outerHTML = headerFiltersOnly();
+      wireFilters();
+      loadAndRender();
+    });
+  });
+  root.querySelectorAll(".year-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.year = btn.dataset.year || null;
       root.querySelector(".rq-filters").outerHTML = headerFiltersOnly();
       wireFilters();
       loadAndRender();

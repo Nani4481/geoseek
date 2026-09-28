@@ -12,6 +12,15 @@
 .od-legend-item { display: flex; align-items: center; gap: 5px; font: 500 10px var(--font-sans); color: var(--ink-dim); }
 .od-legend-swatch { width: 10px; height: 10px; border: 1.5px solid; display: inline-block; }
 
+.od-context-notes { display: flex; flex-direction: column; gap: 4px; }
+.od-context-note {
+  font: 500 10px/1.4 var(--font-mono); letter-spacing: 0.02em;
+  color: var(--amber);
+  padding: 5px 9px;
+  border-left: 2px solid var(--amber);
+  background: var(--alert-warning-bg);
+}
+
 .od-right { background: var(--bg-rail); border-left: 1px solid var(--hairline); }
 .od-right-section { padding: 14px 16px; border-bottom: 1px solid var(--hairline); }
 .od-count-card { display: flex; align-items: center; gap: 10px; padding: 8px 0; }

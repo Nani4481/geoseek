@@ -63,6 +63,7 @@ export const api = {
   stats: () => get("/stats"),
   regions: () => get("/regions"),
   presentationSummary: () => get("/presentation/summary"),
+  restrictedZones: () => get("/restricted-zones"),
 
   // -- candidates ----------------------------------------------------------
   listCandidates: (params) => get("/candidates", params),

@@ -1,0 +1,26 @@
+/* Temporal year selector - pill toggle group used on Overview, Review Queue
+   and Candidate Detail. */
+
+.year-tabs {
+  display: inline-flex;
+  gap: 4px;
+}
+.year-tab {
+  padding: 5px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border-soft);
+  background: var(--tab-inactive);
+  color: var(--ink-dim);
+  font: 600 10px/1 var(--font-mono);
+  letter-spacing: 0.08em;
+}
+.year-tab:hover { background: var(--fill-hover); color: var(--ink); }
+.year-tab.active {
+  background: var(--tab-active);
+  border-color: var(--tab-active);
+  color: #07171D;
+}
+.year-tab.no-data {
+  color: var(--ink-ghost);
+  font-style: italic;
+}

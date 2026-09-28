@@ -167,10 +167,14 @@ export function toCandidateDetailViewModel(detail, regions, api) {
       beforeUrl: api.candidateImageryUrl(detail.candidate_id, { date: imgBeforeYear, view: "rgb" }),
       afterUrl: api.candidateImageryUrl(detail.candidate_id, { date: imgAfterYear, view: "overlay" }),
       dates: (detail.imagery || {}).dates || [],
+      beforeYears: (detail.imagery || {}).before_dates || [],
+      afterYear: imgAfterYear,
+      defaultBeforeYear: imgBeforeYear,
     },
     timeline: buildTimeline(detail),
     effectiveDecision: detail.effective_decision || "undecided",
     currentDecision: detail.current_decision || null,
+    restrictedZone: detail.restricted_zone || null,
   };
 }
 
