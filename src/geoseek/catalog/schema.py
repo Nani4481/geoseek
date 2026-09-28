@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS derived (
 CREATE TABLE IF NOT EXISTS analyst_decisions (
     decision_id            TEXT PRIMARY KEY,
     candidate_id           TEXT NOT NULL,
-    decision               TEXT NOT NULL CHECK (decision IN ('confirm', 'reject')),
+    decision               TEXT NOT NULL CHECK (decision IN ('confirm', 'reject', 'reopen')),
     analyst_note           TEXT NOT NULL DEFAULT '',
     analyst                TEXT NOT NULL DEFAULT '',
     created_at             TEXT NOT NULL,

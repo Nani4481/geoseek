@@ -79,7 +79,29 @@ class SQLiteMetadataRepository(MetadataRepository):
         with self._lock:
             self._conn.executescript(SCHEMA_SQL)
             self._has_rtree = self._ensure_tile_rtree()
+            self._ensure_decision_reopen_value()
             self._conn.commit()
+
+    def _ensure_decision_reopen_value(self) -> None:
+        """``CREATE TABLE IF NOT EXISTS`` never touches a CHECK constraint on a
+        table that already exists, so a database created before ``'reopen'``
+        was added to ``analyst_decisions.decision`` still has the old
+        two-value constraint. Detect that from the table's own stored SQL and
+        rebuild it in place - copying every row byte-for-byte, keeping the
+        append-only triggers - rather than requiring a manual migration step."""
+        row = self._conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='analyst_decisions'").fetchone()
+        if row is None or row[0] is None or "'reopen'" in row[0]:
+            return  # table doesn't exist yet (SCHEMA_SQL will create it) or is already current
+        self._conn.executescript(
+            "DROP TRIGGER IF EXISTS trg_analyst_decisions_no_update;"
+            "DROP TRIGGER IF EXISTS trg_analyst_decisions_no_delete;"
+            "ALTER TABLE analyst_decisions RENAME TO analyst_decisions_pre_reopen;"
+        )
+        self._conn.executescript(SCHEMA_SQL)  # (re-)creates analyst_decisions + its triggers, unconditionally now
+        self._conn.execute(
+            "INSERT INTO analyst_decisions SELECT * FROM analyst_decisions_pre_reopen")
+        self._conn.executescript("DROP TABLE analyst_decisions_pre_reopen;")
 
     def _ensure_tile_rtree(self) -> bool:
         """Create + backfill the ``tile_rtree`` spatial index (see
@@ -535,8 +557,8 @@ class SQLiteMetadataRepository(MetadataRepository):
             confidence_at_decision=d.confidence_at_decision,
             evidence_snapshot=d.evidence_snapshot,
         )
-        if stored.decision not in ("confirm", "reject"):
-            raise CatalogError(f"decision must be 'confirm' or 'reject', got {stored.decision!r}")
+        if stored.decision not in ("confirm", "reject", "reopen"):
+            raise CatalogError(f"decision must be 'confirm', 'reject', or 'reopen', got {stored.decision!r}")
         with self._lock:
             self._conn.execute(
                 f"INSERT INTO analyst_decisions ({self._DECISION_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)",

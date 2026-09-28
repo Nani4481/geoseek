@@ -61,6 +61,20 @@ def test_decision_value_is_validated(repo):
             decision_id="", candidate_id="c1", decision="maybe"))
 
 
+def test_reopen_is_a_valid_decision_value(repo):
+    """'reopen' is a third, equally valid append-only decision kind - it lets
+    an analyst walk back a confirm/reject without ever editing or deleting
+    the row it follows (see AnalystService._effective_decision)."""
+    out = repo.record_analyst_decision(AnalystDecision(
+        decision_id="", candidate_id="c1", decision="reopen", analyst_note="second look requested"))
+    assert out.decision == "reopen"
+    back = repo.get_analyst_decision(out.decision_id)
+    assert back.decision == "reopen"
+    with pytest.raises(CatalogError):
+        repo.record_analyst_decision(AnalystDecision(
+            decision_id="", candidate_id="c1", decision="maybe"))
+
+
 def test_log_is_append_only_second_decision_adds_a_row(repo):
     repo.record_analyst_decision(AnalystDecision(
         decision_id="", candidate_id="c1", decision="reject", analyst_note="cloud edge"))
@@ -159,6 +173,11 @@ def test_candidates_queue_filters_and_sorts(client):
         assert c["geometry"]["type"] == "Polygon"
         assert len(c["geometry"]["coordinates"][0]) == 5
         assert c["decision"] in ("confirm", "reject", "undecided")
+        # the 5 evidence-gate pass/fail booleans, exposed on the list row so a
+        # queue/overview row can draw its gate squares without a full detail fetch
+        assert set(c["gates"]) == {"quality", "registration", "radiometric",
+                                   "phenology", "morphology"}
+        assert all(isinstance(v, bool) for v in c["gates"].values())
 
     filt = client.get("/candidates", params={"change_type": "construction",
                                              "min_confidence": 0.9, "limit": 5}).json()
@@ -274,6 +293,27 @@ def test_decision_writes_audit_and_is_append_only(client):
                        json={"decision": "confirm"}).status_code == 404
     assert client.post(f"/candidates/{top}/decision",
                        json={"decision": "maybe"}).status_code == 400
+
+    # 'reopen' appends a third row - it never edits or removes the reject
+    # above - but the candidate's EFFECTIVE status reverts to undecided.
+    r3 = client.post(f"/candidates/{top}/decision",
+                     json={"decision": "reopen", "note": "phase6 test reopen", "analyst": "pytest"})
+    assert r3.status_code == 200
+    dec3 = r3.json()
+    assert dec3["decision"] == "reopen" and dec3["decision_id"] not in (dec1["decision_id"], r2.json()["decision_id"])
+
+    hist_after_reopen = client.get("/audit", params={"candidate_id": top}).json()
+    mine_after = [d for d in hist_after_reopen["decisions"] if d["analyst"] == "pytest"]
+    assert [d["decision"] for d in mine_after][-3:] == ["confirm", "reject", "reopen"]  # nothing erased
+
+    detail = client.get(f"/candidates/{top}").json()
+    assert detail["effective_decision"] == "undecided"          # status reverted
+    assert detail["current_decision"]["decision"] == "reopen"   # raw last row still visible for the audit trail
+
+    undecided_after_reopen = client.get("/candidates", params={"decision": "undecided", "limit": 5000}).json()
+    assert top in [c["candidate_id"] for c in undecided_after_reopen["candidates"]]
+    still_rejected = client.get("/candidates", params={"decision": "reject", "limit": 5000}).json()
+    assert top not in [c["candidate_id"] for c in still_rejected["candidates"]]
 
 
 def test_export_geojson_features_carry_full_provenance(client):

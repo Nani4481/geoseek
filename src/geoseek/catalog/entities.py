@@ -137,7 +137,7 @@ class AnalystDecision:
 
     decision_id: str                      # uuid4, assigned on write
     candidate_id: str                     # -> the change candidate this decides
-    decision: str                         # "confirm" | "reject"
+    decision: str                         # "confirm" | "reject" | "reopen" (reverts effective status to undecided)
     analyst_note: str = ""
     analyst: str = ""                     # who decided (free text / login)
     created_at: str = ""                  # ISO-8601 UTC, assigned on write

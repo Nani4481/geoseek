@@ -150,8 +150,20 @@ class AnalystService:
 
     # -- queue ----------------------------------------------------------
 
+    @staticmethod
+    def _effective_decision(decision: str | None) -> str:
+        """The analyst-visible status: a candidate whose most recent decision
+        row is ``reopen`` reads as undecided again - reopening never deletes
+        or edits the ``confirm``/``reject`` row it follows, it just appends a
+        new row that overrides which status is *current* (append-only
+        audit trail; see ``analyst_decisions``)."""
+        if decision is None or decision == "reopen":
+            return "undecided"
+        return decision
+
     def _current_verdicts(self) -> dict:
-        return {cid: d.decision for cid, d in self.repo.latest_decision_by_candidate().items()}
+        return {cid: self._effective_decision(d.decision)
+                for cid, d in self.repo.latest_decision_by_candidate().items()}
 
     def _window_of(self, c: dict) -> tuple[str, str]:
         dates = self._observation_dates()
@@ -216,10 +228,21 @@ class AnalystService:
             "candidates": [self._summary(c, v) for c, v in page],
         }
 
+    @staticmethod
+    def _gate_summary(c: dict) -> dict:
+        """The 5 evidence-gate pass/fail booleans, keyed by their technical
+        rule name (quality/registration/radiometric/phenology/morphology) -
+        already computed once per candidate in ``suppression.trace``; this
+        just projects it onto the list row so a queue/overview row doesn't
+        need the full detail payload to draw its gate squares."""
+        trace = (c.get("suppression") or {}).get("trace") or []
+        return {t["rule"]: t.get("verdict") == "pass" for t in trace if "rule" in t}
+
     def _summary(self, c: dict, verdict: str) -> dict:
         out = {k: c.get(k) for k in _SUMMARY_KEYS}
         out["geometry"] = c["_geometry"]
         out["decision"] = verdict
+        out["gates"] = self._gate_summary(c)
         ev = (c.get("classification") or {}).get("evidence", {})
         out["spectral_anomaly_max"] = round(max(
             abs(ev.get("ndvi_anomaly", 0.0)), abs(ev.get("ndbi_anomaly", 0.0)),
@@ -242,6 +265,8 @@ class AnalystService:
         base["provenance"] = self.provenance_for(c)
         base["decisions"] = decisions
         base["current_decision"] = decisions[-1] if decisions else None
+        base["effective_decision"] = self._effective_decision(
+            decisions[-1]["decision"] if decisions else None)
         base["temporal_trajectory"] = self._trajectory_view(c)
         earlier_obs, later_obs = (c["pair"].split("->") + ["", ""])[:2]
         after_date = OBS_TO_DATE.get(later_obs)
