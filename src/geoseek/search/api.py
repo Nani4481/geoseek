@@ -268,15 +268,15 @@ def candidate_imagery(
 
 
 class DecisionRequest(BaseModel):
-    decision: str                      # "confirm" | "reject"
+    decision: str                      # "confirm" | "reject" | "reopen"
     note: str = ""
     analyst: str = ""
 
 
 @app.post("/candidates/{candidate_id}/decision")
 def candidate_decision(candidate_id: str, req: DecisionRequest):
-    if req.decision not in ("confirm", "reject"):
-        raise HTTPException(status_code=400, detail="decision must be 'confirm' or 'reject'")
+    if req.decision not in ("confirm", "reject", "reopen"):
+        raise HTTPException(status_code=400, detail="decision must be 'confirm', 'reject', or 'reopen'")
     try:
         return _get_analyst().record_decision(
             candidate_id, decision=req.decision, note=req.note, analyst=req.analyst)
