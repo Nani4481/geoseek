@@ -4,12 +4,14 @@ import { loadRegions } from "../regions.js";
 import { toCandidateDetailViewModel } from "../viewmodels/candidate.js";
 import { mountCompareSlider, compareSurfaceHtml } from "../compare-slider.js";
 import { shellState, refreshQueueBadge } from "../shell.js";
+import { Terrain3D } from "../components/terrain-3d.js";
 
 let root;
 let currentId = null;
 let currentVm = null;
 let currentIds = []; // the browsing order set by whatever screen deep-linked here
 let sliderCtl = null;
+let terrain = null;
 let selectedBeforeYear = null;
 
 function mount() {
@@ -157,6 +159,16 @@ function render(vm) {
         <div class="cd-resolution-caption t-small">Resolution: 0.5m/px (Maxar WorldView-3)</div>
       </div>
 
+      <div class="cd-terrain-section fixed">
+        <span class="t-section-title">Terrain change model</span>
+        <div class="cd-terrain-canvas-wrap">
+          <span class="cd-terrain-axis left">BEFORE &rarr;</span>
+          <canvas id="cd-terrain-3d" width="500" height="320"></canvas>
+          <span class="cd-terrain-axis right">&rarr; AFTER</span>
+        </div>
+        <div class="terrain-summary t-small" id="cd-terrain-summary"></div>
+      </div>
+
       <div class="cd-timeline fixed">
         <div class="cd-timeline-head">
           <span class="t-section-title">When it was visible</span>
@@ -216,6 +228,12 @@ function render(vm) {
   const surface = root.querySelector(".compare-surface");
   if (sliderCtl) sliderCtl.destroy();
   sliderCtl = mountCompareSlider(surface, { initial: 50, ariaLabel: "Compare before and after imagery" });
+
+  if (terrain) terrain.destroy();
+  terrain = new Terrain3D(root.querySelector("#cd-terrain-3d"));
+  terrain.setData(vm.terrain.changeType, vm.terrain.magnitude);
+  root.querySelector("#cd-terrain-summary").textContent = terrain.summary;
+  terrain.animate();
 
   root.querySelector("#cd-back").addEventListener("click", () => go("overview"));
   root.querySelector("#cd-prev").addEventListener("click", () => stepCandidate(-1));
