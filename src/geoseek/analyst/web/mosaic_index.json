@@ -1,0 +1,256 @@
+{
+  "tiles": [
+    {
+      "name": "ayodhya_44RPQ_scaled_82km",
+      "bbox": [
+        82.00569,
+        26.35216,
+        82.85893,
+        27.11828
+      ],
+      "file": "mosaic/ayodhya_44RPQ_scaled_82km.webp",
+      "date": "2026-03-08",
+      "observation_id": "S2C_44RPQ_20260308_0_L2A_scaled",
+      "width": 901,
+      "height": 809
+    },
+    {
+      "name": "deccan_43QGU_diverse",
+      "bbox": [
+        77.52027,
+        16.181,
+        77.91251,
+        17.15726
+      ],
+      "file": "mosaic/deccan_43QGU_diverse.webp",
+      "date": "2024-03-03",
+      "observation_id": "S2B_43QGU_20240303_0_L2A",
+      "width": 362,
+      "height": 901
+    },
+    {
+      "name": "dehradun_43RGP_diverse",
+      "bbox": [
+        77.06736,
+        29.70297,
+        78.23486,
+        30.71627
+      ],
+      "file": "mosaic/dehradun_43RGP_diverse.webp",
+      "date": "2024-02-28",
+      "observation_id": "S2B_43RGP_20240228_0_L2A",
+      "width": 901,
+      "height": 782
+    },
+    {
+      "name": "dehradun_44RKU_diverse",
+      "bbox": [
+        78.19053,
+        29.71297,
+        79.03352,
+        30.71787
+      ],
+      "file": "mosaic/dehradun_44RKU_diverse.webp",
+      "date": "2023-11-22",
+      "observation_id": "S2A_44RKU_20231122_0_L2A",
+      "width": 755,
+      "height": 900
+    },
+    {
+      "name": "delhi_ncr_43RFM_diverse",
+      "bbox": [
+        76.02099,
+        27.92198,
+        77.15313,
+        28.92344
+      ],
+      "file": "mosaic/delhi_ncr_43RFM_diverse.webp",
+      "date": "2023-12-05",
+      "observation_id": "S2A_43RFM_20231205_0_L2A",
+      "width": 901,
+      "height": 797
+    },
+    {
+      "name": "delhi_ncr_43RGM_diverse",
+      "bbox": [
+        77.03202,
+        27.9008,
+        78.17735,
+        28.91266
+      ],
+      "file": "mosaic/delhi_ncr_43RGM_diverse.webp",
+      "date": "2024-04-08",
+      "observation_id": "S2B_43RGM_20240408_0_L2A",
+      "width": 901,
+      "height": 796
+    },
+    {
+      "name": "jaisalmer_42RXQ_diverse",
+      "bbox": [
+        70.0067,
+        26.11705,
+        71.11627,
+        27.1169
+      ],
+      "file": "mosaic/jaisalmer_42RXQ_diverse.webp",
+      "date": "2024-03-15",
+      "observation_id": "S2B_42RXQ_20240315_0_L2A",
+      "width": 900,
+      "height": 811
+    },
+    {
+      "name": "jaisalmer_42RYQ_diverse",
+      "bbox": [
+        70.99979,
+        26.09654,
+        72.12362,
+        27.10799
+      ],
+      "file": "mosaic/jaisalmer_42RYQ_diverse.webp",
+      "date": "2024-03-15",
+      "observation_id": "S2B_42RYQ_20240315_0_L2A",
+      "width": 900,
+      "height": 810
+    },
+    {
+      "name": "jaisalmer_42RYR_diverse",
+      "bbox": [
+        71.01552,
+        26.99886,
+        72.14924,
+        28.01039
+      ],
+      "file": "mosaic/jaisalmer_42RYR_diverse.webp",
+      "date": "2024-01-20",
+      "observation_id": "S2A_42RYR_20240120_0_L2A",
+      "width": 900,
+      "height": 803
+    },
+    {
+      "name": "kanha_44QMK_diverse",
+      "bbox": [
+        80.03405,
+        21.62302,
+        81.0826,
+        22.59593
+      ],
+      "file": "mosaic/kanha_44QMK_diverse.webp",
+      "date": "2024-04-17",
+      "observation_id": "S2A_44QMK_20240417_0_L2A",
+      "width": 901,
+      "height": 836
+    },
+    {
+      "name": "kerala_backwaters_43PFL_diverse",
+      "bbox": [
+        75.92107,
+        8.97089,
+        76.33673,
+        9.93756
+      ],
+      "file": "mosaic/kerala_backwaters_43PFL_diverse.webp",
+      "date": "2024-02-05",
+      "observation_id": "S2B_43PFL_20240205_0_L2A",
+      "width": 387,
+      "height": 900
+    },
+    {
+      "name": "kerala_backwaters_43PFM_diverse",
+      "bbox": [
+        75.92319,
+        9.87202,
+        76.54367,
+        10.8426
+      ],
+      "file": "mosaic/kerala_backwaters_43PFM_diverse.webp",
+      "date": "2024-02-20",
+      "observation_id": "S2A_43PFM_20240220_0_L2A",
+      "width": 576,
+      "height": 901
+    },
+    {
+      "name": "kutch_42QXM_diverse",
+      "bbox": [
+        69.98538,
+        23.41139,
+        71.06999,
+        24.40692
+      ],
+      "file": "mosaic/kutch_42QXM_diverse.webp",
+      "date": "2024-02-24",
+      "observation_id": "S2B_42QXM_20240224_0_L2A",
+      "width": 901,
+      "height": 827
+    },
+    {
+      "name": "sundarbans_45QXE_diverse",
+      "bbox": [
+        87.97343,
+        21.60607,
+        89.04196,
+        22.59989
+      ],
+      "file": "mosaic/sundarbans_45QXE_diverse.webp",
+      "date": "2024-03-09",
+      "observation_id": "S2A_45QXE_20240309_0_L2A",
+      "width": 901,
+      "height": 838
+    },
+    {
+      "name": "sundarbans_45QYE_diverse",
+      "bbox": [
+        88.93799,
+        21.58778,
+        89.99771,
+        22.18409
+      ],
+      "file": "mosaic/sundarbans_45QYE_diverse.webp",
+      "date": "2024-03-06",
+      "observation_id": "S2A_45QYE_20240306_0_L2A",
+      "width": 901,
+      "height": 507
+    },
+    {
+      "name": "maxar_india-floods-oct-2023_q120220030330",
+      "bbox": [
+        88.11594,
+        27.88344,
+        88.17048,
+        27.93187
+      ],
+      "file": "mosaic/maxar_india-floods-oct-2023_q120220030330.webp",
+      "date": "2023-10-06",
+      "observation_id": "1050010036A0EC00_120220030330",
+      "width": 901,
+      "height": 800
+    },
+    {
+      "name": "maxar_india-floods-oct-2023_q120220122202_chungthang",
+      "bbox": [
+        88.6191,
+        27.56239,
+        88.67362,
+        27.61097
+      ],
+      "file": "mosaic/maxar_india-floods-oct-2023_q120220122202_chungthang.webp",
+      "date": "2022-03-07",
+      "observation_id": "10300100CE8D0400_120220122202",
+      "width": 900,
+      "height": 802
+    },
+    {
+      "name": "maxar_wildfires-losangeles-jan-2025_q031311102120_vannuys",
+      "bbox": [
+        -118.52198,
+        34.19516,
+        -118.46348,
+        34.24378
+      ],
+      "file": "mosaic/maxar_wildfires-losangeles-jan-2025_q031311102120_vannuys.webp",
+      "date": "2025-01-16",
+      "observation_id": "103001010C12B000_031311102120",
+      "width": 900,
+      "height": 748
+    }
+  ]
+}
