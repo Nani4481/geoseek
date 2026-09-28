@@ -58,7 +58,9 @@ function rowHtml(vm) {
   const decisionLabel = vm.decision === "confirm" ? "CONFIRMED" : vm.decision === "reject" ? "REJECTED" : "PENDING";
   return `
     <button class="rq-row" data-id="${vm.id}">
-      <div class="rq-thumb"></div>
+      <div class="rq-thumb">${vm.thumbUrl
+        ? `<img src="${vm.thumbUrl}" alt="" loading="lazy">`
+        : `<span class="rq-thumb-empty">No preview</span>`}</div>
       <div class="min0">
         <div class="t-row-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${vm.locationName}</div>
         <div class="t-meta">${vm.id}</div>
@@ -118,7 +120,7 @@ async function loadAndRender() {
     let rows = state.confBand === "low"
       ? body.candidates.filter((c) => (c.confidence || 0) < 0.52)
       : body.candidates;
-    const vms = rows.map((r) => toCandidateSummaryViewModel(r, regions));
+    const vms = rows.map((r) => toCandidateSummaryViewModel(r, regions, api));
     state.rows = vms;
     rowsHost.innerHTML = vms.length
       ? vms.map(rowHtml).join("")

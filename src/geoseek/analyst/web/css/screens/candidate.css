@@ -1,6 +1,7 @@
 .cd-root.active {
   display: grid !important;
   grid-template-columns: minmax(0,1fr) 390px;
+  grid-template-rows: minmax(0,1fr);
   min-height: 0;
 }
 

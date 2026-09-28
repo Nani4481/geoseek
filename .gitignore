@@ -47,3 +47,11 @@ data/detect_eval/
 data/detections/samples/
 data/detections/audit/*.png
 data/detections/scale_probe/*.png
+
+# raw Natural Earth source files for scripts/build_basemap.py - re-fetched on demand,
+# only the derived src/geoseek/analyst/web/basemap.json ships with the app
+data/basemap_src/
+
+# raw fetch of scripts/stage_earth_textures.py's sources, re-fetched on demand -
+# only the resized src/geoseek/analyst/web/vendor/earth/*.jpg ships with the app
+data/earth_textures_src/

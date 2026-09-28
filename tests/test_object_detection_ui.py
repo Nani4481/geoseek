@@ -94,6 +94,16 @@ def test_observations_lists_maxar_aois_with_counts(client):
     assert van_nuys["by_class"]["small-vehicle"] > 0
 
 
+def test_observations_are_sorted_by_detection_count_descending(client):
+    r = client.get("/detect/observations")
+    assert r.status_code == 200
+    obs = r.json()["observations"]
+    assert len(obs) > 1
+    counts = [o["n_detections"] for o in obs]
+    assert counts == sorted(counts, reverse=True)
+    assert obs[0]["observation_id"] == VAN_NUYS  # most detections of the staged AOIs
+
+
 def test_tiles_are_sorted_by_detection_count_descending(client):
     r = client.get(f"/detect/observations/{VAN_NUYS}/tiles")
     assert r.status_code == 200

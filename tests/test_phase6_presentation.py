@@ -181,9 +181,7 @@ def test_existing_analyst_endpoints_unaffected(client):
     assert d["imagery"]["after_date"] not in d["imagery"]["before_dates"]
     assert len(d["imagery"]["before_dates"]) >= 2
     assert client.get("/app/").status_code == 200
-    # the SPA bundle is still self-contained: no external origins / hosts referenced
-    for asset in ("/app/app.js", "/app/style.css", "/app/index.html"):
-        low = client.get(asset).text.lower()
-        assert "http://" not in low and "https://" not in low
-        assert "fonts.googleapis" not in low and "cdn." not in low
-        assert 'src="//' not in low and "url(http" not in low
+    # the SPA bundle being self-contained (no external origins/hosts anywhere
+    # under the web root, not just these three files) is its own test now -
+    # see test_frontend_offline.py, which also doesn't need the production
+    # catalog this fixture requires, so it always runs.

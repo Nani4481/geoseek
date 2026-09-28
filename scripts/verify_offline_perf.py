@@ -217,15 +217,21 @@ def functional_checks():
     h = client.get("/health").json()
     checks.append(("health / stats", h["status"] == "ok" and client.get("/stats").json()["index"]["tiles"] > 0))
     ps = client.get("/presentation/summary").json()
+    # sanity floor, not an exact expectation: was >=1000 at 1104 candidates
+    # (3-date, 2019-2024 span); Phase 8 extended the stack to 5 dates and the
+    # span pair to 2019-2026, giving 841 on the current production dataset - a
+    # real pipeline change on a different date pair, not a regression to chase
+    # back up to 1000. Matches the floor tests/test_phase6.py already uses for
+    # the identical number (test_health_and_stats).
     checks.append(("overview summary (counters + featured, offline)",
-                   ps["offline"] and ps["counters"]["change_candidates"] > 1000
+                   ps["offline"] and ps["counters"]["change_candidates"] >= 500
                    and 1 <= len(ps["featured"]) <= 4
                    and all(f["caption"] and f["confidence_band"] for f in ps["featured"])))
     s = client.get("/search/text", params={"q": "river", "k": 5}).json()
     checks.append(("search returns hits", s["count"] >= 1))
     q = client.get("/candidates", params={"limit": 20}).json()
     checks.append(("queue lists candidates + footprints",
-                   q["total"] > 1000 and q["candidates"][0]["geometry"]["type"] == "Polygon"))
+                   q["total"] >= 500 and q["candidates"][0]["geometry"]["type"] == "Polygon"))
     d = client.get(f"/candidates/{CID}").json()
     checks.append(("detail has evidence + suppression trace + provenance",
                    bool(d["confidence_breakdown"]) and len(d["suppression"]["trace"]) == 5
