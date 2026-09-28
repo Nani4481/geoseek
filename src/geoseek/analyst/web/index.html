@@ -3,397 +3,52 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>geoseek analyst</title>
-<link rel="stylesheet" href="style.css">
+<title>GeoSeek</title>
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/shell.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/screens/candidate.css">
+<link rel="stylesheet" href="css/screens/queue.css">
+<link rel="stylesheet" href="css/screens/overview.css">
+<link rel="stylesheet" href="css/screens/search.css">
+<link rel="stylesheet" href="css/screens/detect.css">
+<link rel="stylesheet" href="css/screens/discovery.css">
+<link rel="stylesheet" href="css/screens/watch.css">
 </head>
 <body>
-<header>
-  <div class="brand">geoseek <span>/ analyst</span></div>
-  <nav>
-    <button data-route="overview">Overview</button>
-    <button data-route="search">Search</button>
-    <button data-route="queue">Review Queue</button>
-    <button data-route="detail">Candidate Detail</button>
-    <button data-route="discovery">Discovery</button>
-    <button data-route="detect">Object Detection</button>
-    <button data-route="watch">Watch Areas<span class="navbadge hidden" id="watch_navbadge">0</span></button>
-  </nav>
-  <div class="spacer"></div>
-  <button class="demo-launch" id="demoBtn" title="Run the scripted 4-step walkthrough">&#9654;&nbsp;Guided Tour</button>
-  <span class="chip" id="latencyChip">&nbsp;</span>
-  <span class="chip ok" id="offlineChip">offline &middot; no external calls</span>
-</header>
+<div id="root">
+  <div id="topbar">
+    <div class="tb-section tb-wordmark" id="tb-wordmark"></div>
+    <div class="tb-section tb-aoi" id="tb-aoi"></div>
+    <div class="tb-section tb-window" id="tb-window"></div>
+    <div class="tb-spacer"></div>
+    <div class="tb-section tb-offline" id="tb-offline">
+      <span class="tb-offline-dot"></span>
+      <span class="tb-offline-label">OFFLINE &middot; LOCAL ONLY</span>
+    </div>
+    <div class="tb-section tb-analyst" id="tb-analyst"></div>
+  </div>
 
-<main>
-  <!-- ============ OVERVIEW / LANDING (presentation layer) ============ -->
-  <section class="view" id="view-overview">
-    <div class="ov-hero">
-      <div>
-        <h1 class="ov-title">geoseek</h1>
-        <p class="ov-tag">Semantic search &amp; satellite change detection over
-          <b id="ov-aoi">the study area</b> &mdash; running entirely on this machine.</p>
-      </div>
-      <span class="ov-offline" id="ov-offline"><i></i>OFFLINE &middot; no external calls</span>
+  <div id="app-body">
+    <div id="rail">
+      <nav id="rail-nav" aria-label="Screens"></nav>
+      <div id="rail-legend">1-7 SWITCH<br>C CONFIRM<br>X REJECT</div>
     </div>
 
-    <div class="ov-counters" id="ov-counters"></div>
-
-    <div class="panel" id="ov-alerts-panel">
-      <h3>Latest alerts</h3>
-      <div class="body stack" id="ov-alerts"><span class="muted">loading&hellip;</span></div>
-    </div>
-
-    <div class="panel ov-mappanel">
-      <h3>Where the change candidates are</h3>
-      <div class="body">
-        <div class="mapwrap"><canvas class="map" id="ov_map"></canvas></div>
-        <div class="maplegend" id="ov_legend"></div>
-        <div class="mapnote" id="ov_mapnote">Every flagged change, coloured by type.
-          Offline canvas in EPSG:4326 &mdash; no web map tiles. Click a footprint to open it.</div>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h3>Featured findings</h3>
-      <div class="body"><div class="ov-featured" id="ov-featured"><span class="spinner"></span></div></div>
-    </div>
-
-    <div class="ov-searchbar">
-      <label class="grow">Ask in plain language
-        <input id="ov-q" placeholder="e.g. a river with wide sandbars near cropland">
-      </label>
-      <button class="primary" id="ov-go">Search &rarr;</button>
-    </div>
-  </section>
-
-  <!-- ============ SEARCH ============ -->
-  <section class="view" id="view-search">
-    <div class="filters">
-      <label class="grow">natural-language query
-        <input id="q" placeholder="e.g. a river with wide sandbars near cropland" value="an open water reservoir or pond">
-      </label>
-      <label>region
-        <select id="s_region"><option value="">any</option></select>
-      </label>
-      <label>AOI bbox (w,s,e,n)
-        <input id="s_bbox" placeholder="optional - or pick a region">
-      </label>
-      <label>from<input id="s_from" type="date"></label>
-      <label>to<input id="s_to" type="date"></label>
-      <label>sensor
-        <select id="s_sensor"><option value="">any</option><option>Sentinel-2A</option><option>Sentinel-2B</option></select>
-      </label>
-      <label>max cloud %
-        <input id="s_cloud" type="number" min="0" max="100" step="1" style="min-width:80px">
-      </label>
-      <button class="primary" id="s_go">Search</button>
-      <button class="ghost" id="s_upload">Image similarity&hellip;</button>
-      <input type="file" id="s_file" accept="image/*" class="hidden">
-    </div>
-    <div class="split">
-      <div class="panel"><h3>Results <span id="s_count" class="muted small"></span></h3>
-        <div class="body"><div class="cards" id="s_cards"></div></div>
-      </div>
-      <div>
-        <div class="mapwrap"><canvas class="map" id="s_map"></canvas></div>
-        <div class="maplegend" id="s_legend"></div>
-        <div class="mapnote">Coordinate canvas in EPSG:4326 &mdash; no web map tiles are loaded. Click a point to open its tile.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ REVIEW QUEUE ============ -->
-  <section class="view" id="view-queue">
-    <div class="filters">
-      <label>change type
-        <select id="f_type"><option value="">all</option>
-          <option>water_gain</option><option>water_loss</option><option>construction</option>
-          <option>clearance</option><option>road</option><option>other</option></select>
-      </label>
-      <label>min confidence
-        <input id="f_conf" type="number" min="0" max="1" step="0.05" style="min-width:90px">
-      </label>
-      <label>persistence
-        <select id="f_pers"><option value="">any</option>
-          <option>persistent</option><option>progressive</option><option>recent</option>
-          <option>transient</option><option>inconsistent</option><option>single_pair</option></select>
-      </label>
-      <label>sensor
-        <select id="f_sensor"><option value="">any</option>
-          <option value="sentinel-2">Sentinel-2 (optical)</option>
-          <option value="sentinel-1">Sentinel-1 (has SAR)</option></select>
-      </label>
-      <label>decision
-        <select id="f_dec"><option value="">any</option>
-          <option>undecided</option><option>confirm</option><option>reject</option></select>
-      </label>
-      <label>region
-        <select id="f_region"><option value="">any</option></select>
-      </label>
-      <label>AOI bbox
-        <input id="f_bbox" placeholder="optional - or pick a region">
-      </label>
-      <button class="primary" id="f_go">Apply</button>
-      <button class="ghost" id="f_export">Export filtered &darr;</button>
-      <button class="ghost hidden" id="f_clear_ids">Clear alert filter</button>
-    </div>
-    <div class="split">
-      <div>
-        <div class="kvline pad hidden" id="q_idsbanner"></div>
-        <div class="kvline pad" id="q_summary"></div>
-        <div class="tablewrap"><table id="q_table">
-          <thead><tr>
-            <th data-k="rank">#</th><th data-k="candidate_id">candidate</th>
-            <th data-k="change_type">type</th><th data-k="confidence">conf</th>
-            <th data-k="significance">sig</th><th data-k="queue_score">queue</th>
-            <th data-k="area_m2">area m²</th><th data-k="persistence">persistence</th>
-            <th data-k="earliest">earliest change</th><th data-k="decision">verdict</th>
-          </tr></thead>
-          <tbody></tbody>
-        </table></div>
-      </div>
-      <div>
-        <div class="mapwrap"><canvas class="map" id="q_map"></canvas></div>
-        <div class="maplegend" id="q_legend"></div>
-        <div class="mapnote">Candidate footprints reprojected to EPSG:4326 on a plain canvas. Click a footprint to open the candidate.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ CANDIDATE DETAIL ============ -->
-  <section class="view" id="view-detail">
-    <div id="d_empty" class="panel pad muted">Open a candidate from the Review Queue or Search map.</div>
-    <div id="d_body" class="stack hidden">
-      <div class="panel"><div class="body detail-head" id="d_head"></div></div>
-
-      <div class="panel imagery-panel">
-        <h3>Before &middot; After &middot; Change overlay
-          <span style="float:right; text-transform:none; letter-spacing:0">
-            <span class="dateseg" id="d_dates"></span>
-          </span>
-        </h3>
-        <div class="body">
-          <div class="imgrow big" id="d_imgs"></div>
-          <p class="mapnote" id="d_imgnote"></p>
-        </div>
-      </div>
-
-      <div class="panel"><h3>Temporal trajectory</h3>
-        <div class="body">
-          <div class="traj" id="d_traj"></div>
-          <p class="small muted" id="d_trajnote" style="margin-bottom:0"></p>
-        </div>
-      </div>
-
-      <details class="panel disclosure" id="d_why">
-        <summary>Why did the system flag this?</summary>
-        <div class="body stack">
-          <div class="evgrid" id="d_ev"></div>
-          <div id="d_terrainwrap" class="hidden">
-            <div class="small muted" style="margin-bottom:6px">Terrain context — measured vs. derived</div>
-            <div class="tablewrap" style="max-height:none">
-              <table><thead><tr><th>field</th><th>value</th><th>basis</th></tr></thead>
-              <tbody id="d_terrain"></tbody></table>
-            </div>
-          </div>
-          <div>
-            <div class="small muted" style="margin-bottom:6px">Suppression trace &mdash; every gate that was checked before this candidate entered the queue</div>
-            <div class="tablewrap" style="max-height:none">
-              <table class="trace"><thead><tr><th>gate</th><th>verdict</th><th>weight</th><th>detail</th></tr></thead>
-              <tbody id="d_trace"></tbody></table>
-            </div>
-          </div>
-        </div>
-      </details>
-
-      <details class="panel disclosure" id="d_provwrap">
-        <summary>Where did this data come from?</summary>
-        <div class="body stack">
-          <div class="prov" id="d_prov"></div>
-          <div class="kvline" id="d_provcode"></div>
-        </div>
-      </details>
-
-      <div class="panel"><h3>Analyst decision</h3>
-        <div class="body stack">
-          <div class="actions">
-            <button class="confirm" id="d_confirm">Confirm</button>
-            <button class="reject" id="d_reject">Reject</button>
-            <textarea id="d_note" placeholder="optional note (stored verbatim in the append-only audit trail)"></textarea>
-          </div>
-          <div class="small muted" id="d_decstate"></div>
-          <div class="tablewrap" style="max-height:220px">
-            <table><thead><tr><th>when</th><th>verdict</th><th>analyst</th><th>note</th><th>conf@decision</th><th>weights</th></tr></thead>
-            <tbody id="d_hist"></tbody></table>
-          </div>
-        </div>
-      </div>
-
-      <div class="panel"><h3>Discovery &mdash; more like this</h3>
-        <div class="body">
-          <div class="cards" id="d_similar"></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ DISCOVERY ============ -->
-  <section class="view" id="view-discovery">
-    <div class="filters">
-      <label>seed tile id or candidate id
-        <input id="disc_seed" placeholder="e.g. 2019_2026_004510  or  S2A_..._r012_c034" style="min-width:320px">
-      </label>
-      <label>or lon<input id="disc_lon" type="number" step="0.0001" style="min-width:110px"></label>
-      <label>lat<input id="disc_lat" type="number" step="0.0001" style="min-width:110px"></label>
-      <label>k<input id="disc_k" type="number" min="1" max="30" value="12" style="min-width:70px"></label>
-      <button class="primary" id="disc_go">Find similar</button>
-    </div>
-    <div class="split">
-      <div class="panel"><h3>Nearest neighbours <span id="disc_meta" class="muted small"></span></h3>
-        <div class="body"><div class="cards" id="disc_results"></div></div>
-      </div>
-      <div class="panel"><h3>HDBSCAN cluster map</h3>
-        <div class="body stack">
-          <div id="disc_clusters" class="small"></div>
-          <img id="disc_map" alt="cluster map" style="width:100%;border:1px solid var(--line);border-radius:8px">
-        </div>
-      </div>
-    </div>
-    </section>
-
-  <!-- ============ OBJECT DETECTION (Phase 8F) ============ -->
-  <section class="view" id="view-detect">
-    <div class="panel hidden" id="dt_caveatpanel">
-      <div class="body"><div class="dt-caveat" id="dt_caveats"></div></div>
-    </div>
-
-    <div class="panel">
-      <h3>Detector &mdash; xView held-out test metrics <span class="muted small">(TEST half, never used to tune)</span></h3>
-      <div class="body"><div class="evgrid" id="dt_metrics"><span class="spinner"></span></div></div>
-    </div>
-
-    <div class="filters">
-      <label class="grow">Maxar observation
-        <select id="dt_obs"><option>loading&hellip;</option></select>
-      </label>
-      <label class="grow">tile <span class="muted small">(sorted by detection count)</span>
-        <select id="dt_tile"></select>
-      </label>
-    </div>
-    <div class="filters">
-      <label>classes shown
-        <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:10px" id="dt_classes"></div>
-      </label>
-    </div>
-    <div class="filters">
-      <label class="grow">confidence margin above each class's own operating point
-        <input type="range" id="dt_margin" min="0" max="100" value="0">
-      </label>
-      <span class="chip" id="dt_marginlabel">showing everything stored</span>
-      <span class="chip" id="dt_hover">&nbsp;</span>
-    </div>
-
-    <div class="split">
-      <div class="panel">
-        <h3>Tile <span id="dt_tilelabel" class="muted small"></span></h3>
-        <div class="body">
-          <div class="dt-canvaswrap"><canvas id="dt_canvas" width="1024" height="1024"></canvas></div>
-          <div class="maplegend" id="dt_legend"></div>
-          <div class="mapnote">Every box is a REAL stored detection from <code>scripts/detect_maxar.py</code>'s
-            output (the catalog's <code>DerivedProduct</code> record), reprojected from its saved EPSG:4326
-            footprint back to this tile's pixel grid on the server &mdash; no live re-run, no illustrative boxes.
-            Hover a box for its class and confidence.</div>
-        </div>
-      </div>
-      <div>
-        <div class="panel"><h3>Per-class counts &mdash; this tile</h3>
-          <div class="body"><div class="tablewrap" style="max-height:220px"><table id="dt_counts">
-            <thead><tr><th>class</th><th>count</th><th>op. threshold</th></tr></thead>
-            <tbody></tbody>
-          </table></div></div>
-        </div>
-        <div class="panel"><h3>Observation totals</h3>
-          <div class="body"><div class="kvline" id="dt_obstotals"></div></div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ WATCH AREAS (Phase 8 Step C) ============ -->
-  <section class="view" id="view-watch">
-    <div class="split">
-      <div>
-        <div class="panel"><h3>Define a watch area</h3>
-          <div class="body stack">
-            <label class="grow">name
-              <input id="w_name" placeholder="e.g. Ayodhya township construction watch">
-            </label>
-            <label class="grow">region (one click fills the AOI below)
-              <select id="w_region"><option value="">custom / unrestricted</option></select>
-            </label>
-            <div class="mapwrap"><canvas class="map" id="w_map" style="height:280px"></canvas></div>
-            <div class="maplegend" id="w_legend"></div>
-            <div class="mapnote">Click-drag a rectangle to set the AOI, click a coloured region, or pick one above. Leave empty for a global (unrestricted) watch.</div>
-            <label class="grow">AOI bbox (west,south,east,north) &mdash; editable
-              <input id="w_bbox" placeholder="optional - draw on the map or pick a region above">
-            </label>
-            <label class="grow">text query (optional; keyword match, not semantic search)
-              <input id="w_query" placeholder="optional - e.g. construction near the river">
-            </label>
-            <div>
-              <div class="small muted" style="margin-bottom:4px">change types (none checked = any)</div>
-              <div class="stack" style="flex-direction:row;flex-wrap:wrap;gap:10px" id="w_types"></div>
-            </div>
-            <label>min confidence
-              <input id="w_conf" type="number" min="0" max="1" step="0.05" value="0.5" style="min-width:100px">
-            </label>
-            <div class="actions">
-              <button class="primary" id="w_save">Create watch area</button>
-              <button class="ghost hidden" id="w_cancel">Cancel edit</button>
-            </div>
-          </div>
-        </div>
-        <div class="panel"><h3>Standing watch areas <span id="w_count" class="muted small"></span></h3>
-          <div class="body"><div class="tablewrap"><table id="w_table">
-            <thead><tr><th>name</th><th>AOI</th><th>types</th><th>min conf</th>
-              <th>active</th><th>created</th><th></th></tr></thead>
-            <tbody></tbody>
-          </table></div></div>
-        </div>
-      </div>
-      <div class="panel"><h3>Notifications <span id="n_count" class="muted small"></span></h3>
-        <div class="body"><div id="n_list" class="stack"></div></div>
-      </div>
-    </div>
-  </section>
-</main>
-
-<footer id="data-credit">
-  Imagery &amp; data: Copernicus Sentinel-2 / Sentinel-1 (free &amp; open, EU Copernicus Data Policy) &middot;
-  Maxar Open Data Program, accessed 2026-09-13 from registry.opendata.aws/maxar-open-data
-  (CC BY-NC 4.0, non-commercial) &mdash; satellite imagery courtesy of Maxar Technologies &middot;
-  Copernicus DEM GLO-30 (Sinergise / AWS Open Data)
-</footer>
-
-<div id="toast"></div>
-
-<!-- ============ GUIDED DEMO (presentation layer) ============ -->
-<div id="demo" hidden>
-  <div class="demo-banner">GUIDED DEMO &mdash; live API, no mock data <span class="demo-esc">press Esc to exit</span></div>
-  <div class="demo-caption" role="dialog" aria-label="guided demo">
-    <div class="demo-progress" id="demo-progress"></div>
-    <div class="demo-step" id="demo-step">Step 1 / 4</div>
-    <h4 id="demo-title">&nbsp;</h4>
-    <p id="demo-body">&nbsp;</p>
-    <div class="demo-controls">
-      <button class="ghost" id="demo-back">&larr; Back</button>
-      <button class="primary" id="demo-next">Next &rarr;</button>
-      <div class="spacer"></div>
-      <button class="ghost" id="demo-exit">Exit</button>
-    </div>
+    <main id="screens-host" style="min-height:0; overflow:hidden;">
+      <section id="screen-overview" class="screen"></section>
+      <section id="screen-candidate" class="screen"></section>
+      <section id="screen-queue" class="screen"></section>
+      <section id="screen-search" class="screen"></section>
+      <section id="screen-detect" class="screen"></section>
+      <section id="screen-discovery" class="screen"></section>
+      <section id="screen-watch" class="screen"></section>
+    </main>
   </div>
 </div>
 
-<script src="app.js"></script>
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script type="module" src="js/main.js"></script>
 </body>
 </html>
