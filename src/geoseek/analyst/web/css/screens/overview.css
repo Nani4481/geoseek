@@ -84,7 +84,7 @@
 .ov-layers { left: 14px; top: 14px; width: 206px; }
 .ov-layer-row { display: flex; align-items: center; gap: 9px; padding: 7px 11px; cursor: pointer; }
 .ov-layer-row:hover { background: var(--fill-soft); }
-.ov-layer-swatch { width: 10px; height: 10px; border: 1px solid rgba(255,255,255,0.28); flex-shrink: 0; }
+.ov-layer-swatch { width: 10px; height: 10px; border: 1px solid var(--border-soft); flex-shrink: 0; }
 .ov-layers-footer { padding: 8px 11px; border-top: 1px solid var(--hairline-2); }
 
 .ov-activity {

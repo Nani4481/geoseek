@@ -92,6 +92,15 @@
 
 .tb-spacer { flex: 1; min-width: 0; }
 
+.tb-theme { padding: 0 4px; }
+.tb-theme-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 10px; color: var(--ink-dim);
+  border: 1px solid transparent;
+}
+.tb-theme-btn:hover { background: var(--fill-hover); color: var(--ink); border-color: var(--border-soft); }
+.tb-theme-icon { font-size: 12px; line-height: 1; }
+
 .tb-offline {
   flex-shrink: 0; gap: 6px; padding: 5px 8px; margin: auto 12px;
   border: 1px solid rgba(79,197,139,0.30);

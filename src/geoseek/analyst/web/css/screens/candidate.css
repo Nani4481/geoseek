@@ -111,12 +111,12 @@
   display: block;
   width: 100%;
 }
-.cd-timeline-before::before { height: 8px; background: rgba(255,255,255,0.13); }
+.cd-timeline-before::before { height: 8px; background: var(--fill-hover); }
 .cd-timeline-entering::before { height: 18px; background: rgba(240,160,48,0.35); }
 .cd-timeline-present::before { height: 30px; background: var(--amber); border-top: 2px solid var(--amber); }
 .cd-timeline-tick {
   position: absolute; bottom: -14px; left: 0; right: 0; text-align: center;
-  font: 500 7px/1 var(--font-mono); color: #5A6165;
+  font: 500 7px/1 var(--font-mono); color: var(--ink-ghost);
 }
 
 .cd-right {

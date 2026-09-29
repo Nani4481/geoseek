@@ -2,6 +2,7 @@
 import { api } from "./api-client.js";
 import { loadRegions, humanizeRegionName } from "./regions.js";
 import { go, currentScreen } from "./router.js";
+import { getTheme, toggleTheme } from "./theme.js";
 
 const RAIL_ITEMS = [
   { code: "OV", label: "Overview", screen: "overview", key: "1" },
@@ -80,6 +81,21 @@ function renderTopbar() {
 
   renderAoiField();
   renderWindowField();
+  renderThemeToggle();
+}
+
+function renderThemeToggle() {
+  const el = document.getElementById("tb-theme");
+  const isLight = getTheme() === "light";
+  el.innerHTML = `
+    <button class="tb-theme-btn" id="tb-theme-btn" aria-label="Switch to ${isLight ? "dark" : "light"} theme" title="Switch to ${isLight ? "dark" : "light"} theme">
+      <span class="tb-theme-icon">${isLight ? "☀" : "☾"}</span>
+      <span class="t-micro">${isLight ? "LIGHT" : "DARK"}</span>
+    </button>`;
+  el.querySelector("#tb-theme-btn").addEventListener("click", () => {
+    toggleTheme();
+    renderThemeToggle();
+  });
 }
 
 function renderAoiField() {

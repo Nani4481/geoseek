@@ -83,6 +83,13 @@
   --yellow: #E8C24A;
   --detect-box: #3FCB74;
 
+  /* fixed-brightness pair for text/badges sat directly on a solid accent
+     fill (the active year tab, .btn.solid-cyan) - kept bright even in
+     light mode, since --cyan itself darkens there for its (far more
+     common) use as plain text/swatch color on the page background. */
+  --cyan-solid: #5FC8E8;
+  --ink-on-accent: #07171D;
+
   --hairline: rgba(255,255,255,0.09);
   --hairline-2: rgba(255,255,255,0.07);
   --hairline-3: rgba(255,255,255,0.05);
@@ -139,12 +146,58 @@
   --alert-warning-bg: rgba(240,160,48,0.10);
   --restricted-zone-fill: rgba(232,106,74,0.08);
   --restricted-zone-stroke: var(--red);
-  --tab-active: var(--cyan);
+  --tab-active: var(--cyan-solid);
   --tab-inactive: var(--bg-input);
   --feed-timestamp: var(--ink-faint);
   --feed-critical: var(--red);
   --feed-normal: var(--green);
   --feed-attention: var(--amber);
+}
+
+/* Light theme: overrides applied via [data-theme="light"] on <html>,
+   toggled from the top bar (js/theme.js) and remembered in localStorage.
+   --bg-void, --bg-badge and --bg-readout are deliberately left out here -
+   they back photographic imagery, the 3D globe and the bottom telemetry
+   readout strip, not general chrome, and stay a fixed dark "console"
+   surface in both themes (it reads correctly against arbitrary photo
+   content, and keeps that HUD strip legible either way). */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #F5F6F7;
+  --bg-rail: #EEF0F1;
+  --bg-panel: #FFFFFF;
+  --bg-float: rgba(255,255,255,0.96);
+  --bg-float-strong: rgba(255,255,255,0.98);
+  --bg-input: #FFFFFF;
+  --bg-empty: #E7E9EA;
+
+  --ink: #14181A;
+  --ink-2: #33393C;
+  --ink-3: #4B5255;
+  --ink-dim: #63696D;
+  --ink-faint: #74797C;
+  --ink-ghost: #85898C;
+  --ink-help: #565C5F;
+
+  --amber: #8A5A0A;
+  --cyan: #0C6E8C;
+  --green: #0F7A49;
+  --red: #B23A22;
+  --violet: #7A3FB0;
+  --yellow: #8C6A08;
+  --detect-box: #107E45;
+
+  --hairline: rgba(10,12,14,0.10);
+  --hairline-2: rgba(10,12,14,0.08);
+  --hairline-3: rgba(10,12,14,0.06);
+  --border-soft: rgba(10,12,14,0.16);
+  --fill-soft: rgba(10,12,14,0.045);
+  --fill-hover: rgba(10,12,14,0.08);
+
+  --scrollbar-track: #EEF0F1;
+  --scrollbar-thumb: #C7CBCD;
+  --scrollbar-thumb-hover: #ADB2B5;
 }
 
 * { box-sizing: border-box; }
