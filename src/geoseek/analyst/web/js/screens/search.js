@@ -6,6 +6,7 @@ import { toSearchResultViewModel } from "../viewmodels/search.js";
 let root;
 let lastQuery = "";
 let facets = { sensor: null };
+let lastResults = [];
 
 function mount() {
   root = document.getElementById("screen-search");
@@ -26,6 +27,18 @@ function mount() {
         <div class="se-grid" id="se-grid"></div>
       </div>
       <div class="se-facets scroll-pane" id="se-facets"></div>
+    </div>
+    <div class="se-tile-overlay hidden" id="se-tile-overlay" role="dialog" aria-modal="true" aria-label="Tile detail">
+      <div class="se-tile-modal">
+        <div class="se-tile-modal-img" id="se-tile-modal-img"></div>
+        <div class="se-tile-modal-body">
+          <div class="se-tile-modal-header">
+            <span class="t-panel-title" id="se-tile-modal-title"></span>
+            <button class="btn" id="se-tile-modal-close" aria-label="Close">✕</button>
+          </div>
+          <div id="se-tile-modal-meta"></div>
+        </div>
+      </div>
     </div>`;
 
   const SUGGESTIONS = [
@@ -40,11 +53,38 @@ function mount() {
 
   document.getElementById("se-go").addEventListener("click", runSearch);
   document.getElementById("se-input").addEventListener("keydown", (e) => { if (e.key === "Enter") runSearch(); });
+
+  const overlay = document.getElementById("se-tile-overlay");
+  document.getElementById("se-tile-modal-close").addEventListener("click", closeTileDetail);
+  overlay.addEventListener("click", (e) => { if (e.target === overlay) closeTileDetail(); });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && !overlay.classList.contains("hidden")) closeTileDetail();
+  });
+}
+
+function openTileDetail(tileId) {
+  const vm = lastResults.find((r) => r.tileId === tileId);
+  if (!vm) return;
+  document.getElementById("se-tile-modal-img").innerHTML = `<img src="${vm.thumbnailUrl}" alt="">`;
+  document.getElementById("se-tile-modal-title").textContent = vm.locationName;
+  document.getElementById("se-tile-modal-meta").innerHTML = `
+    <div class="t-meta" style="margin-top:2px;">${vm.tileId}</div>
+    <div class="t-small" style="color:var(--ink-2); margin-top:10px;">${vm.reason}</div>
+    <div class="se-tile-modal-facts">
+      <div><span class="t-micro">Rank</span><span class="t-body">${vm.rank}</span></div>
+      <div><span class="t-micro">Sensor</span><span class="t-body">${vm.sensor}</span></div>
+      <div><span class="t-micro">Acquired</span><span class="t-body">${vm.date}</span></div>
+    </div>`;
+  document.getElementById("se-tile-overlay").classList.remove("hidden");
+}
+
+function closeTileDetail() {
+  document.getElementById("se-tile-overlay").classList.add("hidden");
 }
 
 function resultCardHtml(vm) {
   return `
-    <div class="se-card">
+    <div class="se-card" data-id="${vm.tileId}">
       <div class="se-card-img">
         <img src="${vm.thumbnailUrl}" alt="" loading="lazy">
         <span class="badge-plate se-rank" style="color:var(--cyan);">RANK ${String(vm.rank).padStart(2, "0")}</span>
@@ -71,10 +111,13 @@ async function runSearch() {
       loadRegions(api),
     ]);
     const vms = body.results.map((r, i) => toSearchResultViewModel(r, i + 1, regions, api));
+    lastResults = vms;
     document.getElementById("se-summary").innerHTML =
       `Tiles that match "${q}" — best first <span style="float:right;">SEARCHED LOCALLY IN ${(body.latency_ms / 1000).toFixed(2)} S</span>`;
     grid.innerHTML = vms.length ? vms.map(resultCardHtml).join("") :
       `<div class="empty-state"><div class="empty-state-title">No matches</div>Checked the full local tile index for "${q}". Try a shorter or more general description.</div>`;
+    grid.querySelectorAll(".se-card").forEach((el) =>
+      el.addEventListener("click", () => openTileDetail(el.dataset.id)));
   } catch (e) {
     grid.innerHTML = `
       <div class="error-state">

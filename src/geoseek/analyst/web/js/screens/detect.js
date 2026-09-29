@@ -27,11 +27,18 @@ function boxHtml(d, tileW, tileH, mode) {
   const color = groupColor(classToGroupName(d.class));
   const leftPct = (cx / tileW) * 100, topPct = (cy / tileH) * 100;
   const wPct = (w / tileW) * 100, hPct = (h / tileH) * 100;
-  return `
+  const box = `
     <div class="od-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%;
-      border-color:${color}; box-shadow:0 0 6px ${color}44; transform: translate(-50%,-50%) rotate(${angle}deg);">
-      ${mode === "boxes-confidence" ? `<span class="od-box-label" style="color:${color};">${d.score.toFixed(2)}</span>` : ""}
-    </div>`;
+      border-color:${color}; box-shadow:0 0 6px ${color}44; transform: translate(-50%,-50%) rotate(${angle}deg);"></div>`;
+  // The label used to be a child of the rotated box, so it inherited that
+  // rotation and swung out to the side (sometimes past the image edge) for
+  // any steeply-angled detection. Positioned as its own sibling here, at the
+  // box's centroid in plain (unrotated) image space, it always reads upright
+  // and sits just above the box regardless of the detection's heading.
+  const label = mode === "boxes-confidence"
+    ? `<span class="od-box-label" style="left:${leftPct}%; top:${topPct}%; color:${color};">${d.score.toFixed(2)}</span>`
+    : "";
+  return box + label;
 }
 
 async function loadTile(obsId, row, col) {
