@@ -18,7 +18,7 @@
 .year-tab.active {
   background: var(--tab-active);
   border-color: var(--tab-active);
-  color: #07171D;
+  color: var(--ink-on-accent);
 }
 .year-tab.no-data {
   color: var(--ink-ghost);

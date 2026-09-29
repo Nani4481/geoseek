@@ -15,7 +15,7 @@
 .se-results-left { padding: 16px 22px; }
 .se-summary { display: flex; justify-content: space-between; margin-bottom: 12px; }
 .se-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 13px; }
-.se-card { background: var(--bg-panel); border: 1px solid rgba(255,255,255,0.1); min-width: 0; }
+.se-card { background: var(--bg-panel); border: 1px solid var(--border-soft); min-width: 0; }
 .se-card:hover { border-color: rgba(95,200,232,0.45); }
 .se-card-img { position: relative; aspect-ratio: 1/1; background: var(--bg-empty); overflow: hidden; }
 .se-card-img img { width: 100%; height: 100%; object-fit: cover; }

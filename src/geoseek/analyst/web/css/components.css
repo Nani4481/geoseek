@@ -15,7 +15,7 @@
 }
 .btn:hover { background: var(--fill-hover); }
 .btn:disabled { opacity: 0.5; cursor: default; }
-.btn.solid-cyan { background: var(--cyan); border-color: var(--cyan); color: #07171D; }
+.btn.solid-cyan { background: var(--cyan-solid); border-color: var(--cyan-solid); color: var(--ink-on-accent); }
 .btn.solid-cyan:hover { background: #78d3ee; }
 .btn.tone-green { border-color: rgba(79,197,139,0.5); color: var(--green); background: rgba(79,197,139,0.08); }
 .btn.tone-green:hover { background: rgba(79,197,139,0.16); }

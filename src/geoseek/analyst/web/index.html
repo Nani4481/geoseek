@@ -4,6 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GeoSeek</title>
+<script>
+// Applied before any CSS paints, so the stored theme is correct on the very
+// first frame instead of flashing dark then switching to light. Mirrors
+// js/theme.js's storage key/attribute; kept as plain inline JS (not a
+// module import) specifically so it runs synchronously here.
+(function () {
+  try {
+    if (localStorage.getItem("geoseek-theme") === "light") {
+      document.documentElement.setAttribute("data-theme", "light");
+    }
+  } catch (e) { /* private mode - defaults to dark */ }
+})();
+</script>
 <link rel="stylesheet" href="css/tokens.css">
 <link rel="stylesheet" href="css/shell.css">
 <link rel="stylesheet" href="css/components.css">
@@ -26,6 +39,7 @@
     <div class="tb-section tb-aoi" id="tb-aoi"></div>
     <div class="tb-section tb-window" id="tb-window"></div>
     <div class="tb-spacer"></div>
+    <div class="tb-section tb-theme" id="tb-theme"></div>
     <div class="tb-section tb-offline" id="tb-offline">
       <span class="tb-offline-dot"></span>
       <span class="tb-offline-label">OFFLINE &middot; LOCAL ONLY</span>
