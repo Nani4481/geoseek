@@ -1,5 +1,6 @@
 import { initShell, initKeyboardNav } from "./shell.js";
 import { startRouter } from "./router.js";
+import { runIntro } from "./intro.js";
 
 import "./screens/candidate.js";
 import "./screens/queue.js";
@@ -18,4 +19,5 @@ async function boot() {
   startRouter();
 }
 
+runIntro();
 boot();

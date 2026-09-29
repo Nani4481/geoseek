@@ -117,6 +117,13 @@
   --radius: 0;
   --radius-circle: 50%;
 
+  /* -- motion (used by css/motion.css + css/intro.css) ------------------ */
+  --ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-fast: 120ms;
+  --dur: 180ms;
+  --dur-slow: 300ms;
+
   /* spacing scale (px) */
   --sp-1: 2px;  --sp-2: 3px;  --sp-3: 4px;  --sp-4: 5px;  --sp-5: 6px;
   --sp-6: 7px;  --sp-7: 9px;  --sp-8: 11px; --sp-9: 13px; --sp-10: 14px;
