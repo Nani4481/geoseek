@@ -13,9 +13,12 @@ import { OrbitControls } from "../vendor/OrbitControls.js";
 const EARTH_RADIUS = 1;
 const TEX_BASE = new URL("../vendor/earth/", import.meta.url);
 
-function texUrl(name) {
+// exported so js/intro.js can build the same day/night-lit Earth for the
+// boot animation without duplicating the shader source.
+export function earthTexUrl(name) {
   return new URL(name, TEX_BASE).href;
 }
+const texUrl = earthTexUrl;
 
 // Classic equirectangular lat/lon -> unit-sphere mapping for this exact
 // texture set (row 0 = north pole, Greenwich meridian at the texture seam).
@@ -43,7 +46,7 @@ function subsolarPoint(date) {
   return { lat: declDeg, lon };
 }
 
-function starTexture() {
+export function starTexture() {
   const size = 64;
   const c = document.createElement("canvas");
   c.width = c.height = size;
@@ -82,7 +85,7 @@ function buildStarfield() {
   return new THREE.Points(geo, mat);
 }
 
-const EARTH_VERTEX_SHADER = `
+export const EARTH_VERTEX_SHADER = `
   varying vec2 vUv;
   varying vec3 vWorldNormal;
   varying vec3 vWorldPosition;
@@ -95,7 +98,7 @@ const EARTH_VERTEX_SHADER = `
   }
 `;
 
-const EARTH_FRAGMENT_SHADER = `
+export const EARTH_FRAGMENT_SHADER = `
   uniform sampler2D dayTexture;
   uniform sampler2D nightTexture;
   uniform sampler2D specularTexture;
