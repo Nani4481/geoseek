@@ -13,16 +13,20 @@ function mount() {
 }
 
 function boxHtml(d, tileW, tileH, mode) {
-  const xs = d.polygon_px.map((p) => p[0]);
-  const ys = d.polygon_px.map((p) => p[1]);
-  const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
-  const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-  const w = Math.max(...xs) - Math.min(...xs);
-  const h = Math.max(...ys) - Math.min(...ys);
+  // polygon_px is already the 4 corners of the oriented box (rotated rectangle),
+  // so its true width/height/angle come from the corner edges themselves - not
+  // from the axis-aligned bbox of those corners (which is larger than the box
+  // whenever it's rotated) combined with a second rotation, which used to
+  // double up the rotation and push boxes/labels outside the image.
+  const pts = d.polygon_px;
+  const cx = pts.reduce((s, p) => s + p[0], 0) / pts.length;
+  const cy = pts.reduce((s, p) => s + p[1], 0) / pts.length;
+  const w = Math.hypot(pts[1][0] - pts[0][0], pts[1][1] - pts[0][1]);
+  const h = Math.hypot(pts[2][0] - pts[1][0], pts[2][1] - pts[1][1]);
+  const angle = Math.atan2(pts[1][1] - pts[0][1], pts[1][0] - pts[0][0]) * (180 / Math.PI);
   const color = groupColor(classToGroupName(d.class));
   const leftPct = (cx / tileW) * 100, topPct = (cy / tileH) * 100;
   const wPct = (w / tileW) * 100, hPct = (h / tileH) * 100;
-  const angle = d.heading_deg || 0;
   return `
     <div class="od-box" style="left:${leftPct}%; top:${topPct}%; width:${wPct}%; height:${hPct}%;
       border-color:${color}; box-shadow:0 0 6px ${color}44; transform: translate(-50%,-50%) rotate(${angle}deg);">
