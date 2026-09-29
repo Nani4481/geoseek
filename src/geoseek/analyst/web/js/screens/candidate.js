@@ -156,7 +156,7 @@ function render(vm) {
           cornerTL: `AFTER &middot; ${vm.afterDate}`,
           cornerTR: `BEFORE &middot; ${vm.beforeDate}`,
         })}
-        <div class="cd-resolution-caption t-small">Resolution: 0.5m/px (Maxar WorldView-3)</div>
+        <div class="cd-resolution-caption t-small">Optical multispectral imagery &middot; Sentinel-2, ~10m/px</div>
       </div>
 
       <div class="cd-terrain-section fixed">
@@ -234,6 +234,7 @@ function render(vm) {
   terrain.setData(vm.terrain.changeType, vm.terrain.magnitude);
   root.querySelector("#cd-terrain-summary").textContent = terrain.summary;
   terrain.animate();
+  terrain.enableAutoRotate();
 
   root.querySelector("#cd-back").addEventListener("click", () => go("overview"));
   root.querySelector("#cd-prev").addEventListener("click", () => stepCandidate(-1));
