@@ -77,7 +77,7 @@ function rowHtml(vm) {
       <div class="t-chip">${vm.areaHectares.toFixed(1)} ha</div>
       <div class="rq-confidence">
         <div class="confidence-meter-track"><div class="confidence-meter-fill" style="width:${vm.confidencePct}%; background:${meterColor};"></div></div>
-        <span style="color:${meterColor}; font:600 11px var(--font-mono);">${vm.confidencePct}</span>
+        <span style="color:${meterColor}; font:600 13px var(--font-mono);">${vm.confidencePct}</span>
       </div>
       <div class="gate-squares">${gateSquares}</div>
       <div class="pill ${decisionPillClass}">${decisionLabel}</div>

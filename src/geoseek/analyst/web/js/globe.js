@@ -275,7 +275,11 @@ export function createGlobe(container, { onMarkerClick } = {}) {
       const spriteMat = new THREE.SpriteMaterial({ map: findingTex, transparent: true });
       const sprite = new THREE.Sprite(spriteMat);
       sprite.position.copy(pos);
-      sprite.scale.set(0.045, 0.045, 1);
+      // Sized for an actual mouse to land on, not just for looks - the
+      // sprite's soft glow reads much smaller than its true (clickable)
+      // quad, so a "visually right" size here was nearly impossible to hit.
+      sprite.scale.set(0.09, 0.09, 1);
+      sprite.userData.baseScale = 0.09;
       sprite.renderOrder = 1;
       sprite.userData.findingId = f.id;
       markersGroup.add(sprite);
@@ -285,11 +289,26 @@ export function createGlobe(container, { onMarkerClick } = {}) {
   const raycaster = new THREE.Raycaster();
   const pointerNdc = new THREE.Vector2();
   let downPos = null;
+  let hovered = null;
 
   function pointerToNdc(e) {
     const rect = renderer.domElement.getBoundingClientRect();
     pointerNdc.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     pointerNdc.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  }
+
+  // Sprites don't occlude against the opaque earth on their own (raycasting
+  // ignores what's actually visible), so a marker on the globe's far side
+  // could otherwise register a hit through the planet. Filter those out by
+  // comparing distance-from-camera against the earth's near-side surface
+  // along the same ray.
+  function clickableHitAt(ndc) {
+    raycaster.setFromCamera(ndc, camera);
+    const markerHit = raycaster.intersectObjects(markersGroup.children, false)[0];
+    if (!markerHit) return null;
+    const earthHit = raycaster.intersectObject(earth, false)[0];
+    if (earthHit && earthHit.distance < markerHit.distance - 0.01) return null;
+    return markerHit;
   }
 
   function onPointerDown(e) { downPos = { x: e.clientX, y: e.clientY }; }
@@ -299,12 +318,27 @@ export function createGlobe(container, { onMarkerClick } = {}) {
     downPos = null;
     if (moved > 6) return; // a drag-to-rotate gesture, not a click
     pointerToNdc(e);
-    raycaster.setFromCamera(pointerNdc, camera);
-    const hit = raycaster.intersectObjects(markersGroup.children, false)[0];
+    const hit = clickableHitAt(pointerNdc);
     if (hit && hit.object.userData.findingId) onMarkerClick(hit.object.userData.findingId);
   }
+  function onPointerMove(e) {
+    // Only while not dragging - OrbitControls already owns pointermove
+    // during an active drag, and re-raycasting every frame of a drag would
+    // just be wasted work.
+    if (downPos) return;
+    pointerToNdc(e);
+    const hit = clickableHitAt(pointerNdc);
+    const next = hit && hit.object.userData.findingId ? hit.object : null;
+    if (next === hovered) return;
+    if (hovered) hovered.scale.setScalar(hovered.userData.baseScale ?? 0.09);
+    hovered = next;
+    if (hovered) hovered.scale.setScalar((hovered.userData.baseScale ?? 0.09) * 1.5);
+    renderer.domElement.style.cursor = hovered ? "pointer" : "grab";
+  }
+  renderer.domElement.style.cursor = "grab";
   renderer.domElement.addEventListener("pointerdown", onPointerDown);
   renderer.domElement.addEventListener("pointerup", onPointerUp);
+  if (onMarkerClick) renderer.domElement.addEventListener("pointermove", onPointerMove);
 
   function focusOn(lat, lon) {
     if (lat == null || lon == null) return;
@@ -355,6 +389,7 @@ export function createGlobe(container, { onMarkerClick } = {}) {
     ro.disconnect();
     renderer.domElement.removeEventListener("pointerdown", onPointerDown);
     renderer.domElement.removeEventListener("pointerup", onPointerUp);
+    renderer.domElement.removeEventListener("pointermove", onPointerMove);
     controls.dispose();
     [dayTexture, nightTexture, specularTexture, cloudsTexture, aoiTex, findingTex].forEach((t) => t.dispose());
     [earth.geometry, clouds.geometry, atmosphere.geometry].forEach((g) => g.dispose());

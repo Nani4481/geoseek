@@ -15,7 +15,7 @@
 .se-results-left { padding: 16px 22px; }
 .se-summary { display: flex; justify-content: space-between; margin-bottom: 12px; }
 .se-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 13px; }
-.se-card { background: var(--bg-panel); border: 1px solid var(--border-soft); min-width: 0; }
+.se-card { background: var(--bg-panel); border: 1px solid var(--border-soft); min-width: 0; cursor: pointer; }
 .se-card:hover { border-color: rgba(95,200,232,0.45); }
 .se-card-img { position: relative; aspect-ratio: 1/1; background: var(--bg-empty); overflow: hidden; }
 .se-card-img img { width: 100%; height: 100%; object-fit: cover; }
@@ -24,3 +24,32 @@
 .se-card-body { padding: 9px 10px; }
 
 .se-facets { border-left: 1px solid var(--hairline); background: var(--bg-rail); }
+
+/* -- tile detail lightbox ------------------------------------------------ */
+
+.se-tile-overlay {
+  position: fixed; inset: 0; z-index: 200;
+  background: rgba(4,6,7,0.78);
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px;
+}
+.se-tile-overlay.hidden { display: none; }
+.se-tile-modal {
+  display: flex; width: min(1000px, 100%); max-height: 100%;
+  background: var(--bg-panel); border: 1px solid var(--border-soft);
+}
+.se-tile-modal-img {
+  flex: 1.3; min-width: 0; background: var(--bg-void);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.se-tile-modal-img img { width: 100%; height: 100%; object-fit: contain; }
+.se-tile-modal-body { flex: 1; min-width: 260px; max-width: 340px; padding: 16px 18px; overflow-y: auto; }
+.se-tile-modal-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 4px; }
+.se-tile-modal-facts { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+.se-tile-modal-facts > div { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--hairline-3); padding-bottom: 8px; }
+
+@media (max-width: 720px) {
+  .se-tile-modal { flex-direction: column; overflow-y: auto; }
+  .se-tile-modal-img { aspect-ratio: 1/1; }
+  .se-tile-modal-body { max-width: none; }
+}

@@ -14,7 +14,12 @@
 }
 .od-annotation-layer { position: absolute; inset: 0; }
 .od-box { position: absolute; border: 1.5px solid; background: transparent; pointer-events: none; }
-.od-box-label { position: absolute; top: -14px; left: 0; font: 500 7px var(--font-mono); background: var(--bg-badge); padding: 1px 3px; white-space: nowrap; }
+.od-box-label {
+  position: absolute;
+  transform: translate(-50%, calc(-100% - 5px));
+  font: 500 7px var(--font-mono); background: var(--bg-badge); padding: 1px 3px; white-space: nowrap;
+  pointer-events: none;
+}
 .od-legend { display: flex; gap: 12px; flex-wrap: wrap; }
 .od-legend-item { display: flex; align-items: center; gap: 5px; font: 500 10px var(--font-sans); color: var(--ink-dim); }
 .od-legend-swatch { width: 10px; height: 10px; border: 1.5px solid; display: inline-block; }
