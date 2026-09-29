@@ -1,0 +1,136 @@
+/* One-time boot overlay (js/intro.js drives the timing/state). Always
+   renders on the dark --bg-void surface regardless of the light/dark theme
+   toggle - same call as the imagery/globe viewports in overview.css: a
+   fixed dark "power-on" moment reads correctly either way, rather than
+   fighting for identity with whichever theme loads underneath it. */
+
+#intro {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-void);
+  cursor: pointer;
+  transition: opacity 420ms var(--ease), visibility 0ms 420ms;
+}
+#intro.intro-hide {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.intro-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(240,160,48,0.07) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(240,160,48,0.07) 1px, transparent 1px);
+  background-size: 56px 56px;
+  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
+          mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
+  animation: introGridPan 12s linear infinite;
+}
+@keyframes introGridPan { from { background-position: 0 0; } to { background-position: 56px 56px; } }
+
+.intro-sweep {
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 640px; height: 640px;
+  margin: -320px 0 0 -320px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, rgba(240,160,48,0.16), transparent 26%, transparent 100%);
+  animation: introSweep 2.4s linear infinite;
+}
+@keyframes introSweep { to { transform: rotate(360deg); } }
+
+.intro-content {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.intro-mark {
+  width: 52px; height: 52px;
+  border: 2px solid var(--amber);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0;
+  animation: introMarkIn 520ms var(--ease-out) 80ms both;
+}
+.intro-mark-dot {
+  width: 14px; height: 14px; border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 16px rgba(240,160,48,0.7);
+  animation: introDotPulse 1.6s ease-in-out 600ms infinite;
+}
+@keyframes introMarkIn {
+  from { opacity: 0; transform: scale(0.6) rotate(-20deg); }
+  to   { opacity: 1; transform: scale(1) rotate(0deg); }
+}
+@keyframes introDotPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.25); opacity: 0.75; }
+}
+
+.intro-title {
+  font: 700 26px/1 var(--font-sans);
+  letter-spacing: 0.22em;
+  color: var(--ink);
+  opacity: 0;
+  animation: introFadeUp 460ms var(--ease-out) 220ms both;
+}
+.intro-sub {
+  font: 500 9px/1 var(--font-mono);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
+  opacity: 0;
+  animation: introFadeUp 460ms var(--ease-out) 320ms both;
+}
+@keyframes introFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.intro-bar {
+  width: 220px; height: 2px;
+  background: var(--hairline);
+  overflow: hidden;
+  opacity: 0;
+  animation: introFadeUp 400ms var(--ease-out) 420ms both;
+}
+.intro-bar-fill {
+  height: 100%; width: 0%;
+  background: var(--amber);
+  box-shadow: 0 0 8px rgba(240,160,48,0.6);
+  animation: introBarFill 900ms var(--ease-out) 460ms both;
+}
+@keyframes introBarFill { to { width: 100%; } }
+
+.intro-status {
+  min-height: 12px;
+  font: 500 9px/1 var(--font-mono);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-ghost);
+  opacity: 0;
+  animation: introFadeUp 400ms var(--ease-out) 500ms both;
+}
+
+.intro-skip {
+  position: absolute;
+  bottom: 28px; left: 0; right: 0;
+  text-align: center;
+  font: 500 8px/1 var(--font-mono);
+  letter-spacing: 0.14em;
+  color: var(--ink-ghost);
+  opacity: 0;
+  animation: introFadeUp 400ms var(--ease-out) 900ms both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #intro { display: none; }
+}
