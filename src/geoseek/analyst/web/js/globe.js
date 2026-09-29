@@ -257,9 +257,23 @@ export function createGlobe(container, { onMarkerClick } = {}) {
 
   const aoiTex = markerSprite("#F0A030");
   const findingTex = markerSprite("#5FC8E8");
+  const siteTex = markerSprite("#6B7480");
 
-  function setMarkers({ aoi, findings }) {
+  function setMarkers({ aoi, findings, otherSites }) {
     while (markersGroup.children.length) markersGroup.remove(markersGroup.children[0]);
+    // Every other tracked AOI, dim and non-interactive, so the globe reads
+    // as the whole monitored network - the active site (amber, below) still
+    // reads as "you are here" against them.
+    (otherSites || []).forEach((s) => {
+      if (s.lon == null || s.lat == null) return;
+      const pos = latLonToVector3(s.lat, s.lon, EARTH_RADIUS * 1.006);
+      const spriteMat = new THREE.SpriteMaterial({ map: siteTex, transparent: true, opacity: 0.75 });
+      const sprite = new THREE.Sprite(spriteMat);
+      sprite.position.copy(pos);
+      sprite.scale.set(0.05, 0.05, 1);
+      sprite.renderOrder = 0;
+      markersGroup.add(sprite);
+    });
     if (aoi && aoi.lat != null && aoi.lon != null) {
       const pos = latLonToVector3(aoi.lat, aoi.lon, EARTH_RADIUS * 1.012);
       const spriteMat = new THREE.SpriteMaterial({ map: aoiTex, transparent: true });
@@ -391,7 +405,7 @@ export function createGlobe(container, { onMarkerClick } = {}) {
     renderer.domElement.removeEventListener("pointerup", onPointerUp);
     renderer.domElement.removeEventListener("pointermove", onPointerMove);
     controls.dispose();
-    [dayTexture, nightTexture, specularTexture, cloudsTexture, aoiTex, findingTex].forEach((t) => t.dispose());
+    [dayTexture, nightTexture, specularTexture, cloudsTexture, aoiTex, findingTex, siteTex].forEach((t) => t.dispose());
     [earth.geometry, clouds.geometry, atmosphere.geometry].forEach((g) => g.dispose());
     [earthMaterial, cloudsMaterial, atmosphereMaterial].forEach((m) => m.dispose());
     renderer.dispose();

@@ -140,7 +140,7 @@ function render(vm, bbox) {
     ${statsBarHtml(vm)}
     <div class="ov-map">
       <div class="ov-imagery-visual ${viewMode === "globe" ? "hidden" : ""}">
-        ${bgUrl ? `<img class="ov-base-img" src="${bgUrl}" alt="">` : `<div class="ov-base-img ov-base-empty"></div>`}
+        ${bgUrl ? `<img class="ov-base-img" id="ov-base-img" src="${bgUrl}" alt="">` : `<div class="ov-base-img ov-base-empty"></div>`}
         <div class="ov-vignette"></div>
         <div class="ov-graticule ${layersOn.grid ? "" : "hidden"}"></div>
         <div class="ov-zones">${(vm.restrictedZones || []).map((z) => zoneRectHtml(z, bbox)).join("")}</div>
@@ -239,6 +239,24 @@ function render(vm, bbox) {
       setBrowseOrder(vm.findings.map((f) => f.id));
       go("candidate", el.dataset.id);
     }));
+
+  // The map's hero image used to be permanently fixed to the single top
+  // featured story - it never changed no matter which marker or finding you
+  // were looking at. Hovering one now swaps in that finding's own real
+  // change-overlay imagery (same rendered-on-demand endpoint the Candidate
+  // Detail screen uses), and leaving reverts to the featured image.
+  const baseImg = root.querySelector("#ov-base-img");
+  if (baseImg) {
+    const byId = new Map(vm.findings.map((f) => [String(f.id), f]));
+    root.querySelectorAll(".ov-marker, .ov-finding").forEach((el) => {
+      const f = byId.get(el.dataset.id);
+      const year = (f?.window?.[1] || "").slice(0, 4);
+      if (!f || !year) return;
+      const previewUrl = api.candidateImageryUrl(f.id, { date: year, view: "overlay" });
+      el.addEventListener("mouseenter", () => { baseImg.src = previewUrl; });
+      el.addEventListener("mouseleave", () => { baseImg.src = bgUrl; });
+    });
+  }
   root.querySelectorAll(".ov-layer-row").forEach((row) =>
     row.addEventListener("click", () => {
       const key = row.dataset.layer;
@@ -266,7 +284,21 @@ function render(vm, bbox) {
     globeInstance = createGlobe(host, {
       onMarkerClick: (id) => { setBrowseOrder(vm.findings.map((f) => f.id)); go("candidate", id); },
     });
-    globeInstance.setMarkers({ aoi: aoiCenter ? { ...aoiCenter, label: aoiLabel } : null, findings: vm.findings });
+    // Every other staged AOI (real regions this same archive tracks, not
+    // just the one currently selected) so the globe reads as a whole
+    // monitored network rather than a single dot.
+    const otherSites = (vm.regions || [])
+      .filter((r) => r.name !== currentAoi()?.name)
+      .map((r) => ({
+        lat: (r.bbox[1] + r.bbox[3]) / 2,
+        lon: (r.bbox[0] + r.bbox[2]) / 2,
+        label: humanizeRegionName(r.name),
+      }));
+    globeInstance.setMarkers({
+      aoi: aoiCenter ? { ...aoiCenter, label: aoiLabel } : null,
+      findings: vm.findings,
+      otherSites,
+    });
   }
 }
 
@@ -285,6 +317,7 @@ async function show() {
       api.audit({ limit: 20 }),
     ]);
     const vm = toOverviewViewModel(presentation, candidatesBody, regions, stats, api);
+    vm.regions = regions;
     vm.restrictedZones = zonesBody.zones || [];
     vm.activity = buildActivityFeed({
       candidates: feedCandidatesBody.candidates || [],
