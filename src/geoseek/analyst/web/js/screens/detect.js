@@ -5,7 +5,10 @@ import { mountCompareSlider, compareSurfaceHtml } from "../compare-slider.js";
 
 let root;
 let sliderCtl = null;
-let state = { observationId: null, row: null, col: null, mode: "boxes-confidence" };
+// "boxes" matches the chip marked active in the initial markup below - they
+// used to disagree, so the very first render showed confidence labels
+// cluttering every box while the UI implied "boxes only" was selected.
+let state = { observationId: null, row: null, col: null, mode: "boxes" };
 
 function mount() {
   root = document.getElementById("screen-detect");
