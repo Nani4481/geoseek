@@ -5,10 +5,13 @@ import { toOverviewViewModel } from "../viewmodels/overview.js";
 import { buildActivityFeed } from "../viewmodels/activity.js";
 import { setBrowseOrder } from "./candidate.js";
 import { shellState, currentAoi } from "../shell.js";
+import { createGlobe } from "../globe.js";
 
 let root;
 let layersOn = { changes: true, grid: true };
 let yearFilter = null; // null = all years
+let viewMode = "imagery"; // "imagery" | "globe"
+let globeInstance = null;
 
 function zoneRectHtml(zone, bbox) {
   if (!bbox) return "";
@@ -84,6 +87,10 @@ function statsBarHtml(vm) {
           <div class="t-micro">${s.label}</div>
         </div>`).join("")}
       <div class="ov-stats-spacer"></div>
+      <div class="ov-chips" id="ov-view-toggle">
+        <button class="chip ${viewMode === "imagery" ? "active" : ""}" data-view="imagery">IMAGERY</button>
+        <button class="chip ${viewMode === "globe" ? "active" : ""}" data-view="globe">GEOINT GLOBE</button>
+      </div>
       <div class="ov-stats-years">${yearTabsHtml(vm.years)}</div>
     </div>`;
 }
@@ -124,16 +131,34 @@ function render(vm, bbox) {
   // not years, and would 400 if passed directly).
   const bgUrl = vm.featured[0] ? vm.featured[0].imagery.overlay : null;
 
+  const aoiCenter = bbox ? { lat: (bbox[1] + bbox[3]) / 2, lon: (bbox[0] + bbox[2]) / 2 } : null;
+  const aoiLabel = currentAoi() ? humanizeRegionName(currentAoi().name) : "";
+
+  if (globeInstance) { globeInstance.dispose(); globeInstance = null; }
+
   root.innerHTML = `
     ${statsBarHtml(vm)}
     <div class="ov-map">
-      ${bgUrl ? `<img class="ov-base-img" src="${bgUrl}" alt="">` : `<div class="ov-base-img ov-base-empty"></div>`}
-      <div class="ov-vignette"></div>
-      <div class="ov-graticule ${layersOn.grid ? "" : "hidden"}"></div>
-      <div class="ov-zones">${(vm.restrictedZones || []).map((z) => zoneRectHtml(z, bbox)).join("")}</div>
-      <div class="ov-markers ${layersOn.changes ? "" : "hidden"}" id="ov-markers"></div>
-      <div class="ov-aoi-boundary">
-        <span class="ov-aoi-label">AOI BOUNDARY · AOI-${String(shellState.aoiIdx + 1).padStart(2, "0")}</span>
+      <div class="ov-imagery-visual ${viewMode === "globe" ? "hidden" : ""}">
+        ${bgUrl ? `<img class="ov-base-img" src="${bgUrl}" alt="">` : `<div class="ov-base-img ov-base-empty"></div>`}
+        <div class="ov-vignette"></div>
+        <div class="ov-graticule ${layersOn.grid ? "" : "hidden"}"></div>
+        <div class="ov-zones">${(vm.restrictedZones || []).map((z) => zoneRectHtml(z, bbox)).join("")}</div>
+        <div class="ov-markers ${layersOn.changes ? "" : "hidden"}" id="ov-markers"></div>
+        <div class="ov-aoi-boundary">
+          <span class="ov-aoi-label">AOI BOUNDARY · AOI-${String(shellState.aoiIdx + 1).padStart(2, "0")}</span>
+        </div>
+      </div>
+
+      <div class="ov-globe-visual ${viewMode === "globe" ? "" : "hidden"}">
+        <div class="ov-globe-caption">
+          <div class="t-eyebrow">GEOINT / GEOGRAPHIC CONTEXT</div>
+          <div class="t-small" style="color:var(--ink-3); margin-top:2px;">
+            ${vm.findings.length} located finding${vm.findings.length === 1 ? "" : "s"} · live solar terminator${aoiLabel ? " · " + aoiLabel : ""}
+          </div>
+        </div>
+        <div class="ov-globe-host" id="ov-globe-host"></div>
+        <div class="ov-globe-hint t-micro">Drag to rotate · scroll to zoom · click a marker to inspect</div>
       </div>
 
       <div class="ov-panel panel ov-layers">
@@ -229,9 +254,24 @@ function render(vm, bbox) {
       yearFilter = btn.dataset.year || null;
       show();
     }));
+  root.querySelectorAll("#ov-view-toggle [data-view]").forEach((btn) =>
+    btn.addEventListener("click", () => {
+      if (btn.dataset.view === viewMode) return;
+      viewMode = btn.dataset.view;
+      render(vm, bbox);
+    }));
+
+  if (viewMode === "globe") {
+    const host = root.querySelector("#ov-globe-host");
+    globeInstance = createGlobe(host, {
+      onMarkerClick: (id) => { setBrowseOrder(vm.findings.map((f) => f.id)); go("candidate", id); },
+    });
+    globeInstance.setMarkers({ aoi: aoiCenter ? { ...aoiCenter, label: aoiLabel } : null, findings: vm.findings });
+  }
 }
 
 async function show() {
+  if (globeInstance) { globeInstance.dispose(); globeInstance = null; }
   root.innerHTML = `<div class="loading-state">Loading the overview from the local index…</div>`;
   try {
     const aoi = currentAoi();
