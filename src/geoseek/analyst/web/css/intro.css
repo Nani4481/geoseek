@@ -1,4 +1,4 @@
-/* One-time boot overlay (js/intro.js drives the timing/state). Always
+/* One-time boot overlay (js/intro.js drives the 3D scene + timing). Always
    renders on the dark --bg-void surface regardless of the light/dark theme
    toggle - same call as the imagery/globe viewports in overview.css: a
    fixed dark "power-on" moment reads correctly either way, rather than
@@ -8,9 +8,7 @@
   position: fixed;
   inset: 0;
   z-index: 9999;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  overflow: hidden;
   background: var(--bg-void);
   cursor: pointer;
   transition: opacity 420ms var(--ease), visibility 0ms 420ms;
@@ -21,66 +19,33 @@
   pointer-events: none;
 }
 
-.intro-grid {
+.intro-scene {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(240,160,48,0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(240,160,48,0.07) 1px, transparent 1px);
-  background-size: 56px 56px;
-  -webkit-mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
-          mask-image: radial-gradient(ellipse at center, black 25%, transparent 72%);
-  animation: introGridPan 12s linear infinite;
 }
-@keyframes introGridPan { from { background-position: 0 0; } to { background-position: 56px 56px; } }
-
-.intro-sweep {
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 640px; height: 640px;
-  margin: -320px 0 0 -320px;
-  border-radius: 50%;
-  background: conic-gradient(from 0deg, rgba(240,160,48,0.16), transparent 26%, transparent 100%);
-  animation: introSweep 2.4s linear infinite;
+.intro-scene canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
-@keyframes introSweep { to { transform: rotate(360deg); } }
 
 .intro-content {
-  position: relative;
+  position: absolute;
+  left: 0; right: 0;
+  bottom: 14%;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
-}
-
-.intro-mark {
-  width: 52px; height: 52px;
-  border: 2px solid var(--amber);
-  display: flex; align-items: center; justify-content: center;
-  opacity: 0;
-  animation: introMarkIn 520ms var(--ease-out) 80ms both;
-}
-.intro-mark-dot {
-  width: 14px; height: 14px; border-radius: 50%;
-  background: var(--amber);
-  box-shadow: 0 0 16px rgba(240,160,48,0.7);
-  animation: introDotPulse 1.6s ease-in-out 600ms infinite;
-}
-@keyframes introMarkIn {
-  from { opacity: 0; transform: scale(0.6) rotate(-20deg); }
-  to   { opacity: 1; transform: scale(1) rotate(0deg); }
-}
-@keyframes introDotPulse {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.25); opacity: 0.75; }
+  gap: 14px;
+  pointer-events: none;
 }
 
 .intro-title {
-  font: 700 26px/1 var(--font-sans);
-  letter-spacing: 0.22em;
+  font: 700 25px/1 var(--font-sans);
+  letter-spacing: 0.28em;
   color: var(--ink);
   opacity: 0;
-  animation: introFadeUp 460ms var(--ease-out) 220ms both;
+  animation: introFadeUp 460ms var(--ease-out) 700ms both;
 }
 .intro-sub {
   font: 500 9px/1 var(--font-mono);
@@ -88,7 +53,7 @@
   text-transform: uppercase;
   color: var(--ink-faint);
   opacity: 0;
-  animation: introFadeUp 460ms var(--ease-out) 320ms both;
+  animation: introFadeUp 460ms var(--ease-out) 800ms both;
 }
 @keyframes introFadeUp {
   from { opacity: 0; transform: translateY(6px); }
@@ -100,13 +65,13 @@
   background: var(--hairline);
   overflow: hidden;
   opacity: 0;
-  animation: introFadeUp 400ms var(--ease-out) 420ms both;
+  animation: introFadeUp 400ms var(--ease-out) 900ms both;
 }
 .intro-bar-fill {
   height: 100%; width: 0%;
   background: var(--amber);
   box-shadow: 0 0 8px rgba(240,160,48,0.6);
-  animation: introBarFill 900ms var(--ease-out) 460ms both;
+  animation: introBarFill 1100ms var(--ease-out) 940ms both;
 }
 @keyframes introBarFill { to { width: 100%; } }
 
@@ -117,7 +82,7 @@
   text-transform: uppercase;
   color: var(--ink-ghost);
   opacity: 0;
-  animation: introFadeUp 400ms var(--ease-out) 500ms both;
+  animation: introFadeUp 400ms var(--ease-out) 1000ms both;
 }
 
 .intro-skip {
@@ -128,7 +93,7 @@
   letter-spacing: 0.14em;
   color: var(--ink-ghost);
   opacity: 0;
-  animation: introFadeUp 400ms var(--ease-out) 900ms both;
+  animation: introFadeUp 400ms var(--ease-out) 1500ms both;
 }
 
 @media (prefers-reduced-motion: reduce) {
