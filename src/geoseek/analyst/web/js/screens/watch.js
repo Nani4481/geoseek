@@ -17,7 +17,12 @@ async function cardData(w) {
     candidateCount += n.candidates.length;
     n.candidates.forEach((c) => { if (c.confidence) largestArea = Math.max(largestArea, c.confidence); });
   });
-  return { watch: w, notifications, unseenCount: unseen.length, candidateCount };
+  // The card's thumbnail is the most recent notification's first candidate,
+  // rendered through the same imagery endpoint the Candidate Detail screen
+  // uses. There's no dedicated "watch area thumbnail" image - a watch area
+  // is just a bbox until a candidate has actually been found inside it.
+  const latestCandidateId = notifications[0]?.candidates?.[0]?.candidate_id ?? null;
+  return { watch: w, notifications, unseenCount: unseen.length, candidateCount, latestCandidateId };
 }
 
 function cardHtml(d) {
@@ -35,10 +40,13 @@ function cardHtml(d) {
       <span class="t-small" style="color:var(--ink-dim);">${n.candidates.length} candidate(s)</span>
     </div>`).join("") || `<div class="t-small" style="color:var(--ink-ghost);">No notifications logged yet.</div>`;
 
+  const thumbInner = d.latestCandidateId
+    ? `<img src="${api.candidateImageryUrl(d.latestCandidateId, { view: "overlay" })}" alt="" loading="lazy">`
+    : "";
   return `
     <div class="wa-card panel" style="border-color:${needsLook ? "rgba(240,160,48,0.3)" : "rgba(255,255,255,0.1)"};" data-watch="${d.watch.watch_id}">
       <div class="wa-card-top">
-        <div class="wa-card-thumb"></div>
+        <div class="wa-card-thumb">${thumbInner}</div>
         <div class="min0" style="flex:1;">
           <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
             <span class="t-card-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${d.watch.name}</span>

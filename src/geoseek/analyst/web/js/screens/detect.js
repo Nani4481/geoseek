@@ -5,14 +5,39 @@ import { mountCompareSlider, compareSurfaceHtml } from "../compare-slider.js";
 
 let root;
 let sliderCtl = null;
+let sceneResizeObserver = null;
 // "boxes" matches the chip marked active in the initial markup below - they
 // used to disagree, so the very first render showed confidence labels
 // cluttering every box while the UI implied "boxes only" was selected.
-let state = { observationId: null, row: null, col: null, mode: "boxes" };
+let state = { observationId: null, row: null, col: null, mode: "boxes", tileW: null, tileH: null };
 
 function mount() {
   root = document.getElementById("screen-detect");
   root.classList.add("od-root");
+}
+
+// The annotation layer draws boxes as percentages of the tile's own pixel
+// grid, which only lines up with the visible image when the surface's box
+// has *exactly* the tile's aspect ratio. Leaving that to CSS (height:100% +
+// max-width:100% + `aspect-ratio`) only holds while the flex column happens
+// to be wide enough; once the available width is the tighter constraint,
+// max-width clamps the box's width but not its height, so the surface's
+// ratio drifts from the tile's and object-fit:contain letterboxes the <img>
+// inside a box the annotation layer doesn't know about - detections then
+// read as drifted past the visible photo's edge. Sizing the surface with
+// explicit pixel dimensions computed the same way "contain" would keeps the
+// two in lockstep at every viewport size.
+function fitSurfaceToScene() {
+  const scene = document.getElementById("od-scene");
+  const surface = scene && scene.querySelector(".compare-surface");
+  if (!surface || !state.tileW || !state.tileH) return;
+  const availW = scene.clientWidth;
+  const availH = scene.clientHeight;
+  const ratio = state.tileW / state.tileH;
+  let w = availW, h = w / ratio;
+  if (h > availH) { h = availH; w = h * ratio; }
+  surface.style.width = `${Math.floor(w)}px`;
+  surface.style.height = `${Math.floor(h)}px`;
 }
 
 function boxHtml(d, tileW, tileH, mode) {
@@ -56,10 +81,15 @@ async function loadTile(obsId, row, col) {
       cornerTL: "DETECTIONS DRAWN",
       cornerTR: "IMAGERY ONLY",
     });
+    state.tileW = detail.width;
+    state.tileH = detail.height;
     const surface = host.querySelector(".compare-surface");
-    surface.style.aspectRatio = `${detail.width} / ${detail.height}`;
+    fitSurfaceToScene();
     if (sliderCtl) sliderCtl.destroy();
     sliderCtl = mountCompareSlider(surface, { initial: 62, ariaLabel: "Compare imagery and detections" });
+    if (sceneResizeObserver) sceneResizeObserver.disconnect();
+    sceneResizeObserver = new ResizeObserver(() => fitSurfaceToScene());
+    sceneResizeObserver.observe(host);
     renderLegend(detail.detections);
     renderContextNotes(detail.detections);
   } catch (e) {
