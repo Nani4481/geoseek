@@ -1,10 +1,13 @@
 import { api } from "../api-client.js";
 import { registerScreen, go } from "../router.js";
 import { loadRegions } from "../regions.js";
+import { loadZones, zoneBboxByName } from "../zones.js";
 import { toCandidateDetailViewModel } from "../viewmodels/candidate.js";
 import { mountCompareSlider, compareSurfaceHtml } from "../compare-slider.js";
 import { shellState, refreshQueueBadge } from "../shell.js";
 import { Terrain3D } from "../components/terrain-3d.js";
+import { mountCandidateMap } from "../components/candidate-map.js";
+import { mountGateChart } from "../components/mini-chart.js";
 
 let root;
 let currentId = null;
@@ -12,6 +15,8 @@ let currentVm = null;
 let currentIds = []; // the browsing order set by whatever screen deep-linked here
 let sliderCtl = null;
 let terrain = null;
+let candidateMap = null;
+let gateChart = null;
 let selectedBeforeYear = null;
 
 function mount() {
@@ -169,6 +174,11 @@ function render(vm) {
         <div class="terrain-summary t-small" id="cd-terrain-summary"></div>
       </div>
 
+      <div class="cd-map-section fixed">
+        <span class="t-section-title">Location &middot; drag to pan, scroll to zoom</span>
+        <div class="geo-map" id="cd-map"></div>
+      </div>
+
       <div class="cd-timeline fixed">
         <div class="cd-timeline-head">
           <span class="t-section-title">When it was visible</span>
@@ -204,6 +214,7 @@ function render(vm) {
           <span class="t-eyebrow">Evidence check</span>
           <span class="t-micro">${vm.gatesPassCount} OF 5 CLEAR</span>
         </div>
+        <div class="cd-gate-chart-wrap"><canvas id="cd-gate-chart" height="90"></canvas></div>
         <div>${gateRowsHtml(vm.gates)}</div>
       </div>
 
@@ -235,6 +246,23 @@ function render(vm) {
   root.querySelector("#cd-terrain-summary").textContent = terrain.summary;
   terrain.animate();
   terrain.enableAutoRotate();
+
+  if (candidateMap) candidateMap.destroy();
+  candidateMap = mountCandidateMap(root.querySelector("#cd-map"), {
+    geometry: vm.geometry,
+    centroidLonLat: vm.centroidLonLat,
+    imageUrl: vm.imagery.afterUrl,
+    restrictedZone: vm.restrictedZoneBbox,
+  });
+  if (candidateMap.marker) {
+    candidateMap.marker.bindPopup(`
+      <strong>${vm.changeTypeLabel}</strong><br>
+      ${vm.confidencePct}% confidence &middot; ${vm.band.toUpperCase()}<br>
+      ${vm.effectiveDecision === "undecided" ? "Undecided" : vm.effectiveDecision.toUpperCase()}`);
+  }
+
+  if (gateChart) gateChart.destroy();
+  gateChart = mountGateChart(root.querySelector("#cd-gate-chart"), vm.gates);
 
   root.querySelector("#cd-back").addEventListener("click", () => go("overview"));
   root.querySelector("#cd-prev").addEventListener("click", () => stepCandidate(-1));
@@ -291,8 +319,9 @@ async function show(id) {
   selectedBeforeYear = null;
   root.innerHTML = `<div class="loading-state">Loading candidate ${id} from the local index…</div>`;
   try {
-    const [detail, regions] = await Promise.all([api.getCandidate(id), loadRegions(api)]);
+    const [detail, regions, zones] = await Promise.all([api.getCandidate(id), loadRegions(api), loadZones(api)]);
     currentVm = toCandidateDetailViewModel(detail, regions, api);
+    currentVm.restrictedZoneBbox = currentVm.restrictedZone ? zoneBboxByName(zones, currentVm.restrictedZone.name) : null;
     render(currentVm);
   } catch (e) {
     root.innerHTML = `

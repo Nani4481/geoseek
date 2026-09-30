@@ -104,6 +104,9 @@ serve different queries: one finds *what looks like X*, the other finds
 | rasterio / GDAL / pyproj | Reading, reprojecting, and co-registering satellite imagery | Standard geospatial stack with correct CRS/warp handling |
 | FastAPI + SQLite | Analyst API and audit-trail storage | Lightweight, offline-capable, no external database server needed |
 | Vanilla JS (no framework, no CDN) | Analyst web UI | Runs fully offline with zero build step or external script dependency |
+| Leaflet | Interactive map on Candidate Detail: real detection polygon, real evidence imagery draped at its true bounds, restricted-zone rectangle | Self-hostable as a single JS+CSS drop-in (`scripts/stage_leaflet.py`); no vector-tile/style-JSON server needed since there is no offline basemap tile pyramid to serve under it |
+| Chart.js | Evidence-gate and per-class detection-count charts | Single self-hostable UMD file (`scripts/stage_chartjs.py`); charts read the same real numbers the UI already states in text, nothing invented for the chart |
+| Docker / docker-compose | Optional containerized deployment | `Dockerfile` builds a CPU-only image with every dependency including the `detect` extra; `data/` stays a bind mount since it's machine-specific and gigabytes in size |
 
 ## Data and models
 

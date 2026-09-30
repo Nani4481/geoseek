@@ -2,10 +2,12 @@ import { api } from "../api-client.js";
 import { registerScreen } from "../router.js";
 import { toModelInfoViewModel, classToGroupName, groupColor, contextualNotes } from "../viewmodels/detection.js";
 import { mountCompareSlider, compareSurfaceHtml } from "../compare-slider.js";
+import { mountCountsChart } from "../components/mini-chart.js";
 
 let root;
 let sliderCtl = null;
 let sceneResizeObserver = null;
+let countsChart = null;
 // "boxes" matches the chip marked active in the initial markup below - they
 // used to disagree, so the very first render showed confidence labels
 // cluttering every box while the UI implied "boxes only" was selected.
@@ -144,6 +146,7 @@ async function renderRight(obsId) {
   document.getElementById("od-right").innerHTML = `
     <div class="od-right-section">
       <div class="t-eyebrow">Counts in this scene</div>
+      ${vm.groups.length ? `<div class="od-counts-chart-wrap"><canvas id="od-counts-chart" height="120"></canvas></div>` : ""}
       ${countsHtml || `<div class="t-small" style="color:var(--ink-dim);">No detections recorded for this observation.</div>`}
     </div>
     <div class="od-right-section">
@@ -157,6 +160,14 @@ async function renderRight(obsId) {
         <div class="tinted-box-text">Objects under netting, in deep shadow, or smaller than a few pixels are routinely missed. Counts are a floor, not a total.</div>
       </div>
     </div>`;
+
+  if (countsChart) countsChart.destroy();
+  const chartCanvas = document.getElementById("od-counts-chart");
+  if (chartCanvas) {
+    countsChart = mountCountsChart(chartCanvas, vm.groups.map((g) => ({
+      name: g.name, color: g.color, count: grouped[g.name] || 0,
+    })));
+  }
 }
 
 async function show() {

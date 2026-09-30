@@ -1,0 +1,14 @@
+# Staged models/datasets/tiles/index/provenance are gigabytes, machine-
+# specific, and already gitignored - bind-mounted at run time instead of
+# baked into the image (see Dockerfile's top comment and docker-compose.yml).
+# The Dockerfile recreates the empty directory skeleton itself at build time.
+data/
+
+.git/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+build/
+dist/

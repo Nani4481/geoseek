@@ -200,6 +200,8 @@ export function toCandidateDetailViewModel(detail, regions, api) {
     effectiveDecision: detail.effective_decision || "undecided",
     currentDecision: detail.current_decision || null,
     restrictedZone: detail.restricted_zone || null,
+    geometry: detail.geometry || null,
+    centroidLonLat: detail.centroid_lonlat || null,
   };
 }
 
