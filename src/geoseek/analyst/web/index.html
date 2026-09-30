@@ -33,6 +33,8 @@
 <link rel="stylesheet" href="css/activity-feed.css">
 <link rel="stylesheet" href="css/motion.css">
 <link rel="stylesheet" href="css/intro.css">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/leaflet-theme.css">
 </head>
 <body>
 <div id="intro" role="status" aria-live="polite">
@@ -86,6 +88,11 @@
   "imports": { "three": "./vendor/three.module.min.js" }
 }
 </script>
+<!-- Leaflet and Chart.js ship as classic UMD globals (L, Chart), not ES
+     modules - loaded as plain scripts here, same as any other vendored
+     no-build-step dependency, before the app's own module graph. -->
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="vendor/chart.umd.js"></script>
 <script type="module" src="js/main.js"></script>
 </body>
 </html>

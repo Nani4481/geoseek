@@ -1,0 +1,23 @@
+services:
+  geoseek:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      # Staged models + the ingested tile/index catalog live on the host,
+      # not in the image - see Dockerfile's top comment. Stage them first
+      # per RUN.md if this is a fresh checkout (an empty ./data still
+      # starts the container fine; the API just has nothing indexed yet).
+      - ./data:/app/data
+    restart: unless-stopped
+    # Uncomment to use a host GPU (requires the NVIDIA Container Toolkit
+    # installed on the host; the app's own device selection - see
+    # src/geoseek/config.py::select_device - already picks it up
+    # automatically, no image or env change needed beyond this):
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]

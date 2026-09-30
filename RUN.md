@@ -6,6 +6,30 @@ PowerShell, run from the repo root: `C:\Users\Prash\Downloads\SIH 2026\geoseek`.
 
 ---
 
+## 0. Or: run it in Docker (skip the conda setup)
+
+If you'd rather not set up conda/GDAL/CUDA by hand, `docker compose up --build`
+builds a CPU-only image (torch, faiss-cpu, rasterio, opencv, the `detect`
+extra — everything sections 1-9 below need) and serves the app at
+`http://localhost:8000/app/`. `data/` is bind-mounted, not baked into the
+image, so stage it once first exactly as section 1's prerequisites describe -
+an empty `data/` still starts the container, the API just has nothing
+indexed yet. A host GPU works too: it needs the NVIDIA Container Toolkit
+installed, then uncommenting the `deploy.resources.reservations` block in
+`docker-compose.yml` (the app's own device selection, `select_device()` in
+`src/geoseek/config.py`, already picks up `cuda` automatically once it's
+visible in the container - no image change needed beyond that block).
+
+```bash
+docker compose up --build
+```
+
+The rest of this file (sections 1-9) is the bare-metal/conda path; skip to
+section 3 once the container is up, or read on if you want the process
+running directly on your machine instead.
+
+---
+
 ## 1. Activate the conda environment
 
 Env name: **`geoseek`** (lives at `C:\AnacondaPython\anaconda3\envs\geoseek`,
