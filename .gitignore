@@ -66,3 +66,7 @@ data/earth_textures_src/
 # (src/geoseek/analyst/web_react/) is committed so an air-gapped machine needs no Node at all.
 frontend-react/node_modules/
 frontend-react/.vite/
+
+# tests/test_phase6.py POSTs /export (csv + geojson) on every full pytest run; those artifacts must never be committable.
+# (Already covered by data/change_model/ above; listed explicitly so removing that broader rule cannot expose them.)
+data/change_model/exports/
