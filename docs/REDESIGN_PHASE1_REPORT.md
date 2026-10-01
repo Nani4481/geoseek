@@ -226,7 +226,7 @@ touching the frontend), but since zero Python/backend files were modified,
 there's no mechanism by which this work could have moved these numbers.
 
 **Boot verification, in a real browser** (Playwright + the system Chrome,
-headless — claude-in-chrome wasn't connected this session): loaded
+headless — the browser-automation extension wasn't connected this session): loaded
 `/app/`, confirmed `window.Tokens` resolves at boot with no thrown error,
 spot-checked several resolved values against independently-computed OKLCH→sRGB
 math (exact matches, e.g. `--surface-app` → `rgb(7,13,25)`, predicted `#070d19`).

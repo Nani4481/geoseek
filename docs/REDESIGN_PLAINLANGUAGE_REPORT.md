@@ -124,7 +124,7 @@ pieces of UI never disagree about what the current sort is called.
   phase report — `/candidates/{id}/similar` and `/discovery/similar`,
   untouched by this work), zero non-loopback network calls attempted.
 - **Live headless-Chrome verification** (Playwright wasn't installed in any
-  Python env on this machine and claude-in-chrome wasn't connected this
+  Python env on this machine and the browser-automation extension wasn't connected this
   session — drove real Chrome via raw CDP over `websockets` instead, the
   same workaround used in the Phase 8F detect-UI session): booted the real
   FastAPI server against the real dataset, walked all seven views plus the

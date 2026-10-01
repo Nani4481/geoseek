@@ -61,7 +61,9 @@ def main() -> None:
     manifest = load_manifest()
     artifacts = manifest.setdefault("artifacts", [])
     for name, out_path in MEMBERS.items():
-        artifact_name = "leaflet_" + Path(name).stem.replace("-", "_") + "_vendor"
+        # full file name, not the stem: leaflet.js and leaflet.css share a stem, and the upsert-by-name below would
+        # have let the second silently replace the first's provenance record
+        artifact_name = "leaflet_" + Path(name).name.replace("-", "_").replace(".", "_") + "_vendor"
         record = build_record(name=artifact_name, source_url=TARBALL_URL, local_path=out_path, license=LICENSE)
         artifacts[:] = [a for a in artifacts if a.get("name") != artifact_name]
         artifacts.append({**asdict(record), "pinned_version": VERSION})

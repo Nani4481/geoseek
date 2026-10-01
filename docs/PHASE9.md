@@ -9,6 +9,10 @@ place a weights path, hash, licence and preprocessing config live.
 
 ## 0. Headline
 
+> **Update (Phase 10, Block 0):** the four vendored-asset test failures, the `laion2b` provenance string, the `rebuild_index.py`
+> hazard, the older-doc attribution hits and the seam-list statement flagged below were remediated; see `docs/PHASE10_11.md`.
+> The corpus counts are reconciled in §9 of this document. The text below is left as written at the end of Phase 9.
+
 **Every number that is a pure function of frozen inputs reproduced.** 124 retrieval, OSCD and detector numbers
 were re-measured from scratch and all match the reports to the reports' own rounding (largest difference
 5.2e-4); the detector AP/CI values and the OSCD TP/FP/FN counts match to the last digit.
@@ -395,3 +399,41 @@ python scripts/snapshot_baseline.py --sections env,corpus,retrieval --parts-dir 
 (`INDEX` may also be the word `production`.) The OSCD and detector sections evaluate the registry's change and detector
 entries; a candidate change or detection model of a different architecture needs those two sections adapted
 (they use `FCSiamDiff` / `eval_detector.py` directly) — not done here.
+
+## 9. Evaluation corpus: frozen vs live (reconciliation)
+
+The evaluation report states 101,911 vectors / 104,990 catalog tiles / 75 scenes. The live catalog now holds
+**105,245 vectors / 108,324 catalog tiles / 81 scenes**. Both are correct — for different moments — and every
+evaluation from Phase 10 on states which corpus it ran on.
+
+| quantity | frozen evaluation corpus | live catalog now |
+|---|--:|--:|
+| rule | production `faiss_id < 101911` | every tile with a `faiss_id` |
+| vectors | **101,911** | **105,245** |
+| Sentinel-2 L2A embedded tiles | 101,911 | 104,089 |
+| Maxar VHR embedded tiles (4 observations × 289) | 0 | 1,156 |
+| Sentinel-1 tiles, catalogued, never embedded | — | 3,079 |
+| catalog tiles | — | 108,324 |
+| scenes | 75 (at Phase 7b) | 81 (+2 Ayodhya Sentinel-2, +4 Maxar) |
+| Ayodhya dates in the index | 3 (2019, 2021, 2024) — the judged ones | 5 (+2025-03-08, +2026-03-08) |
+
+**Why the frozen corpus is `faiss_id < 101911`.**
+1. It is the corpus every at-scale number in the evaluation report was measured on (retrieval §7.3, scale §10,
+   clustering §11), so it is the only corpus a Phase 9 baseline can be compared to the reports on.
+2. The relevance judgements (Phase 7a) were made on the 3,267 Ayodhya tiles inside it; the judge has never seen a tile
+   outside it.
+3. The index is append-only and positional (`VectorIndex` contract, proven byte-identical across ingests in report
+   §2.2): ids 0..101,910 are the same vectors they were at Phase 7b, so the corpus is a *prefix of the live index*,
+   not a copy that could drift. Phase 9 verified it: all 101,911 are Sentinel-2, ids are contiguous from 0, and a fresh
+   re-embed reproduces them (99.16% byte-identical, the rest a batch-composition float effect; §5.3).
+
+**What the live corpus adds, and why it is not evaluated as-is.** 2,178 Ayodhya Sentinel-2 tiles (2025 and 2026
+scenes) and 1,156 Maxar 0.3 m tiles. The Ayodhya additions are *unjudged* (the judge covers 3 of the 5 dates), so a
+live-corpus Ayodhya region filter would put 2,178 never-judged tiles into the candidate pool and read them as
+irrelevant; Maxar tiles are a different sensor and resolution class. Neither belongs in a comparison with the
+Phase 7 numbers, and the live corpus is therefore reported separately where it is used (latency, footprint,
+ingestion are measured on the live index because they describe the system as it runs).
+
+**Labelling convention** (used by the snapshot format): metric paths under `retrieval.full_101911.*` ran on the frozen
+corpus; anything measured on the live index says `n_vectors` (e.g. `latency.n_vectors = 105245`) or lives under a
+`live_*` key. A result with no corpus label is not valid evidence.

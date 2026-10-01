@@ -216,7 +216,7 @@ or "verified").
 ## Screenshots
 
 Captured live via Playwright + headless Chrome at both 1920×1080 and
-1440×900 (claude-in-chrome was not connected this session): Candidate Detail
+1440×900 (the browser-automation extension was not connected this session): Candidate Detail
 with the rail expanded, with the rail collapsed, and mid-load (skeleton
 + shimmer confirmed both visually and programmatically, per above); Object
 Detection with the confidence margin at 0 (97/98 detections shown) and at 90

@@ -231,7 +231,7 @@ new worst case). Applied to `tokens.css`, re-verified live in Chrome
 
 ## Screenshots
 
-All captured live via Playwright + headless Chrome (claude-in-chrome was not
+All captured live via Playwright + headless Chrome (the browser-automation extension was not
 connected this session).
 
 **Dev gallery** (`#/dev-gallery`, full page) — every component, every state,
