@@ -192,6 +192,37 @@ def test_no_external_urls_in_text_asset(relpath):
     )
 
 
+def _load_vendor_hashes() -> dict[str, str]:
+    """{web-relative path: pinned sha256} for EVERY manifest entry (artifact or grouped sub-file) that points
+    into the web root - not only the ones that enumerate external URLs."""
+    if not MANIFEST_PATH.is_file():
+        pytest.fail(f"Provenance manifest missing at {MANIFEST_PATH}; run `python -m geoseek.staging.vendor_provenance`.")
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    out: dict[str, str] = {}
+    for art in manifest.get("artifacts", []):
+        for entry in (art, *art.get("files", [])):
+            rel = _to_web_relative(entry.get("local_path", ""))
+            if rel is not None and entry.get("sha256"):
+                out[rel] = entry["sha256"]
+    return out
+
+
+_VENDOR_FILES = [p for p in _ALL_FILES if p.relative_to(WEB_ROOT).parts[0] == "vendor"]
+
+
+@pytest.mark.parametrize("relpath", [p.relative_to(WEB_ROOT).as_posix() for p in _VENDOR_FILES], ids=lambda s: s)
+def test_every_vendored_file_is_hash_pinned_in_the_manifest(relpath):
+    """The hash check used to run only for vendored files that happened to contain a URL, so a file without any
+    (OrbitControls.js) could drift from its recorded hash unnoticed. Every file under vendor/ - text or binary,
+    URL-bearing or not - must be pinned, and must still hash to the pin."""
+    pins = _load_vendor_hashes()
+    assert relpath in pins, (f"{relpath} is vendored but not pinned in the provenance manifest "
+                             f"(run `python -m geoseek.staging.vendor_provenance`)")
+    assert _sha256(WEB_ROOT / relpath) == pins[relpath], (
+        f"{relpath} no longer hashes to its pinned sha256. Either it changed (re-review it) or the checkout converted "
+        f"line endings (vendor/** must be '-text' in .gitattributes).")
+
+
 @pytest.mark.parametrize(
     "relpath", [p.relative_to(WEB_ROOT).as_posix() for p in _OTHER_FILES], ids=lambda s: s
 )

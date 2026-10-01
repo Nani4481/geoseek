@@ -1,1 +1,5 @@
 deploy/gcp/*.sh text eol=lf
+
+# Vendored third-party files must be byte-identical to upstream on every platform: their SHA256 is pinned in the
+# provenance manifest and checked by tests/test_frontend_offline.py. No line-ending conversion.
+src/geoseek/analyst/web/vendor/** -text
