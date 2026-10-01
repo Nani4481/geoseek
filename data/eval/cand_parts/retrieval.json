@@ -1,0 +1,2718 @@
+{
+ "section": "retrieval",
+ "metrics": {
+  "judgements": {
+   "source": "frozen Phase 7a judgements (data/eval_retrieval/judgments.json), independent of both models",
+   "n_queries": 16,
+   "n_low_confidence": 3,
+   "low_confidence_queries": [
+    "a bridge crossing a river",
+    "a dirt track or unpaved road",
+    "a paved road"
+   ]
+  },
+  "systems": {
+   "remoteclip": {
+    "model_key": "remoteclip-vitb32",
+    "weights_sha256": "60014e395d930a3f2963d1d89c8522bf4ad56775571e4356e866864789af85c4",
+    "vectors_source": "fresh re-embed via scripts/reembed.py (remoteclip_frozen101911.faiss)"
+   },
+   "vanilla": {
+    "model_key": "openclip-vitb32-openai",
+    "weights_sha256": "e6d1bd7789aa45192b3bf90570a789b478bae1b74ebcce7eddd908e83a2b7c31",
+    "vectors_source": "fresh re-embed via scripts/reembed.py (vanilla_frozen101911.faiss)"
+   }
+  },
+  "ayodhya_3267": {
+   "corpus_tiles": 3267,
+   "remoteclip": {
+    "all": {
+     "k1": {
+      "recall": 0.04006169631169631,
+      "precision": 0.5625,
+      "ndcg": 0.4375
+     },
+     "k5": {
+      "recall": 0.2279158279158279,
+      "precision": 0.425,
+      "ndcg": 0.3965378030377206
+     },
+     "k10": {
+      "recall": 0.36505693536943534,
+      "precision": 0.38125,
+      "ndcg": 0.418517300602807
+     },
+     "k20": {
+      "recall": 0.7046404577654578,
+      "precision": 0.35625,
+      "ndcg": 0.526025926264229
+     }
+    },
+    "excluding_low_confidence": {
+     "k1": {
+      "recall": 0.049306703152857,
+      "precision": 0.6923076923076923,
+      "ndcg": 0.5384615384615384
+     },
+     "k5": {
+      "recall": 0.24388175157405925,
+      "precision": 0.49230769230769234,
+      "ndcg": 0.4540349682919199
+     },
+     "k10": {
+      "recall": 0.4030554222861915,
+      "precision": 0.4461538461538462,
+      "ndcg": 0.4796620715004965
+     },
+     "k20": {
+      "recall": 0.6667003436234206,
+      "precision": 0.38076923076923075,
+      "ndcg": 0.5473598279424978
+     }
+    },
+    "n_queries": 16,
+    "n_queries_excluding_low_confidence": 13,
+    "topk_composition_k20": {
+     "judged_relevant": 0.35625,
+     "judged_zero": 0.64375,
+     "unjudged_ayodhya": 0.0,
+     "unjudged_other_region": 0.0
+    },
+    "per_query": [
+     {
+      "query": "newly built structures near a river",
+      "low_confidence": false,
+      "recall@1": 0.16666666666666666,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.5,
+      "precision@5": 0.6,
+      "ndcg@5": 0.6164336326286644,
+      "recall@10": 0.8333333333333334,
+      "precision@10": 0.5,
+      "ndcg@10": 0.7586453982379298,
+      "recall@20": 1.0,
+      "precision@20": 0.3,
+      "ndcg@20": 0.8404201159871018
+     },
+     {
+      "query": "settlement along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.1,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.3,
+      "precision@5": 0.6,
+      "ndcg@5": 0.7227265726449519,
+      "recall@10": 0.5,
+      "precision@10": 0.5,
+      "ndcg@10": 0.6480687733654913,
+      "recall@20": 0.9,
+      "precision@20": 0.45,
+      "ndcg@20": 0.8257289210858216
+     },
+     {
+      "query": "a river with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.08333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.25,
+      "precision@5": 0.6,
+      "ndcg@5": 0.6992148198508501,
+      "recall@10": 0.3333333333333333,
+      "precision@10": 0.4,
+      "ndcg@10": 0.5173633627401372,
+      "recall@20": 0.75,
+      "precision@20": 0.45,
+      "ndcg@20": 0.7076153460106223
+     },
+     {
+      "query": "dense urban buildings",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 1.0,
+      "precision@20": 0.05,
+      "ndcg@20": 0.24465054211822604
+     },
+     {
+      "query": "agricultural fields",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.1,
+      "precision@5": 0.6,
+      "ndcg@5": 0.34960740992542505,
+      "recall@10": 0.16666666666666666,
+      "precision@10": 0.5,
+      "ndcg@10": 0.323619187196739,
+      "recall@20": 0.3,
+      "precision@20": 0.45,
+      "ndcg@20": 0.29673055528057596
+     },
+     {
+      "query": "open bare ground",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.25,
+      "precision@5": 0.2,
+      "ndcg@5": 0.24630238874073,
+      "recall@10": 0.75,
+      "precision@10": 0.3,
+      "ndcg@10": 0.5028746730079328,
+      "recall@20": 1.0,
+      "precision@20": 0.2,
+      "ndcg@20": 0.6054078116261546
+     },
+     {
+      "query": "a water body",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 1.0,
+      "ndcg@5": 0.584790051318404,
+      "recall@10": 0.3333333333333333,
+      "precision@10": 1.0,
+      "ndcg@10": 0.7207358812863668,
+      "recall@20": 0.6666666666666666,
+      "precision@20": 1.0,
+      "ndcg@20": 0.818464465471254
+     },
+     {
+      "query": "cropland with visible field boundaries",
+      "low_confidence": false,
+      "recall@1": 0.02702702702702703,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.13513513513513514,
+      "precision@5": 1.0,
+      "ndcg@5": 0.7573857224418385,
+      "recall@10": 0.21621621621621623,
+      "precision@10": 0.8,
+      "ndcg@10": 0.6637426546230977,
+      "recall@20": 0.3783783783783784,
+      "precision@20": 0.7,
+      "ndcg@20": 0.6072852422398481
+     },
+     {
+      "query": "a paved road",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.14285714285714285,
+      "precision@5": 0.2,
+      "ndcg@5": 0.14606834984270645,
+      "recall@10": 0.14285714285714285,
+      "precision@10": 0.1,
+      "ndcg@10": 0.11838279295536291,
+      "recall@20": 0.8571428571428571,
+      "precision@20": 0.3,
+      "ndcg@20": 0.4543659389158074
+     },
+     {
+      "query": "riverside construction",
+      "low_confidence": false,
+      "recall@1": 0.07692307692307693,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.15384615384615385,
+      "precision@5": 0.4,
+      "ndcg@5": 0.5531464700081437,
+      "recall@10": 0.38461538461538464,
+      "precision@10": 0.5,
+      "ndcg@10": 0.5743371894486219,
+      "recall@20": 0.5384615384615384,
+      "precision@20": 0.35,
+      "ndcg@20": 0.5681438975086457
+     },
+     {
+      "query": "a bridge crossing a river",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.3333333333333333,
+      "precision@5": 0.2,
+      "ndcg@5": 0.2960819109658652,
+      "recall@10": 0.3333333333333333,
+      "precision@10": 0.1,
+      "ndcg@10": 0.2960819109658652,
+      "recall@20": 1.0,
+      "precision@20": 0.15,
+      "ndcg@20": 0.5230383710257068
+     },
+     {
+      "query": "dense vegetation along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 1.0,
+      "precision@5": 0.2,
+      "ndcg@5": 0.43067655807339306,
+      "recall@10": 1.0,
+      "precision@10": 0.1,
+      "ndcg@10": 0.43067655807339306,
+      "recall@20": 1.0,
+      "precision@20": 0.05,
+      "ndcg@20": 0.43067655807339306
+     },
+     {
+      "query": "an urban residential neighborhood",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.14285714285714285,
+      "precision@20": 0.05,
+      "ndcg@20": 0.06258116307550304
+     },
+     {
+      "query": "irrigated farmland",
+      "low_confidence": false,
+      "recall@1": 0.037037037037037035,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.14814814814814814,
+      "precision@5": 0.8,
+      "ndcg@5": 0.4569424070462355,
+      "recall@10": 0.2222222222222222,
+      "precision@10": 0.6,
+      "ndcg@10": 0.4990259181277378,
+      "recall@20": 0.4074074074074074,
+      "precision@20": 0.55,
+      "ndcg@20": 0.5227184884440034
+     },
+     {
+      "query": "a braided river channel with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.08333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 0.4,
+      "ndcg@5": 0.48522855511632257,
+      "recall@10": 0.5,
+      "precision@10": 0.6,
+      "ndcg@10": 0.596517333399007,
+      "recall@20": 0.5833333333333334,
+      "precision@20": 0.35,
+      "ndcg@20": 0.5852546563313227
+     },
+     {
+      "query": "a dirt track or unpaved road",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.125,
+      "precision@10": 0.1,
+      "ndcg@10": 0.046205176217229485,
+      "recall@20": 0.75,
+      "precision@20": 0.3,
+      "ndcg@20": 0.3233327470336768
+     }
+    ],
+    "ranking_vs_stored_phase7a_pools": {
+     "queries_with_identical_top20_list": 16,
+     "mean_top20_set_overlap": 1.0,
+     "of_queries": 16
+    }
+   },
+   "vanilla": {
+    "all": {
+     "k1": {
+      "recall": 0.018876689189189187,
+      "precision": 0.3125,
+      "ndcg": 0.28125
+     },
+     "k5": {
+      "recall": 0.062332163894663895,
+      "precision": 0.2625,
+      "ndcg": 0.23110726461767508
+     },
+     "k10": {
+      "recall": 0.11468872718872719,
+      "precision": 0.23750000000000002,
+      "ndcg": 0.22312278494940083
+     },
+     "k20": {
+      "recall": 0.22734867422367422,
+      "precision": 0.23125,
+      "ndcg": 0.25426245772198175
+     }
+    },
+    "excluding_low_confidence": {
+     "k1": {
+      "recall": 0.013617463617463616,
+      "precision": 0.3076923076923077,
+      "ndcg": 0.2692307692307692
+     },
+     "k5": {
+      "recall": 0.06710112479343248,
+      "precision": 0.3076923076923077,
+      "ndcg": 0.25651877981500465
+     },
+     "k10": {
+      "recall": 0.12192458730920269,
+      "precision": 0.27692307692307694,
+      "ndcg": 0.24389028159580634
+     },
+     "k20": {
+      "recall": 0.26058298365990673,
+      "precision": 0.27692307692307694,
+      "ndcg": 0.28221603270052126
+     }
+    },
+    "n_queries": 16,
+    "n_queries_excluding_low_confidence": 13,
+    "topk_composition_k20": {
+     "judged_relevant": 0.23125,
+     "judged_zero": 0.76875,
+     "unjudged_ayodhya": 0.0,
+     "unjudged_other_region": 0.0
+    },
+    "per_query": [
+     {
+      "query": "newly built structures near a river",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "settlement along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.1,
+      "precision@20": 0.05,
+      "ndcg@20": 0.056446226510177555
+     },
+     {
+      "query": "a river with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 0.4,
+      "ndcg@5": 0.30078518014914984,
+      "recall@10": 0.16666666666666666,
+      "precision@10": 0.2,
+      "ndcg@10": 0.19518900079066107,
+      "recall@20": 0.4166666666666667,
+      "precision@20": 0.25,
+      "ndcg@20": 0.3206760165314279
+     },
+     {
+      "query": "dense urban buildings",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "agricultural fields",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 1.0,
+      "ndcg@5": 0.849607409925425,
+      "recall@10": 0.26666666666666666,
+      "precision@10": 0.8,
+      "ndcg@10": 0.7275209197241654,
+      "recall@20": 0.4666666666666667,
+      "precision@20": 0.7,
+      "ndcg@20": 0.6619564731878629
+     },
+     {
+      "query": "open bare ground",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "a water body",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 1.0,
+      "ndcg@5": 0.6069931323672637,
+      "recall@10": 0.26666666666666666,
+      "precision@10": 0.8,
+      "ndcg@10": 0.647433701622823,
+      "recall@20": 0.36666666666666664,
+      "precision@20": 0.55,
+      "ndcg@20": 0.5845118956993713
+     },
+     {
+      "query": "cropland with visible field boundaries",
+      "low_confidence": false,
+      "recall@1": 0.02702702702702703,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.13513513513513514,
+      "precision@5": 1.0,
+      "ndcg@5": 0.8930068676327362,
+      "recall@10": 0.21621621621621623,
+      "precision@10": 0.8,
+      "ndcg@10": 0.7292961943918133,
+      "recall@20": 0.40540540540540543,
+      "precision@20": 0.75,
+      "ndcg@20": 0.6659580979117311
+     },
+     {
+      "query": "a paved road",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "riverside construction",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.15384615384615385,
+      "precision@5": 0.4,
+      "ndcg@5": 0.34519134224686937,
+      "recall@10": 0.3076923076923077,
+      "precision@10": 0.4,
+      "ndcg@10": 0.3686580539482399,
+      "recall@20": 0.46153846153846156,
+      "precision@20": 0.3,
+      "ndcg@20": 0.4174867048011273
+     },
+     {
+      "query": "a bridge crossing a river",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "dense vegetation along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "an urban residential neighborhood",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.14285714285714285,
+      "precision@20": 0.05,
+      "ndcg@20": 0.07035680323970717
+     },
+     {
+      "query": "irrigated farmland",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.1111111111111111,
+      "precision@10": 0.3,
+      "ndcg@10": 0.137731531536635,
+      "recall@20": 0.4444444444444444,
+      "precision@20": 0.6,
+      "ndcg@20": 0.3663745267037451
+     },
+     {
+      "query": "a braided river channel with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.08333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.08333333333333333,
+      "precision@5": 0.2,
+      "ndcg@5": 0.3391602052736161,
+      "recall@10": 0.25,
+      "precision@10": 0.3,
+      "ndcg@10": 0.3647442587311445,
+      "recall@20": 0.5833333333333334,
+      "precision@20": 0.35,
+      "ndcg@20": 0.5250416805216263
+     },
+     {
+      "query": "a dirt track or unpaved road",
+      "low_confidence": true,
+      "recall@1": 0.125,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.125,
+      "precision@5": 0.2,
+      "ndcg@5": 0.36297209628774124,
+      "recall@10": 0.25,
+      "precision@10": 0.2,
+      "ndcg@10": 0.399390898444931,
+      "recall@20": 0.25,
+      "precision@20": 0.1,
+      "ndcg@20": 0.399390898444931
+     }
+    ],
+    "ranking_vs_stored_phase7a_pools": {
+     "queries_with_identical_top20_list": 16,
+     "mean_top20_set_overlap": 1.0,
+     "of_queries": 16
+    }
+   }
+  },
+  "full_101911": {
+   "corpus_tiles": 101911,
+   "remoteclip": {
+    "global": {
+     "k1": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k5": {
+      "recall": 0.015625,
+      "precision": 0.037500000000000006,
+      "ndcg": 0.025529906554211876
+     },
+     "k10": {
+      "recall": 0.027083333333333334,
+      "precision": 0.03125,
+      "ndcg": 0.02614678960412386
+     },
+     "k20": {
+      "recall": 0.10625,
+      "precision": 0.028125,
+      "ndcg": 0.04747626920517836
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.028125,
+      "judged_zero": 0.065625,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.90625
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.1,
+       "precision@10": 0.1,
+       "ndcg@10": 0.08384281207641174,
+       "recall@20": 0.2,
+       "precision@20": 0.1,
+       "ndcg@20": 0.13925254550923508
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 0.4,
+       "ndcg@5": 0.27727342735504823,
+       "recall@10": 0.25,
+       "precision@10": 0.3,
+       "ndcg@10": 0.24936270394794902,
+       "recall@20": 0.4166666666666667,
+       "precision@20": 0.25,
+       "ndcg@20": 0.3167358943899307
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 1.0,
+       "precision@20": 0.05,
+       "ndcg@20": 0.227670248696953
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.08333333333333333,
+       "precision@5": 0.2,
+       "ndcg@5": 0.13120507751234178,
+       "recall@10": 0.08333333333333333,
+       "precision@10": 0.1,
+       "ndcg@10": 0.08514311764162098,
+       "recall@20": 0.08333333333333333,
+       "precision@20": 0.05,
+       "ndcg@20": 0.07596161868673496
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      }
+     ]
+    },
+    "region_filtered_ayodhya": {
+     "k1": {
+      "recall": 0.04006169631169631,
+      "precision": 0.5625,
+      "ndcg": 0.4375
+     },
+     "k5": {
+      "recall": 0.2279158279158279,
+      "precision": 0.425,
+      "ndcg": 0.3965378030377206
+     },
+     "k10": {
+      "recall": 0.36505693536943534,
+      "precision": 0.38125,
+      "ndcg": 0.418517300602807
+     },
+     "k20": {
+      "recall": 0.7046404577654578,
+      "precision": 0.35625,
+      "ndcg": 0.526025926264229
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.35625,
+      "judged_zero": 0.64375,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.0
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.16666666666666666,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.5,
+       "precision@5": 0.6,
+       "ndcg@5": 0.6164336326286644,
+       "recall@10": 0.8333333333333334,
+       "precision@10": 0.5,
+       "ndcg@10": 0.7586453982379298,
+       "recall@20": 1.0,
+       "precision@20": 0.3,
+       "ndcg@20": 0.8404201159871018
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.1,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.3,
+       "precision@5": 0.6,
+       "ndcg@5": 0.7227265726449519,
+       "recall@10": 0.5,
+       "precision@10": 0.5,
+       "ndcg@10": 0.6480687733654913,
+       "recall@20": 0.9,
+       "precision@20": 0.45,
+       "ndcg@20": 0.8257289210858216
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.08333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.25,
+       "precision@5": 0.6,
+       "ndcg@5": 0.6992148198508501,
+       "recall@10": 0.3333333333333333,
+       "precision@10": 0.4,
+       "ndcg@10": 0.5173633627401372,
+       "recall@20": 0.75,
+       "precision@20": 0.45,
+       "ndcg@20": 0.7076153460106223
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 1.0,
+       "precision@20": 0.05,
+       "ndcg@20": 0.24465054211822604
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.1,
+       "precision@5": 0.6,
+       "ndcg@5": 0.34960740992542505,
+       "recall@10": 0.16666666666666666,
+       "precision@10": 0.5,
+       "ndcg@10": 0.323619187196739,
+       "recall@20": 0.3,
+       "precision@20": 0.45,
+       "ndcg@20": 0.29673055528057596
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.25,
+       "precision@5": 0.2,
+       "ndcg@5": 0.24630238874073,
+       "recall@10": 0.75,
+       "precision@10": 0.3,
+       "ndcg@10": 0.5028746730079328,
+       "recall@20": 1.0,
+       "precision@20": 0.2,
+       "ndcg@20": 0.6054078116261546
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 1.0,
+       "ndcg@5": 0.584790051318404,
+       "recall@10": 0.3333333333333333,
+       "precision@10": 1.0,
+       "ndcg@10": 0.7207358812863668,
+       "recall@20": 0.6666666666666666,
+       "precision@20": 1.0,
+       "ndcg@20": 0.818464465471254
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.02702702702702703,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.13513513513513514,
+       "precision@5": 1.0,
+       "ndcg@5": 0.7573857224418385,
+       "recall@10": 0.21621621621621623,
+       "precision@10": 0.8,
+       "ndcg@10": 0.6637426546230977,
+       "recall@20": 0.3783783783783784,
+       "precision@20": 0.7,
+       "ndcg@20": 0.6072852422398481
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.14285714285714285,
+       "precision@5": 0.2,
+       "ndcg@5": 0.14606834984270645,
+       "recall@10": 0.14285714285714285,
+       "precision@10": 0.1,
+       "ndcg@10": 0.11838279295536291,
+       "recall@20": 0.8571428571428571,
+       "precision@20": 0.3,
+       "ndcg@20": 0.4543659389158074
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.07692307692307693,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.15384615384615385,
+       "precision@5": 0.4,
+       "ndcg@5": 0.5531464700081437,
+       "recall@10": 0.38461538461538464,
+       "precision@10": 0.5,
+       "ndcg@10": 0.5743371894486219,
+       "recall@20": 0.5384615384615384,
+       "precision@20": 0.35,
+       "ndcg@20": 0.5681438975086457
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.3333333333333333,
+       "precision@5": 0.2,
+       "ndcg@5": 0.2960819109658652,
+       "recall@10": 0.3333333333333333,
+       "precision@10": 0.1,
+       "ndcg@10": 0.2960819109658652,
+       "recall@20": 1.0,
+       "precision@20": 0.15,
+       "ndcg@20": 0.5230383710257068
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 1.0,
+       "precision@5": 0.2,
+       "ndcg@5": 0.43067655807339306,
+       "recall@10": 1.0,
+       "precision@10": 0.1,
+       "ndcg@10": 0.43067655807339306,
+       "recall@20": 1.0,
+       "precision@20": 0.05,
+       "ndcg@20": 0.43067655807339306
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.14285714285714285,
+       "precision@20": 0.05,
+       "ndcg@20": 0.06258116307550304
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.037037037037037035,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.14814814814814814,
+       "precision@5": 0.8,
+       "ndcg@5": 0.4569424070462355,
+       "recall@10": 0.2222222222222222,
+       "precision@10": 0.6,
+       "ndcg@10": 0.4990259181277378,
+       "recall@20": 0.4074074074074074,
+       "precision@20": 0.55,
+       "ndcg@20": 0.5227184884440034
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.08333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 0.4,
+       "ndcg@5": 0.48522855511632257,
+       "recall@10": 0.5,
+       "precision@10": 0.6,
+       "ndcg@10": 0.596517333399007,
+       "recall@20": 0.5833333333333334,
+       "precision@20": 0.35,
+       "ndcg@20": 0.5852546563313227
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.125,
+       "precision@10": 0.1,
+       "ndcg@10": 0.046205176217229485,
+       "recall@20": 0.75,
+       "precision@20": 0.3,
+       "ndcg@20": 0.3233327470336768
+      }
+     ]
+    }
+   },
+   "vanilla": {
+    "global": {
+     "k1": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k5": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k10": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k20": {
+      "recall": 0.010416666666666666,
+      "precision": 0.00625,
+      "ndcg": 0.006011160304004793
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.00625,
+      "judged_zero": 0.03125,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.9625
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.16666666666666666,
+       "precision@20": 0.1,
+       "ndcg@20": 0.0961785648640767
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      }
+     ]
+    },
+    "region_filtered_ayodhya": {
+     "k1": {
+      "recall": 0.018876689189189187,
+      "precision": 0.3125,
+      "ndcg": 0.28125
+     },
+     "k5": {
+      "recall": 0.062332163894663895,
+      "precision": 0.2625,
+      "ndcg": 0.23110726461767508
+     },
+     "k10": {
+      "recall": 0.11468872718872719,
+      "precision": 0.23750000000000002,
+      "ndcg": 0.22312278494940083
+     },
+     "k20": {
+      "recall": 0.22734867422367422,
+      "precision": 0.23125,
+      "ndcg": 0.25426245772198175
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.23125,
+      "judged_zero": 0.76875,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.0
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.1,
+       "precision@20": 0.05,
+       "ndcg@20": 0.056446226510177555
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 0.4,
+       "ndcg@5": 0.30078518014914984,
+       "recall@10": 0.16666666666666666,
+       "precision@10": 0.2,
+       "ndcg@10": 0.19518900079066107,
+       "recall@20": 0.4166666666666667,
+       "precision@20": 0.25,
+       "ndcg@20": 0.3206760165314279
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 1.0,
+       "ndcg@5": 0.849607409925425,
+       "recall@10": 0.26666666666666666,
+       "precision@10": 0.8,
+       "ndcg@10": 0.7275209197241654,
+       "recall@20": 0.4666666666666667,
+       "precision@20": 0.7,
+       "ndcg@20": 0.6619564731878629
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 1.0,
+       "ndcg@5": 0.6069931323672637,
+       "recall@10": 0.26666666666666666,
+       "precision@10": 0.8,
+       "ndcg@10": 0.647433701622823,
+       "recall@20": 0.36666666666666664,
+       "precision@20": 0.55,
+       "ndcg@20": 0.5845118956993713
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.02702702702702703,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.13513513513513514,
+       "precision@5": 1.0,
+       "ndcg@5": 0.8930068676327362,
+       "recall@10": 0.21621621621621623,
+       "precision@10": 0.8,
+       "ndcg@10": 0.7292961943918133,
+       "recall@20": 0.40540540540540543,
+       "precision@20": 0.75,
+       "ndcg@20": 0.6659580979117311
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.15384615384615385,
+       "precision@5": 0.4,
+       "ndcg@5": 0.34519134224686937,
+       "recall@10": 0.3076923076923077,
+       "precision@10": 0.4,
+       "ndcg@10": 0.3686580539482399,
+       "recall@20": 0.46153846153846156,
+       "precision@20": 0.3,
+       "ndcg@20": 0.4174867048011273
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.14285714285714285,
+       "precision@20": 0.05,
+       "ndcg@20": 0.07035680323970717
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.1111111111111111,
+       "precision@10": 0.3,
+       "ndcg@10": 0.137731531536635,
+       "recall@20": 0.4444444444444444,
+       "precision@20": 0.6,
+       "ndcg@20": 0.3663745267037451
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.08333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.08333333333333333,
+       "precision@5": 0.2,
+       "ndcg@5": 0.3391602052736161,
+       "recall@10": 0.25,
+       "precision@10": 0.3,
+       "ndcg@10": 0.3647442587311445,
+       "recall@20": 0.5833333333333334,
+       "precision@20": 0.35,
+       "ndcg@20": 0.5250416805216263
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.125,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.125,
+       "precision@5": 0.2,
+       "ndcg@5": 0.36297209628774124,
+       "recall@10": 0.25,
+       "precision@10": 0.2,
+       "ndcg@10": 0.399390898444931,
+       "recall@20": 0.25,
+       "precision@20": 0.1,
+       "ndcg@20": 0.399390898444931
+      }
+     ]
+    }
+   }
+  },
+  "checks": {
+   "region_filter_mask_equals_judged_ayodhya_mask": 1,
+   "deterministic_rankings_across_orderings": 1,
+   "vanilla_ayodhya_vectors_vs_phase7a_stored": {
+    "n": 3267,
+    "min_cosine": 0.9999995231628418,
+    "mean_cosine": 1.0,
+    "max_abs_diff": 3.5762786865234375e-07,
+    "tile_order_identical_to_phase7a": 1
+   },
+   "remoteclip_fresh_reembed_vs_production": {
+    "n": 101911,
+    "rows_byte_identical": 101054,
+    "fraction_byte_identical": 0.9915907016906909,
+    "max_abs_diff": 7.450580596923828e-07,
+    "mean_abs_diff": 3.5454916780253143e-10,
+    "min_cosine": 0.9999992847442627,
+    "mean_cosine": 1.0,
+    "mean_top10_neighbour_overlap": 1.0,
+    "top1_agreement": 1.0,
+    "n_queries": 200
+   }
+  }
+ },
+ "noise_bands": {
+  "retrieval.ayodhya_3267.remoteclip.all.k1.recall": {
+   "band": 0.02258418274043273
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.precision": {
+   "band": 0.25
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.ndcg": {
+   "band": 0.21875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.recall": {
+   "band": 0.11236926701770451
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.precision": {
+   "band": 0.15015624999999916
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.ndcg": {
+   "band": 0.12332218856127261
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.recall": {
+   "band": 0.13498455314861552
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.precision": {
+   "band": 0.140625
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.ndcg": {
+   "band": 0.11970479384463875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.recall": {
+   "band": 0.13120573011198
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.precision": {
+   "band": 0.1203125
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.ndcg": {
+   "band": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.recall": {
+   "band": 0.025390579188656108
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.ndcg": {
+   "band": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.recall": {
+   "band": 0.13385698198198187
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.precision": {
+   "band": 0.16153846153846155
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.ndcg": {
+   "band": 0.13258158294606495
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.recall": {
+   "band": 0.16091642678181128
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.precision": {
+   "band": 0.15000000000000002
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.ndcg": {
+   "band": 0.12974054523249465
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.recall": {
+   "band": 0.15692315413469254
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.precision": {
+   "band": 0.13846153846153847
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.ndcg": {
+   "band": 0.12818781434402604
+  },
+  "retrieval.full_101911.remoteclip.global.k1.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k5.recall": {
+   "band": 0.020833333333333332
+  },
+  "retrieval.full_101911.remoteclip.global.k5.precision": {
+   "band": 0.05
+  },
+  "retrieval.full_101911.remoteclip.global.k5.ndcg": {
+   "band": 0.034194701159057136
+  },
+  "retrieval.full_101911.remoteclip.global.k10.recall": {
+   "band": 0.03229166666666666
+  },
+  "retrieval.full_101911.remoteclip.global.k10.precision": {
+   "band": 0.0375
+  },
+  "retrieval.full_101911.remoteclip.global.k10.ndcg": {
+   "band": 0.031279667539919426
+  },
+  "retrieval.full_101911.remoteclip.global.k20.recall": {
+   "band": 0.1250130208333333
+  },
+  "retrieval.full_101911.remoteclip.global.k20.precision": {
+   "band": 0.031249999999999993
+  },
+  "retrieval.full_101911.remoteclip.global.k20.ndcg": {
+   "band": 0.04748549431611247
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.recall": {
+   "band": 0.02258418274043273
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.precision": {
+   "band": 0.25
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.21875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.recall": {
+   "band": 0.11236926701770451
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.precision": {
+   "band": 0.15015624999999916
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.12332218856127261
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.recall": {
+   "band": 0.13498455314861552
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.precision": {
+   "band": 0.140625
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.11970479384463875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.recall": {
+   "band": 0.13120573011198
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.precision": {
+   "band": 0.1203125
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.recall": {
+   "band": 0.016992011542792784
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.precision": {
+   "band": 0.21875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.ndcg": {
+   "band": 0.203125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.recall": {
+   "band": 0.03696705268970893
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.precision": {
+   "band": 0.1875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.ndcg": {
+   "band": 0.1493755024446742
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.recall": {
+   "band": 0.06106700450450443
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.precision": {
+   "band": 0.14687500000000003
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.ndcg": {
+   "band": 0.13531462382155962
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.recall": {
+   "band": 0.10268835671179417
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.precision": {
+   "band": 0.128125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.ndcg": {
+   "band": 0.12448569725423969
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.recall": {
+   "band": 0.012976437976437973
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923075
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.ndcg": {
+   "band": 0.21153846153846154
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.recall": {
+   "band": 0.04195319579934964
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.precision": {
+   "band": 0.20788461538461442
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.ndcg": {
+   "band": 0.17117729930968473
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.recall": {
+   "band": 0.06643977557439096
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.precision": {
+   "band": 0.16923076923076918
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.ndcg": {
+   "band": 0.14923851349799613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.recall": {
+   "band": 0.11385706448206448
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.precision": {
+   "band": 0.14615384615384613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.ndcg": {
+   "band": 0.1378845079714744
+  },
+  "retrieval.full_101911.vanilla.global.k1.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k20.recall": {
+   "band": 0.015625
+  },
+  "retrieval.full_101911.vanilla.global.k20.precision": {
+   "band": 0.009375000000000001
+  },
+  "retrieval.full_101911.vanilla.global.k20.ndcg": {
+   "band": 0.009016740456007189
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.recall": {
+   "band": 0.016992011542792784
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.precision": {
+   "band": 0.21875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.203125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.recall": {
+   "band": 0.03696705268970893
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.precision": {
+   "band": 0.1875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.1493755024446742
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.recall": {
+   "band": 0.06106700450450443
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.precision": {
+   "band": 0.14687500000000003
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.13531462382155962
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.recall": {
+   "band": 0.10268835671179417
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.precision": {
+   "band": 0.128125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.12448569725423969
+  }
+ },
+ "noise_detail": {
+  "retrieval.ayodhya_3267.remoteclip.all.k1.recall": {
+   "band": 0.02258418274043273,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.02258418274043273
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.precision": {
+   "band": 0.25,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.25
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.ndcg": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.recall": {
+   "band": 0.11236926701770451,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11236926701770451
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.precision": {
+   "band": 0.15015624999999916,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15015624999999916
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.ndcg": {
+   "band": 0.12332218856127261,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12332218856127261
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.recall": {
+   "band": 0.13498455314861552,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13498455314861552
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.precision": {
+   "band": 0.140625,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.140625
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.ndcg": {
+   "band": 0.11970479384463875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11970479384463875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.recall": {
+   "band": 0.13120573011198,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13120573011198
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.precision": {
+   "band": 0.1203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1203125
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.ndcg": {
+   "band": 0.10417646722866505,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.recall": {
+   "band": 0.025390579188656108,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.025390579188656108
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923078,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.ndcg": {
+   "band": 0.23076923076923078,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.recall": {
+   "band": 0.13385698198198187,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13385698198198187
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.precision": {
+   "band": 0.16153846153846155,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.16153846153846155
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.ndcg": {
+   "band": 0.13258158294606495,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13258158294606495
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.recall": {
+   "band": 0.16091642678181128,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.16091642678181128
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.precision": {
+   "band": 0.15000000000000002,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15000000000000002
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.ndcg": {
+   "band": 0.12974054523249465,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12974054523249465
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.recall": {
+   "band": 0.15692315413469254,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15692315413469254
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.precision": {
+   "band": 0.13846153846153847,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13846153846153847
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.ndcg": {
+   "band": 0.12818781434402604,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12818781434402604
+  },
+  "retrieval.full_101911.remoteclip.global.k1.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k5.recall": {
+   "band": 0.020833333333333332,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.020833333333333332
+  },
+  "retrieval.full_101911.remoteclip.global.k5.precision": {
+   "band": 0.05,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.05
+  },
+  "retrieval.full_101911.remoteclip.global.k5.ndcg": {
+   "band": 0.034194701159057136,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.034194701159057136
+  },
+  "retrieval.full_101911.remoteclip.global.k10.recall": {
+   "band": 0.03229166666666666,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.03229166666666666
+  },
+  "retrieval.full_101911.remoteclip.global.k10.precision": {
+   "band": 0.0375,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0375
+  },
+  "retrieval.full_101911.remoteclip.global.k10.ndcg": {
+   "band": 0.031279667539919426,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.031279667539919426
+  },
+  "retrieval.full_101911.remoteclip.global.k20.recall": {
+   "band": 0.1250130208333333,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1250130208333333
+  },
+  "retrieval.full_101911.remoteclip.global.k20.precision": {
+   "band": 0.031249999999999993,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.031249999999999993
+  },
+  "retrieval.full_101911.remoteclip.global.k20.ndcg": {
+   "band": 0.04748549431611247,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.04748549431611247
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.recall": {
+   "band": 0.02258418274043273,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.02258418274043273
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.precision": {
+   "band": 0.25,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.25
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.recall": {
+   "band": 0.11236926701770451,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11236926701770451
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.precision": {
+   "band": 0.15015624999999916,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15015624999999916
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.12332218856127261,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12332218856127261
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.recall": {
+   "band": 0.13498455314861552,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13498455314861552
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.precision": {
+   "band": 0.140625,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.140625
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.11970479384463875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11970479384463875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.recall": {
+   "band": 0.13120573011198,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13120573011198
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.precision": {
+   "band": 0.1203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1203125
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.10417646722866505,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.recall": {
+   "band": 0.016992011542792784,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.016992011542792784
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.precision": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.ndcg": {
+   "band": 0.203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.203125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.recall": {
+   "band": 0.03696705268970893,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.03696705268970893
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.precision": {
+   "band": 0.1875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.ndcg": {
+   "band": 0.1493755024446742,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1493755024446742
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.recall": {
+   "band": 0.06106700450450443,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.06106700450450443
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.precision": {
+   "band": 0.14687500000000003,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14687500000000003
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.ndcg": {
+   "band": 0.13531462382155962,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13531462382155962
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.recall": {
+   "band": 0.10268835671179417,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10268835671179417
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.precision": {
+   "band": 0.128125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.128125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.ndcg": {
+   "band": 0.12448569725423969,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12448569725423969
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.recall": {
+   "band": 0.012976437976437973,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.012976437976437973
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923075,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.23076923076923075
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.ndcg": {
+   "band": 0.21153846153846154,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21153846153846154
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.recall": {
+   "band": 0.04195319579934964,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.04195319579934964
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.precision": {
+   "band": 0.20788461538461442,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.20788461538461442
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.ndcg": {
+   "band": 0.17117729930968473,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.17117729930968473
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.recall": {
+   "band": 0.06643977557439096,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.06643977557439096
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.precision": {
+   "band": 0.16923076923076918,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.16923076923076918
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.ndcg": {
+   "band": 0.14923851349799613,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14923851349799613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.recall": {
+   "band": 0.11385706448206448,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11385706448206448
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.precision": {
+   "band": 0.14615384615384613,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14615384615384613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.ndcg": {
+   "band": 0.1378845079714744,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1378845079714744
+  },
+  "retrieval.full_101911.vanilla.global.k1.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k20.recall": {
+   "band": 0.015625,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.015625
+  },
+  "retrieval.full_101911.vanilla.global.k20.precision": {
+   "band": 0.009375000000000001,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.009375000000000001
+  },
+  "retrieval.full_101911.vanilla.global.k20.ndcg": {
+   "band": 0.009016740456007189,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.009016740456007189
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.recall": {
+   "band": 0.016992011542792784,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.016992011542792784
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.precision": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.203125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.recall": {
+   "band": 0.03696705268970893,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.03696705268970893
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.precision": {
+   "band": 0.1875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.1493755024446742,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1493755024446742
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.recall": {
+   "band": 0.06106700450450443,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.06106700450450443
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.precision": {
+   "band": 0.14687500000000003,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14687500000000003
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.13531462382155962,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13531462382155962
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.recall": {
+   "band": 0.10268835671179417,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10268835671179417
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.precision": {
+   "band": 0.128125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.128125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.12448569725423969,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12448569725423969
+  }
+ },
+ "extra": {},
+ "power": {
+  "start": {
+   "source": "AC",
+   "battery_percent": 99
+  },
+  "end": {
+   "source": "AC",
+   "battery_percent": 99
+  }
+ },
+ "written_at": "2026-10-01T02:27:28Z"
+}

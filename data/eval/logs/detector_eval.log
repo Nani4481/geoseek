@@ -1,0 +1,23 @@
+[eval] predicting finetuned on monitor (1476 chips) ...
+[infer]   496/1476 chips  22s
+[infer]   992/1476 chips  39s
+[eval]   129666 raw detections in 58s
+[eval] predicting pretrained_restricted on monitor (1476 chips) ...
+[infer]   496/1476 chips  19s
+[infer]   992/1476 chips  36s
+[eval]   47895 raw detections in 54s
+[eval] operating confidence chosen on MONITOR: 0.525 (macro-F1 0.866)
+[eval] predicting finetuned on val (5297 chips) ...
+[infer]   496/5297 chips  20s
+[infer]   992/5297 chips  39s
+[infer]   1488/5297 chips  56s
+[infer]   1984/5297 chips  73s
+[infer]   2480/5297 chips  93s
+[infer]   2976/5297 chips  110s
+[infer]   3472/5297 chips  126s
+[infer]   3968/5297 chips  143s
+[infer]   4464/5297 chips  162s
+[infer]   4960/5297 chips  182s
+[eval]   436842 raw detections in 195s
+[eval] bootstrap (100 resamples of 458 val images) took 47s
+[eval] wrote C:\Users\Prash\Downloads\SIH 2026\geoseek\data\eval\detector_run\eval_results.json

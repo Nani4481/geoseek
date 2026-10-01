@@ -1,0 +1,1209 @@
+{
+ "section": "change_detection",
+ "metrics": {
+  "oscd_heldout": {
+   "model_key": "fc-siam-diff-oscd",
+   "weights_sha256": "452ac062e3b3d56f7997b9a5bbf81bab41d148b525fc28621e964cbbd0a3bcab",
+   "chosen_threshold_from_validation": 0.8,
+   "chosen_threshold_stored_in_checkpoint": 0.8,
+   "validation_regions": [
+    "bordeaux",
+    "cupertino",
+    "beirut"
+   ],
+   "test_regions": [
+    "brasilia",
+    "chongqing",
+    "dubai",
+    "lasvegas",
+    "milano",
+    "montpellier",
+    "norcia",
+    "rio",
+    "saclay_w",
+    "valencia"
+   ],
+   "test_pixels_total": 3077936,
+   "test_change_pixel_fraction": 0.05168301095279434,
+   "inference_passes": 3,
+   "thr_0p50": {
+    "threshold": 0.5,
+    "pooled": {
+     "precision": 0.517047090054265,
+     "recall": 0.6097487380325252,
+     "f1": 0.5595846253695824,
+     "iou": 0.3884883730244555,
+     "fpr": 0.031039868661007605,
+     "tp": 96997,
+     "fp": 90601,
+     "fn": 62080,
+     "tn": 2828258
+    },
+    "per_region": {
+     "brasilia": {
+      "precision": 0.412059728713097,
+      "recall": 0.6896222815719191,
+      "f1": 0.5158758473064573,
+      "iou": 0.34759615384615383,
+      "fpr": 0.02607223191043041,
+      "tp": 3615,
+      "fp": 5158,
+      "fn": 1627,
+      "tn": 192677,
+      "change_fraction": 0.02581286901027689
+     },
+     "chongqing": {
+      "precision": 0.6745976777347729,
+      "recall": 0.5782030240597827,
+      "f1": 0.6226918882328608,
+      "iou": 0.4521079073831367,
+      "fpr": 0.021675355443806093,
+      "tp": 16558,
+      "fp": 7987,
+      "fn": 12079,
+      "tn": 360496,
+      "change_fraction": 0.0721117042707494
+     },
+     "dubai": {
+      "precision": 0.5501838934686113,
+      "recall": 0.4455010371952597,
+      "f1": 0.4923394693238305,
+      "iou": 0.3265585715791217,
+      "fpr": 0.04011972119350175,
+      "tp": 21691,
+      "fp": 17734,
+      "fn": 26998,
+      "tn": 424293,
+      "change_fraction": 0.09922032295665925
+     },
+     "lasvegas": {
+      "precision": 0.6792705278592376,
+      "recall": 0.8186657830793019,
+      "f1": 0.7424822197736152,
+      "iou": 0.5904347687552773,
+      "fpr": 0.032125115198067246,
+      "tp": 37061,
+      "fp": 17499,
+      "fn": 8209,
+      "tn": 527215,
+      "change_fraction": 0.07673089439713619
+     },
+     "milano": {
+      "precision": 0.7111299915038233,
+      "recall": 0.34601074824307565,
+      "f1": 0.46551724137931044,
+      "iou": 0.30337078651685395,
+      "fpr": 0.0011269809175613458,
+      "tp": 837,
+      "fp": 340,
+      "fn": 1582,
+      "tn": 301351,
+      "change_fraction": 0.007954358620236099
+     },
+     "montpellier": {
+      "precision": 0.7837435982157608,
+      "recall": 0.7268270261988663,
+      "f1": 0.7542130365659778,
+      "iou": 0.6054109239407861,
+      "fpr": 0.01461981772694782,
+      "tp": 9488,
+      "fp": 2618,
+      "fn": 3566,
+      "tn": 176454,
+      "change_fraction": 0.06794499443073816
+     },
+     "norcia": {
+      "precision": 0.13942307692307693,
+      "recall": 0.5672371638141809,
+      "f1": 0.22383019778099372,
+      "iou": 0.12601846822379142,
+      "fpr": 0.04692107734987658,
+      "tp": 696,
+      "fp": 4296,
+      "fn": 531,
+      "tn": 87262,
+      "change_fraction": 0.013224120278062187
+     },
+     "rio": {
+      "precision": 0.4755150287065181,
+      "recall": 0.4939195509822264,
+      "f1": 0.48454258675078865,
+      "iou": 0.31973355537052456,
+      "fpr": 0.03285011210920424,
+      "tp": 4224,
+      "fp": 4659,
+      "fn": 4328,
+      "tn": 137167,
+      "change_fraction": 0.05687002088071393
+     },
+     "saclay_w": {
+      "precision": 0.13937133724027703,
+      "recall": 0.5213232363491431,
+      "f1": 0.2199428283167984,
+      "iou": 0.12355941809937654,
+      "fpr": 0.03716861398850474,
+      "tp": 2616,
+      "fp": 16154,
+      "fn": 2402,
+      "tn": 418460,
+      "change_fraction": 0.011414091785857262
+     },
+     "valencia": {
+      "precision": 0.014686434189461962,
+      "recall": 0.21775025799793601,
+      "f1": 0.0275169535732916,
+      "iou": 0.013950413223140496,
+      "fpr": 0.06522330088140842,
+      "tp": 211,
+      "fp": 14156,
+      "fn": 758,
+      "tn": 202883,
+      "change_fraction": 0.004444791016843418
+     }
+    }
+   },
+   "thr_0p80": {
+    "threshold": 0.8,
+    "pooled": {
+     "precision": 0.6033698173814764,
+     "recall": 0.5101051691947924,
+     "f1": 0.5528315705210091,
+     "iou": 0.38200914230836225,
+     "fpr": 0.018274949218170525,
+     "tp": 81146,
+     "fp": 53342,
+     "fn": 77931,
+     "tn": 2865517
+    },
+    "per_region": {
+     "brasilia": {
+      "precision": 0.538562520511979,
+      "recall": 0.6260969095764976,
+      "f1": 0.5790402258292167,
+      "iou": 0.40749937919046436,
+      "fpr": 0.014213865089594864,
+      "tp": 3282,
+      "fp": 2812,
+      "fn": 1960,
+      "tn": 195023,
+      "change_fraction": 0.02581286901027689
+     },
+     "chongqing": {
+      "precision": 0.7448409531410329,
+      "recall": 0.45626287669797816,
+      "f1": 0.5658849260486368,
+      "iou": 0.39458822818832484,
+      "fpr": 0.012147100408974092,
+      "tp": 13066,
+      "fp": 4476,
+      "fn": 15571,
+      "tn": 364007,
+      "change_fraction": 0.0721117042707494
+     },
+     "dubai": {
+      "precision": 0.5906911432289883,
+      "recall": 0.3542278543408162,
+      "f1": 0.4428723663769307,
+      "iou": 0.2844162269129288,
+      "fpr": 0.027036809968621827,
+      "tp": 17247,
+      "fp": 11951,
+      "fn": 31442,
+      "tn": 430076,
+      "change_fraction": 0.09922032295665925
+     },
+     "lasvegas": {
+      "precision": 0.7433411369760149,
+      "recall": 0.7434724983432737,
+      "f1": 0.7434068118566949,
+      "iou": 0.591604999033239,
+      "fpr": 0.021334131305602574,
+      "tp": 33657,
+      "fp": 11621,
+      "fn": 11613,
+      "tn": 533093,
+      "change_fraction": 0.07673089439713619
+     },
+     "milano": {
+      "precision": 0.7702127659574468,
+      "recall": 0.22447292269532865,
+      "f1": 0.34763124199743917,
+      "iou": 0.2103835722588144,
+      "fpr": 0.0005369732607204059,
+      "tp": 543,
+      "fp": 162,
+      "fn": 1876,
+      "tn": 301529,
+      "change_fraction": 0.007954358620236099
+     },
+     "montpellier": {
+      "precision": 0.8417735515258735,
+      "recall": 0.5831928910678719,
+      "f1": 0.689021630916825,
+      "iou": 0.5255781843286158,
+      "fpr": 0.007991199070764832,
+      "tp": 7613,
+      "fp": 1431,
+      "fn": 5441,
+      "tn": 177641,
+      "change_fraction": 0.06794499443073816
+     },
+     "norcia": {
+      "precision": 0.20802919708029197,
+      "recall": 0.46454767726161367,
+      "f1": 0.2873708091756995,
+      "iou": 0.16779511333529584,
+      "fpr": 0.02370082352170209,
+      "tp": 570,
+      "fp": 2170,
+      "fn": 657,
+      "tn": 89388,
+      "change_fraction": 0.013224120278062187
+     },
+     "rio": {
+      "precision": 0.5022807906741004,
+      "recall": 0.34763797942001873,
+      "f1": 0.41089074701126393,
+      "iou": 0.2585667072534354,
+      "fpr": 0.020771931803759535,
+      "tp": 2973,
+      "fp": 2946,
+      "fn": 5579,
+      "tn": 138880,
+      "change_fraction": 0.05687002088071393
+     },
+     "saclay_w": {
+      "precision": 0.17232441471571908,
+      "recall": 0.4107214029493822,
+      "f1": 0.24278478030392275,
+      "iou": 0.13816451029027285,
+      "fpr": 0.022776532739396338,
+      "tp": 2061,
+      "fp": 9899,
+      "fn": 2957,
+      "tn": 424715,
+      "change_fraction": 0.011414091785857262
+     },
+     "valencia": {
+      "precision": 0.02230359520639148,
+      "recall": 0.13828689370485037,
+      "f1": 0.03841192489608715,
+      "iou": 0.019582054654391348,
+      "fpr": 0.0270642603403075,
+      "tp": 134,
+      "fp": 5874,
+      "fn": 835,
+      "tn": 211165,
+      "change_fraction": 0.004444791016843418
+     }
+    }
+   }
+  }
+ },
+ "noise_bands": {
+  "change_detection.oscd_heldout.thr_0p50.pooled.precision": {
+   "band": 0.15915922331214008
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.recall": {
+   "band": 0.13841855374988596
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.f1": {
+   "band": 0.13603935175782314
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.iou": {
+   "band": 0.12752207989007633
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.fpr": {
+   "band": 0.009806719645944765
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.precision": {
+   "band": 0.15089407295904586
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.precision": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.recall": {
+   "band": 0.1452834241525364
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.recall": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.f1": {
+   "band": 0.13242145660616755
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.f1": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.iou": {
+   "band": 0.12439559547298337
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.iou": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.fpr": {
+   "band": 0.0056446854421011074
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.fpr": {
+   "band": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.fpr": {
+   "band": 0.0
+  }
+ },
+ "noise_detail": {
+  "change_detection.oscd_heldout.thr_0p50.pooled.precision": {
+   "band": 0.15915922331214008,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15915922331214008
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.recall": {
+   "band": 0.13841855374988596,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13841855374988596
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.f1": {
+   "band": 0.13603935175782314,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13603935175782314
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.iou": {
+   "band": 0.12752207989007633,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12752207989007633
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.pooled.fpr": {
+   "band": 0.009806719645944765,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.009806719645944765
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.brasilia.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.chongqing.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.dubai.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.lasvegas.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.milano.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.montpellier.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.norcia.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.rio.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.saclay_w.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p50.per_region.valencia.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.precision": {
+   "band": 0.15089407295904586,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15089407295904586
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.precision": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.recall": {
+   "band": 0.1452834241525364,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1452834241525364
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.recall": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.f1": {
+   "band": 0.13242145660616755,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13242145660616755
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.f1": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.iou": {
+   "band": 0.12439559547298337,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12439559547298337
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.iou": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.pooled.fpr": {
+   "band": 0.0056446854421011074,
+   "method": "max(spread over 3 inference passes, region-bootstrap 95% CI half-width, 2000 draws over 10 regions)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0056446854421011074
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.dubai.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.milano.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.norcia.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.rio.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  },
+  "change_detection.oscd_heldout.thr_0p80.per_region.valencia.fpr": {
+   "band": 0.0,
+   "method": "spread over 3 inference passes (fixed region: no sampling component)",
+   "ordering_or_rerun_spread": 0.0
+  }
+ },
+ "extra": {},
+ "power": {
+  "start": {
+   "source": "AC",
+   "battery_percent": 99
+  },
+  "end": {
+   "source": "AC",
+   "battery_percent": 99
+  }
+ },
+ "written_at": "2026-10-01T02:22:31Z"
+}

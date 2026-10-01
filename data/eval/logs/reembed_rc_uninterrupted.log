@@ -1,0 +1,40 @@
+﻿[reembed] power source: AC (97%)
+[reembed] weights verified: C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\RemoteCLIP-ViT-B-32.pt sha256=60014e395d930a3f...
+[reembed] catalog C:\Users\Prash\Downloads\SIH 2026\geoseek\data\index\tiles.sqlite: 101911 tiles selected (faiss_id 0..101910), collections ['sentinel-2-l2a']
+[reembed] VRAM cap 0.80: applied
+[embed] Loading RemoteCLIP (ViT-B-32) ONCE from C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\RemoteCLIP-ViT-B-32.pt ...
+[staging] Building open_clip architecture 'ViT-B-32' (random init) ...
+python.exe : WARNING:root:No pretrained weights loaded for model 'ViT-B-32'. Model initialized randomly.
+At line:4 char:1
++ & "C:\AnacondaPython\anaconda3\envs\geoseek\python.exe" -u -W ignore  ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (WARNING:root:No...lized randomly.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[staging] Loading RemoteCLIP weights from local file C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\RemoteCLIP-ViT-B-32.pt ...
+[staging] load_state_dict result: <All keys matched successfully>
+WARNING:root:No pretrained weights loaded for model 'ViT-B-32'. Model initialized randomly.
+[embed] Model loaded once in 2.13s on device=cuda (load_count=1) - will be reused for every tile.
+[reembed] model=remoteclip-vitb32 tiles=101911 shards=21 (size 5000, batch 64); 0 already complete, 21 to do
+[reembed] shard 1/21  5000 tiles  329.1 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 4.9 min
+[reembed] shard 2/21  5000 tiles  269.7 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 5.2 min
+[reembed] shard 3/21  5000 tiles  298.7 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 4.9 min
+[reembed] shard 4/21  5000 tiles  289.7 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 4.6 min
+[reembed] shard 5/21  5000 tiles  303.3 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 4.3 min
+[reembed] shard 6/21  5000 tiles  279.8 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 4.1 min
+[reembed] shard 7/21  5000 tiles  283.4 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 3.8 min
+[reembed] shard 8/21  5000 tiles  276.4 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 3.6 min
+[reembed] shard 9/21  5000 tiles  284.0 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 3.3 min
+[reembed] shard 10/21  5000 tiles  263.8 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 3.0 min
+[reembed] shard 11/21  5000 tiles  283.1 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 2.7 min
+[reembed] shard 12/21  5000 tiles  297.5 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 2.4 min
+[reembed] shard 13/21  5000 tiles  291.1 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 2.1 min
+[reembed] shard 14/21  5000 tiles  264.6 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 1.9 min
+[reembed] shard 15/21  5000 tiles  287.4 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 1.6 min
+[reembed] shard 16/21  5000 tiles  293.0 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 1.3 min
+[reembed] shard 17/21  5000 tiles  300.4 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 1.0 min
+[reembed] shard 18/21  5000 tiles  279.6 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 0.7 min
+[reembed] shard 19/21  5000 tiles  290.9 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 0.4 min
+[reembed] shard 20/21  5000 tiles  273.2 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 0.1 min
+[reembed] shard 21/21  1911 tiles  263.6 tiles/s  peak VRAM 739 MB alloc / 818 MB reserved  ETA 0.0 min
+[reembed] session: {'complete': True, 'shards_total': 21, 'new_shards': 21, 'session_tiles': 101911, 'session_seconds': 356.632, 'session_tiles_per_s': 285.76, 'wall_s': 356.73, 'power_source': 'AC'}

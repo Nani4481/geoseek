@@ -1,0 +1,13 @@
+{
+ "summary": {
+  "complete": true,
+  "shards_total": 21,
+  "new_shards": 21,
+  "session_tiles": 101911,
+  "session_seconds": 356.632,
+  "session_tiles_per_s": 285.76,
+  "wall_s": 356.73,
+  "power_source": "AC"
+ },
+ "shards_dir": "data\\index\\shards\\baseline_v1_uninterrupted\\remoteclip-vitb32"
+}
