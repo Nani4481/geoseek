@@ -135,7 +135,7 @@ class AnalystService:
         from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository
         from geoseek.ingest.store import DB_FILENAME
 
-        return SQLiteMetadataRepository(self.settings.index_dir / DB_FILENAME)
+        return SQLiteMetadataRepository(self.settings.database_path)
 
     # -- load -------------------------------------------------------------
 

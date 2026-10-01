@@ -10,14 +10,8 @@ services:
       # starts the container fine; the API just has nothing indexed yet).
       - ./data:/app/data
     restart: unless-stopped
-    # Uncomment to use a host GPU (requires the NVIDIA Container Toolkit
-    # installed on the host; the app's own device selection - see
-    # src/geoseek/config.py::select_device - already picks it up
-    # automatically, no image or env change needed beyond this):
-    # deploy:
-    #   resources:
-    #     reservations:
-    #       devices:
-    #         - driver: nvidia
-    #           count: 1
-    #           capabilities: [gpu]
+    environment:
+      GEOSEEK_DEVICE: cpu
+      OMP_NUM_THREADS: "2"
+      MKL_NUM_THREADS: "2"
+    # This image installs CPU torch; --gpus alone cannot enable CUDA.

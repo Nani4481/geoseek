@@ -1,0 +1,30 @@
+{
+  "platform": "Windows-10-10.0.26200-SP0",
+  "processor": "AMD64 Family 25 Model 116 Stepping 1, AuthenticAMD",
+  "torch": "2.2.2",
+  "device": "cpu",
+  "threads": 2,
+  "remoteclip_load_seconds": 2.087479500041809,
+  "remoteclip_text": {
+    "median_ms": 90.39719999418594,
+    "max_ms": 106.40639998018742,
+    "samples": 10
+  },
+  "remoteclip_image_synthetic": {
+    "median_ms": 137.7333500131499,
+    "max_ms": 179.05390000669286,
+    "samples": 10
+  },
+  "index_vectors": 105245,
+  "faiss_exact_all_vectors": {
+    "median_ms": 17.310499999439344,
+    "max_ms": 19.30509996600449,
+    "samples": 10
+  },
+  "fc_siam_diff_synthetic_256_pair": {
+    "median_ms": 217.20304997870699,
+    "max_ms": 227.47770004207268,
+    "samples": 10
+  },
+  "peak_rss_bytes": 1869127680
+}

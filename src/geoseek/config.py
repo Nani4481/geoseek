@@ -33,6 +33,23 @@ class Settings:
     device: str = field(default="cpu")
     embedding_dim: int = EMBEDDING_DIM
 
+    @property
+    def faiss_index_path(self) -> Path:
+        return Path(os.environ.get("FAISS_INDEX_PATH") or self.index_dir / "tiles.faiss")
+
+    @property
+    def database_path(self) -> Path:
+        url = os.environ.get("DATABASE_URL")
+        if not url:
+            return self.index_dir / "tiles.sqlite"
+        if not url.startswith("sqlite:///") or not url.removeprefix("sqlite:///"):
+            raise ValueError("DATABASE_URL must be sqlite:/// followed by a local file path")
+        return Path(url.removeprefix("sqlite:///"))
+
+    @property
+    def model_path(self) -> Path:
+        return Path(os.environ.get("MODEL_PATH") or self.models_dir / "RemoteCLIP-ViT-B-32.pt")
+
     def ensure_dirs(self) -> None:
         for d in (self.data_dir, self.models_dir, self.datasets_dir, self.tiles_dir, self.index_dir):
             d.mkdir(parents=True, exist_ok=True)
@@ -48,7 +65,17 @@ def select_device() -> str:
 
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
-    settings = Settings(device=select_device())
+    # Empty variables retain the original local layout. GCS is mounted/synced
+    # by deployment tooling; application paths always remain filesystem paths.
+    data = Path(os.environ.get("GEOSEEK_DATA_DIR") or PROJECT_ROOT / "data")
+    settings = Settings(
+        device=select_device(), data_dir=data,
+        models_dir=Path(os.environ.get("GEOSEEK_MODELS_DIR") or data / "models"),
+        datasets_dir=Path(os.environ.get("GEOSEEK_DATASETS_DIR") or data / "datasets"),
+        tiles_dir=Path(os.environ.get("GEOSEEK_TILES_DIR") or data / "tiles"),
+        index_dir=Path(os.environ.get("GEOSEEK_INDEX_DIR") or data / "index"),
+        provenance_manifest_path=Path(os.environ.get("GEOSEEK_PROVENANCE_PATH") or data / "provenance_manifest.json"),
+    )
     settings.ensure_dirs()
     return settings
 

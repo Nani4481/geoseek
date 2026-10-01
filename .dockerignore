@@ -12,3 +12,15 @@ __pycache__/
 .venv/
 build/
 dist/
+.env
+.env.*
+!.env.example
+**/*credentials*.json
+**/*service-account*.json
+**/*service_account*.json
+**/*.pem
+**/*.key
+.gcloud/
+.secrets/
+deploy/gcp/benchmark-results.json
+deploy/gcp/smoke-results.json
