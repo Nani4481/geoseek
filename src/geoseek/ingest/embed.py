@@ -245,7 +245,7 @@ def load_model_once():
         return _MODEL, _PREPROCESS, _DEVICE
 
     settings = get_settings()
-    checkpoint_path = settings.models_dir / CHECKPOINT_FILENAME
+    checkpoint_path = settings.model_path
     if not checkpoint_path.is_file():
         raise FileNotFoundError(
             f"RemoteCLIP checkpoint not staged at {checkpoint_path}. "

@@ -96,7 +96,7 @@ def discover_date_to_obs(repo=None) -> dict[str, str]:
     try:
         if owns_repo:
             from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository
-            repo = SQLiteMetadataRepository(get_settings().index_dir / "tiles.sqlite")
+            repo = SQLiteMetadataRepository(get_settings().database_path)
         obs = repo.list_observations(location=AOI_POINT, collection=S2_COLLECTION)
         obs.sort(key=lambda o: o.acquired_at)
         if len(obs) < 3:
@@ -666,7 +666,7 @@ def diversify(ranked: list["Candidate"], *, n: int = 10, per_type_cap: int = 3,
 
 def _build_repo():
     from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository
-    return SQLiteMetadataRepository(get_settings().index_dir / "tiles.sqlite")
+    return SQLiteMetadataRepository(get_settings().database_path)
 
 
 def _component_mask(span_prob_path: str, bbox, centroid_rc, span_pair) -> np.ndarray:

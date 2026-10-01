@@ -17,6 +17,12 @@ __pycache__/
 .pytest_cache/
 *.egg-info/
 .venv/
+.env
+.env.*
+!.env.example
+.secrets/
+data/cloud-release/
+data/*.zip
 build/
 dist/
 data/discovery/

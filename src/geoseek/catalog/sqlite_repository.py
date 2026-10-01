@@ -63,7 +63,7 @@ class SQLiteMetadataRepository(MetadataRepository):
             self.db_path = Path(getattr(connection, "_geoseek_path", ":memory:"))
             self._conn = connection
         else:
-            self.db_path = Path(db_path) if db_path is not None else get_settings().index_dir / "tiles.sqlite"
+            self.db_path = Path(db_path) if db_path is not None else get_settings().database_path
             self.db_path.parent.mkdir(parents=True, exist_ok=True)
             # check_same_thread=False + an explicit lock: a SearchEngine backing a
             # server is queried from a threadpool. The flag only lifts the

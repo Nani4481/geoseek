@@ -127,8 +127,10 @@ class SearchEngine:
 
         self.embedding_model = RemoteCLIPEmbeddingModel()
         self.embedding_model.load()  # RemoteCLIP resident before the first query is served
-        self.vector_index = FaissFlatIPIndex(self.index_dir / INDEX_FILENAME)
-        self.repo = SQLiteMetadataRepository(self.index_dir / DB_FILENAME)
+        self.vector_index = FaissFlatIPIndex(
+            self.index_dir / INDEX_FILENAME if index_dir is not None else self.settings.faiss_index_path)
+        self.repo = SQLiteMetadataRepository(
+            self.index_dir / DB_FILENAME if index_dir is not None else self.settings.database_path)
         self._rows: dict[int, dict] = {}
         # ALL model encodes run on this ONE thread. FastAPI serves sync endpoints
         # from a threadpool; the first GPU op on each fresh worker thread pays a
