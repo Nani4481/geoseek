@@ -24,3 +24,6 @@ dist/
 .secrets/
 deploy/gcp/benchmark-results.json
 deploy/gcp/smoke-results.json
+
+# Node dependencies for the React console are a build-time concern only; the built output under src/ is what ships.
+frontend-react/node_modules/

@@ -270,3 +270,167 @@ def test_web_root_has_files_to_scan():
     assert len(_TEXT_FILES) >= 4  # index.html, tokens.css, api-client.js, shell.js at minimum
     assert any(p.suffix.lower() == ".woff2" for p in _OTHER_FILES), \
         "expected at least one vendored .woff2 font to exist and be scanned"
+
+
+# =====================================================================================================================
+# React console build (frontend-react/ -> src/geoseek/analyst/web_react/)
+#
+# Same two rules as the vendored directory above, applied to the build output:
+#   * every emitted file is byte-pinned (frontend-react/build-pins.json, regenerated offline by
+#     `python -m geoseek.staging.react_build_pins` after `npm run build`);
+#   * every external-looking URL string in a shipped text file must be classified in
+#     geoseek.staging.react_build_pins.ALLOWED_URLS. Protocol-relative strings, remote @import and remote
+#     fetch()/XHR/Image targets are never allowed.
+# On top of that: the vendored libraries it bundles must still be the already-pinned bytes, index.html must carry a
+# self-only CSP (so the browser itself refuses any external request), and the app SOURCE must contain no external URL.
+# The runtime counterpart - a real request log from headless Chrome - is frontend-react/tools/verify-offline.mjs.
+# =====================================================================================================================
+
+from geoseek.staging import react_build_pins as rbp  # noqa: E402
+
+REACT_ROOT = rbp.REACT_ROOT
+REACT_SRC = rbp.FRONTEND_DIR / "src"
+_REACT_FILES = sorted(p for p in REACT_ROOT.rglob("*") if p.is_file()) if REACT_ROOT.is_dir() else []
+_REACT_TEXT = [p for p in _REACT_FILES if p.suffix.lower() in rbp.TEXT_SUFFIXES]
+_REACT_BINARY = [p for p in _REACT_FILES if p.suffix.lower() not in rbp.TEXT_SUFFIXES]
+
+
+def _react_rel(p: Path) -> str:
+    return p.relative_to(REACT_ROOT).as_posix()
+
+
+def _react_pins() -> dict:
+    if not rbp.PINS_PATH.is_file():
+        pytest.fail(f"{rbp.PINS_PATH} missing - run `python -m geoseek.staging.react_build_pins` after `npm run build`")
+    return json.loads(rbp.PINS_PATH.read_text(encoding="utf-8"))
+
+
+def test_react_build_output_exists():
+    """Guards the parametrized React tests below against silently checking nothing."""
+    assert (REACT_ROOT / "index.html").is_file(), f"no React build at {REACT_ROOT} - run `npm run build` in frontend-react/"
+    assert any(p.suffix == ".js" for p in _REACT_FILES), "build has no JavaScript"
+    assert any(p.suffix == ".woff2" for p in _REACT_BINARY), "expected the bundled web fonts to be present"
+    assert any(p.suffix == ".jpg" for p in _REACT_BINARY), "expected the vendored Earth textures to be present"
+
+
+@pytest.mark.parametrize("relpath", [_react_rel(p) for p in _REACT_FILES], ids=lambda s: s)
+def test_react_file_is_hash_pinned(relpath):
+    pins = _react_pins()["files"]
+    assert relpath in pins, f"{relpath} is in the build but not pinned (re-run `python -m geoseek.staging.react_build_pins`)"
+    assert rbp.sha256_file(REACT_ROOT / relpath) == pins[relpath]["sha256"], (
+        f"{relpath} no longer hashes to its pin - the build changed; re-review and re-pin")
+
+
+def test_react_pinned_file_set_equals_build_output():
+    on_disk = {_react_rel(p) for p in _REACT_FILES}
+    pinned = set(_react_pins()["files"])
+    assert on_disk == pinned, f"added: {sorted(on_disk - pinned)}  missing: {sorted(pinned - on_disk)}"
+
+
+@pytest.mark.parametrize("relpath", [_react_rel(p) for p in _REACT_TEXT], ids=lambda s: s)
+def test_react_text_asset_has_no_unclassified_external_url(relpath):
+    refs = rbp.external_references((REACT_ROOT / relpath).read_text(encoding="utf-8", errors="replace"))
+    for bucket in ("protocol_relative", "css_import", "network_call"):
+        assert not refs[bucket], f"{relpath}: {bucket} reference(s) are never allowed: {refs[bucket]}"
+    unlisted = [u for u in refs["absolute"] if not rbp.is_allowed(u)]
+    assert not unlisted, (f"{relpath} contains external URL strings not classified in "
+                          f"react_build_pins.ALLOWED_URLS: {unlisted}")
+    pinned = set(_react_pins()["files"][relpath].get("external_urls", []))
+    assert set(refs["absolute"]) <= pinned, f"{relpath}: URL strings not enumerated in its pin: {sorted(set(refs['absolute']) - pinned)}"
+
+
+@pytest.mark.parametrize("relpath", [_react_rel(p) for p in _REACT_BINARY], ids=lambda s: s)
+def test_react_binary_asset_has_no_url_strings(relpath):
+    raw = (REACT_ROOT / relpath).read_bytes()
+    assert b"http://" not in raw and b"https://" not in raw, f"{relpath} (binary) embeds an http(s):// string"
+
+
+def test_react_allowlist_is_reviewed_and_never_a_live_fetch():
+    assert rbp.ALLOWED_URLS, "allowlist unexpectedly empty"
+    for a in rbp.ALLOWED_URLS:
+        assert a.kind != rbp.LIVE_FETCH_KIND, f"{a.url} is classified as a live runtime fetch - a submission blocker"
+        assert a.note.strip() and a.kind.strip(), f"{a.url} needs a kind and a reviewer note"
+
+
+def test_react_bundled_vendor_inputs_are_the_pinned_vendor_bytes():
+    """The React bundle reuses the vendored three.js / OrbitControls / Leaflet; they must still be exactly the bytes the
+    build was made from AND exactly the bytes the provenance manifest pins for the existing frontend."""
+    pins = _react_pins()["vendored_inputs_bundled"]
+    assert set(pins) == set(rbp.VENDOR_INPUTS), "pinned vendored inputs differ from react_build_pins.VENDOR_INPUTS"
+    manifest_pins = _load_vendor_hashes()
+    for rel, sha in pins.items():
+        assert _sha256(WEB_ROOT / rel) == sha, f"{rel} changed since the React build was made from it - rebuild and re-pin"
+        assert rel in manifest_pins, f"{rel} is not pinned in the provenance manifest"
+        assert manifest_pins[rel] == sha, f"{rel}: React pin disagrees with the provenance manifest"
+
+
+def test_react_copied_assets_are_byte_identical_to_their_vendor_source():
+    """Textures / fonts / the Leaflet marker image the build copied must be identical to the existing frontend's files."""
+    copied = {rel: e for rel, e in _react_pins()["files"].items() if "vendor_source" in e}
+    assert any(e["vendor_source"].startswith("vendor/earth/") for e in copied.values()), "Earth textures not traced to vendor/"
+    assert any(e["vendor_source"].startswith("fonts/") for e in copied.values()), "fonts not traced to analyst/web/fonts"
+    manifest_pins = _load_vendor_hashes()
+    for rel, e in copied.items():
+        src = WEB_ROOT / e["vendor_source"]
+        assert src.is_file(), f"{rel}: source {e['vendor_source']} missing"
+        assert _sha256(src) == e["sha256"] == _sha256(REACT_ROOT / rel), f"{rel} differs from {e['vendor_source']}"
+        if e["vendor_source"] in manifest_pins:
+            assert manifest_pins[e["vendor_source"]] == e["sha256"], f"{e['vendor_source']} disagrees with the provenance manifest"
+
+
+def _csp_directives(html: str) -> dict[str, list[str]]:
+    m = re.search(r"""http-equiv=["']Content-Security-Policy["'][^>]*content="([^"]+)\"""", html)
+    assert m, "index.html has no Content-Security-Policy meta tag"
+    return {d.split()[0]: d.split()[1:] for d in (x.strip() for x in m.group(1).split(";")) if d}
+
+
+def test_react_index_html_enforces_a_self_only_csp():
+    """The browser itself refuses any non-same-origin request: every fetch-type directive is limited to self/data:/blob:."""
+    csp = _csp_directives((REACT_ROOT / "index.html").read_text(encoding="utf-8"))
+    assert csp.get("default-src") == ["'self'"], csp
+    for directive in ("script-src", "connect-src", "img-src", "font-src", "style-src", "worker-src", "object-src"):
+        for src in csp.get(directive, []):
+            assert src in ("'self'", "data:", "blob:", "'none'", "'unsafe-inline'"), f"{directive} allows {src!r}"
+    assert "'unsafe-eval'" not in sum(csp.values(), []), "CSP allows eval"
+    assert "'unsafe-inline'" not in csp.get("script-src", []), "CSP allows inline scripts"
+    assert not any(s in ("*", "http:", "https:") for srcs in csp.values() for s in srcs), "CSP is not self-only"
+
+
+def test_react_index_html_references_only_local_assets():
+    html = (REACT_ROOT / "index.html").read_text(encoding="utf-8")
+    refs = re.findall(r"""(?:src|href)=["']([^"']+)["']""", html)
+    assert refs, "index.html references nothing?"
+    for r in refs:
+        assert r.startswith("/react/") or r.startswith("#"), f"index.html references a non-local asset: {r}"
+
+
+def test_react_app_source_contains_no_external_url_and_no_tile_layer():
+    """Source-level guard, stricter than the build scan: the app's own code has NO external URL at all (no allowlist),
+    and never creates a Leaflet tile layer (there are no tiles offline)."""
+    assert REACT_SRC.is_dir(), f"{REACT_SRC} missing"
+    bad: list[str] = []
+    for p in sorted(REACT_SRC.rglob("*")):
+        if not p.is_file() or p.suffix.lower() not in {".ts", ".tsx", ".css", ".html", ".json"}:
+            continue
+        text = p.read_text(encoding="utf-8", errors="replace")
+        for bucket, hits in rbp.external_references(text).items():
+            bad += [f"{p.relative_to(REACT_SRC)}: {bucket}: {h}" for h in hits]
+        if re.search(r"\btileLayer\s*\(", text):
+            bad.append(f"{p.relative_to(REACT_SRC)}: creates a Leaflet tile layer")
+    index_html = (rbp.FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
+    for bucket, hits in rbp.external_references(index_html).items():
+        bad += [f"index.html: {bucket}: {h}" for h in hits]
+    assert not bad, "\n".join(bad)
+
+
+def test_react_build_toolchain_is_locked():
+    """Dependencies are pinned with a lockfile, and the build records which lockfile produced it."""
+    lock = rbp.FRONTEND_DIR / "package-lock.json"
+    assert lock.is_file(), "package-lock.json missing"
+    pkg = json.loads((rbp.FRONTEND_DIR / "package.json").read_text(encoding="utf-8"))
+    for section in ("dependencies", "devDependencies"):
+        for name, ver in pkg.get(section, {}).items():
+            assert re.fullmatch(r"\d+\.\d+\.\d+", ver), f"{name} is not exact-pinned: {ver!r}"
+    assert set(pkg.get("dependencies", {})) == {"react", "react-dom"}, "runtime dependencies changed - re-review the offline surface"
+    assert _react_pins()["build_toolchain"]["package_lock_sha256"] == rbp.sha256_file(lock), (
+        "package-lock.json changed since the build was pinned - rebuild and re-pin")

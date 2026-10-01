@@ -1,0 +1,186 @@
+{
+  "generated_by": "python -m geoseek.staging.react_build_pins",
+  "note": "Hash pins for src/geoseek/analyst/web_react/ (the React console build). tests/test_frontend_offline.py fails if any file drifts from its pin, if a file is added or missing, or if a URL string is not classified in geoseek/staging/react_build_pins.py::ALLOWED_URLS.",
+  "build_toolchain": {
+    "package_lock_sha256": "7caaeb8cffb0143ef9dba0c4a3bfa1a097e7440d42db7d0ccbc7b8d32af59a4d",
+    "versions": {
+      "react": "19.3.0",
+      "react-dom": "19.3.0",
+      "vite": "8.3.2",
+      "typescript": "5.9.3",
+      "@vitejs/plugin-react": "6.1.1",
+      "@types/leaflet": "1.9.22"
+    }
+  },
+  "vendored_inputs_bundled": {
+    "vendor/three.module.min.js": "3e690ac7d180b0aadf0891bea39eec643e29e2d3e75c99b18689518665f69ba6",
+    "vendor/OrbitControls.js": "5a44a9e86a2a0fb11933eed69bc2cd33c76a496854c1aed6ed776efa87d7b064",
+    "vendor/leaflet/leaflet.js": "db49d009c841f5ca34a888c96511ae936fd9f5533e90d8b2c4d57596f4e5641a",
+    "vendor/leaflet/leaflet.css": "a7837102824184820dfa198d1ebcd109ff6d0ff9a2672a074b9a1b4d147d04c6"
+  },
+  "allowed_urls": [
+    {
+      "url": "http://www.w3.org/1998/Math/MathML",
+      "kind": "xml_namespace_identifier",
+      "note": "react-dom namespace constant used with createElementNS; an identifier, never fetched."
+    },
+    {
+      "url": "http://www.w3.org/1999/xhtml",
+      "kind": "xml_namespace_identifier",
+      "note": "react-dom namespace constant; an identifier, never fetched."
+    },
+    {
+      "url": "http://www.w3.org/1999/xlink",
+      "kind": "xml_namespace_identifier",
+      "note": "react-dom namespace for xlink:* SVG attributes; an identifier, never fetched."
+    },
+    {
+      "url": "http://www.w3.org/2000/svg",
+      "kind": "xml_namespace_identifier",
+      "note": "SVG namespace passed to createElementNS by react-dom, three.js and Leaflet; an identifier, never fetched."
+    },
+    {
+      "url": "http://www.w3.org/XML/1998/namespace",
+      "kind": "xml_namespace_identifier",
+      "note": "react-dom namespace for xml:* attributes; an identifier, never fetched."
+    },
+    {
+      "url": "https://react.dev/errors",
+      "kind": "diagnostic_message_text",
+      "note": "react-dom concatenates this into the text of a thrown Error in production builds so a developer can look the code up. String content only; nothing requests it."
+    },
+    {
+      "url": "https://discourse.threejs.org/t/updates-to-lighting-in-three-js-r155/53733",
+      "kind": "diagnostic_message_text",
+      "note": "three.js console.warn text about a lighting-units change; string content only."
+    },
+    {
+      "url": "https://leafletjs.com",
+      "kind": "attribution_link",
+      "note": "href inside Leaflet's default attribution prefix. The console builds every map with attributionControl:false, so the markup is never created or rendered, and the page CSP would block a navigation fetch anyway."
+    }
+  ],
+  "files": {
+    "assets/Briefing-BHIMQb7q.js": {
+      "sha256": "f43352ca1ed4d0f0a6f97d4364bdbbc17e17d25f278fd705776556ee89ef73b5",
+      "bytes": 8873,
+      "external_urls": []
+    },
+    "assets/Changes-ByFKqcoZ.js": {
+      "sha256": "5eb4a28913b295bef94a00d30572ede2c7e636f401b3ea889b1279bcb921664c",
+      "bytes": 6721,
+      "external_urls": []
+    },
+    "assets/day-CDIlSrW5.jpg": {
+      "sha256": "4fef0615b983a0880a311a6d2a6f33e2ad618d43f9e856bc673a7a948a5c4ba7",
+      "bytes": 350413,
+      "vendor_source": "vendor/earth/day.jpg"
+    },
+    "assets/Detect-D1pgpCPT.js": {
+      "sha256": "e6f865318e951209ff41d8d4d9ef3306ce7bb3d7d2341d92c1db25918d00bb4d",
+      "bytes": 7040,
+      "external_urls": []
+    },
+    "assets/Discovery-DOijzYEO.js": {
+      "sha256": "bd38045c1e97fae01f34725c5e6b0a96e8c8b0b10600897ad286c4a8524af8bb",
+      "bytes": 4346,
+      "external_urls": []
+    },
+    "assets/Fingerprints-TkGtxKg1.js": {
+      "sha256": "9615dfd3451be9c7b01c533d373c874b64622430f831eca6540de212ea0a493a",
+      "bytes": 6400,
+      "external_urls": []
+    },
+    "assets/index-DfQJi4cX.js": {
+      "sha256": "c4e38060d038a66e971bed8bad43fd8b4b67c1168d8025dc675399a8dac5eb05",
+      "bytes": 934864,
+      "external_urls": [
+        "http://www.w3.org/1998/Math/MathML",
+        "http://www.w3.org/1999/xhtml",
+        "http://www.w3.org/1999/xlink",
+        "http://www.w3.org/2000/svg",
+        "http://www.w3.org/XML/1998/namespace",
+        "https://discourse.threejs.org/t/updates-to-lighting-in-three-js-r155/53733",
+        "https://leafletjs.com",
+        "https://react.dev/errors/"
+      ]
+    },
+    "assets/index-DN5aWSYp.css": {
+      "sha256": "f880b6208ad00a3b6df3d23d978d02801f57c93440b524f66ead445d6eb11057",
+      "bytes": 33385,
+      "external_urls": []
+    },
+    "assets/Inter-Bold-BOs3KVhN.woff2": {
+      "sha256": "fa888127b6da015b65569f0351f3b5c391ad928904951f1c20e9f8462a8d95ea",
+      "bytes": 114840,
+      "vendor_source": "fonts/Inter-Bold.woff2"
+    },
+    "assets/Inter-Medium-CDhBSFyE.woff2": {
+      "sha256": "0ff3e94614e1493eb556314fd247ae6c4a85a7783b4cc86be539940cf83f2a48",
+      "bytes": 114348,
+      "vendor_source": "fonts/Inter-Medium.woff2"
+    },
+    "assets/Inter-Regular-COLGFB3M.woff2": {
+      "sha256": "e06f6b1bc553aaea4e4668023ed0ab0a147129c3107f511bc7d03d361b0ae085",
+      "bytes": 111268,
+      "vendor_source": "fonts/Inter-Regular.woff2"
+    },
+    "assets/Inter-SemiBold-BAEEcJ4E.woff2": {
+      "sha256": "5cb7103e4e605989afebc03d989c79201e54b21b5183db33981f70db9178a301",
+      "bytes": 114812,
+      "vendor_source": "fonts/Inter-SemiBold.woff2"
+    },
+    "assets/JetBrainsMono-Medium-3S3k2nMz.woff2": {
+      "sha256": "086c48dfbea9ddaff1320f7e09399b8e2924e88ce67453721255db3bdbb5a353",
+      "bytes": 93824,
+      "vendor_source": "fonts/JetBrainsMono-Medium.woff2"
+    },
+    "assets/JetBrainsMono-Regular-BQaDgvhP.woff2": {
+      "sha256": "a9cb1cd82332b23a47e3a1239d25d13c86d16c4220695e34b243effa999f45f2",
+      "bytes": 92164,
+      "vendor_source": "fonts/JetBrainsMono-Regular.woff2"
+    },
+    "assets/JetBrainsMono-SemiBold-BM8Dc2t-.woff2": {
+      "sha256": "918edad542a1da608fd2ba8daebaff9ac802309103fe760eed465b8b4e47faf1",
+      "bytes": 94472,
+      "vendor_source": "fonts/JetBrainsMono-SemiBold.woff2"
+    },
+    "assets/marker-icon-hN30_KVU.png": {
+      "sha256": "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437",
+      "bytes": 1466,
+      "vendor_source": "vendor/leaflet/images/marker-icon.png"
+    },
+    "assets/night-gZ-i9LrA.jpg": {
+      "sha256": "4c13180ff921fb5d5fbad48afaafabde69d485616b3ee7417482bd5d71f75231",
+      "bytes": 196613,
+      "vendor_source": "vendor/earth/night.jpg"
+    },
+    "assets/Panel-DrVCwH_W.js": {
+      "sha256": "63ad7fefc1306e30a51f9e364b95dc1ec302c7c12f4f2f14e09661bd864994cc",
+      "bytes": 14666,
+      "external_urls": []
+    },
+    "assets/Roadmap-CEF5pfxL.js": {
+      "sha256": "2e8220d82d432643aee263d16c1424e0832ea5bf3a83e7452d8172fd15825403",
+      "bytes": 12385,
+      "external_urls": []
+    },
+    "assets/Search-BHjIBIew.js": {
+      "sha256": "f6fa29af7621ef580f53d2258e0130f7304cee299170e80e98020832bff4b9e4",
+      "bytes": 6958,
+      "external_urls": []
+    },
+    "favicon.svg": {
+      "sha256": "9ce21a1f5a8334eb3fa43b34f2393916af5d3fc3ba5574af572335896e56f23b",
+      "bytes": 239,
+      "external_urls": [
+        "http://www.w3.org/2000/svg"
+      ]
+    },
+    "index.html": {
+      "sha256": "ec54dd4f4a9ae375cb859bfc9712ca0dbc8ebf6146c48ddb977d78074f8aa481",
+      "bytes": 886,
+      "external_urls": []
+    }
+  }
+}
