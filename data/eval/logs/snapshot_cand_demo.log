@@ -1,0 +1,28 @@
+[snapshot] === section: env
+[snapshot] section 'env' written -> data\eval\cand_parts\env.json
+[snapshot] === section env finished in 2s
+[snapshot] === section: corpus
+[snapshot] section 'corpus' written -> data\eval\cand_parts\corpus.json
+[snapshot] === section corpus finished in 1s
+[snapshot] === section: retrieval
+[snapshot] frozen corpus: 101911 tiles; Ayodhya-judged 3267, region=ayodhya 3267
+[embed] Loading RemoteCLIP (ViT-B-32) ONCE from C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\RemoteCLIP-ViT-B-32.pt ...
+[staging] Building open_clip architecture 'ViT-B-32' (random init) ...
+WARNING:root:No pretrained weights loaded for model 'ViT-B-32'. Model initialized randomly.
+[staging] Loading RemoteCLIP weights from local file C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\RemoteCLIP-ViT-B-32.pt ...
+[staging] load_state_dict result: <All keys matched successfully>
+WARNING:root:No pretrained weights loaded for model 'ViT-B-32'. Model initialized randomly.
+[embed] Model loaded once in 2.72s on device=cuda (load_count=1) - will be reused for every tile.
+[embed] Loading VANILLA OpenCLIP (ViT-B-32, pretrained='openai') ONCE from local cache C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\openclip_vanilla_cache (HF_HUB_OFFLINE=1) ...
+Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+WARNING:huggingface_hub.utils._http:Warning: You are sending unauthenticated requests to the HF Hub. Please set a HF_TOKEN to enable higher rate limits and faster downloads.
+[embed] Vanilla OpenCLIP loaded once in 1.67s (load_count=1).
+[snapshot] retrieval: remoteclip done (3 conditions x (1 canonical + 3 reordered))
+[snapshot] retrieval: vanilla done (3 conditions x (1 canonical + 3 reordered))
+[snapshot] section 'retrieval' written -> data\eval\cand_parts\retrieval.json
+[snapshot] === section retrieval finished in 29s
+[snapshot] wrote data\eval\candidate_demo.json (0.13 MB). reproduction: {'REPRODUCED': 60, 'NOT_RUN': 88, 'NOT_REPRODUCED': 4}
+[snapshot]   NOT_REPRODUCED corpus.faiss_vectors: reported 101911 measured 105245.0
+[snapshot]   NOT_REPRODUCED corpus.sentinel2_embedded_tiles: reported 101911 measured 104089.0
+[snapshot]   NOT_REPRODUCED corpus.catalog_tiles_total: reported 104990 measured 108324.0
+[snapshot]   NOT_REPRODUCED corpus.scenes_total: reported 75 measured 81.0

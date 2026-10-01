@@ -1,0 +1,108 @@
+[snapshot] === section: latency
+[embed] Loading RemoteCLIP (ViT-B-32) ONCE from C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\RemoteCLIP-ViT-B-32.pt ...
+[staging] Building open_clip architecture 'ViT-B-32' (random init) ...
+WARNING:root:No pretrained weights loaded for model 'ViT-B-32'. Model initialized randomly.
+[staging] Loading RemoteCLIP weights from local file C:\Users\Prash\Downloads\SIH 2026\geoseek\data\models\RemoteCLIP-ViT-B-32.pt ...
+[staging] load_state_dict result: <All keys matched successfully>
+WARNING:root:No pretrained weights loaded for model 'ViT-B-32'. Model initialized randomly.
+[embed] Model loaded once in 2.78s on device=cuda (load_count=1) - will be reused for every tile.
+[search] encoders + thumbnail path pre-warmed in 437 ms
+[search] SearchEngine ready: 105245 vectors, 105245 tile rows.
+[snapshot] latency: pass 1/3 done
+[snapshot] latency: pass 2/3 done
+[snapshot] latency: pass 3/3 done
+[snapshot] section 'latency' written -> C:\Users\Prash\Downloads\SIH 2026\geoseek\data\eval\baseline_parts\latency.json
+[snapshot] === section latency finished in 35s
+[snapshot] === section: footprint
+[snapshot] section 'footprint' written -> C:\Users\Prash\Downloads\SIH 2026\geoseek\data\eval\baseline_parts\footprint.json
+[snapshot] === section footprint finished in 6s
+[snapshot] === section: ingestion
+[pipeline] Read scene 'S2B_44QMK_20240103_0_L2A': 8124x8078 px, CRS=EPSG:32644
+[pipeline] Tiled into 1024 tiles (256x256, edge tiles partial, nodata tiles skipped)
+[pipeline] True-color: fixed bounds [0.0, 0.3] reflectance (DN [0, 3000]), gamma=1.0, BOA offset subtracted=0.0 DN
+[pipeline] Embedded 1024 tiles in 16 batch(es) of up to 64
+
+[pipeline] Run report:
+  scene_id: S2B_44QMK_20240103_0_L2A
+  tiles_added: 1024
+  index_total_vectors: 1024
+  build_time_s: 5.212
+  index_size_mb: 2.0
+  mean_embed_latency_ms: 2.685
+  ingested_at: 2026-10-01T02:08:31.473476+00:00
+[snapshot] ingestion: run 0: 196.5 tiles/s end-to-end, 372.4 pure embed
+[pipeline] Read scene 'S2B_44QMK_20240103_0_L2A': 8124x8078 px, CRS=EPSG:32644
+[pipeline] Tiled into 1024 tiles (256x256, edge tiles partial, nodata tiles skipped)
+[pipeline] True-color: fixed bounds [0.0, 0.3] reflectance (DN [0, 3000]), gamma=1.0, BOA offset subtracted=0.0 DN
+[pipeline] Embedded 1024 tiles in 16 batch(es) of up to 64
+
+[pipeline] Run report:
+  scene_id: S2B_44QMK_20240103_0_L2A
+  tiles_added: 1024
+  index_total_vectors: 1024
+  build_time_s: 5.06
+  index_size_mb: 2.0
+  mean_embed_latency_ms: 2.567
+  ingested_at: 2026-10-01T02:08:36.568912+00:00
+[snapshot] ingestion: run 1: 202.4 tiles/s end-to-end, 389.6 pure embed
+[pipeline] Read scene 'S2B_44QMK_20240103_0_L2A': 8124x8078 px, CRS=EPSG:32644
+[pipeline] Tiled into 1024 tiles (256x256, edge tiles partial, nodata tiles skipped)
+[pipeline] True-color: fixed bounds [0.0, 0.3] reflectance (DN [0, 3000]), gamma=1.0, BOA offset subtracted=0.0 DN
+[pipeline] Embedded 1024 tiles in 16 batch(es) of up to 64
+
+[pipeline] Run report:
+  scene_id: S2B_44QMK_20240103_0_L2A
+  tiles_added: 1024
+  index_total_vectors: 1024
+  build_time_s: 4.997
+  index_size_mb: 2.0
+  mean_embed_latency_ms: 2.589
+  ingested_at: 2026-10-01T02:08:41.589207+00:00
+[snapshot] ingestion: run 2: 204.9 tiles/s end-to-end, 386.2 pure embed
+[pipeline] Read scene 'S2B_44QMK_20240103_0_L2A': 8124x8078 px, CRS=EPSG:32644
+[pipeline] Tiled into 1024 tiles (256x256, edge tiles partial, nodata tiles skipped)
+[pipeline] True-color: fixed bounds [0.0, 0.3] reflectance (DN [0, 3000]), gamma=1.0, BOA offset subtracted=0.0 DN
+[pipeline] Embedded 1024 tiles in 16 batch(es) of up to 64
+
+[pipeline] Run report:
+  scene_id: S2B_44QMK_20240103_0_L2A
+  tiles_added: 1024
+  index_total_vectors: 1024
+  build_time_s: 4.987
+  index_size_mb: 2.0
+  mean_embed_latency_ms: 2.564
+  ingested_at: 2026-10-01T02:08:46.610578+00:00
+[snapshot] ingestion: run 3: 205.3 tiles/s end-to-end, 390.0 pure embed
+[pipeline] Read scene 'S2B_44QMK_20240103_0_L2A': 8124x8078 px, CRS=EPSG:32644
+[pipeline] Tiled into 1024 tiles (256x256, edge tiles partial, nodata tiles skipped)
+[pipeline] True-color: fixed bounds [0.0, 0.3] reflectance (DN [0, 3000]), gamma=1.0, BOA offset subtracted=0.0 DN
+[pipeline] Embedded 1024 tiles in 16 batch(es) of up to 64
+
+[pipeline] Run report:
+  scene_id: S2B_44QMK_20240103_0_L2A
+  tiles_added: 1024
+  index_total_vectors: 1024
+  build_time_s: 5.004
+  index_size_mb: 2.0
+  mean_embed_latency_ms: 2.596
+  ingested_at: 2026-10-01T02:08:51.651257+00:00
+[pipeline] Read scene 'S2A_44RPQ_20240308_0_L2A_scaled': 8384x8384 px, CRS=EPSG:32644
+[pipeline] Tiled into 1089 tiles (256x256, edge tiles partial, nodata tiles skipped)
+[pipeline] True-color: fixed bounds [0.0, 0.3] reflectance (DN [0, 3000]), gamma=1.0, BOA offset subtracted=0.0 DN
+[pipeline] Embedded 1089 tiles in 18 batch(es) of up to 64
+
+[pipeline] Run report:
+  scene_id: S2A_44RPQ_20240308_0_L2A_scaled
+  tiles_added: 1089
+  index_total_vectors: 2113
+  build_time_s: 5.316
+  index_size_mb: 4.127
+  mean_embed_latency_ms: 2.512
+  ingested_at: 2026-10-01T02:08:57.005748+00:00
+[snapshot] section 'ingestion' written -> C:\Users\Prash\Downloads\SIH 2026\geoseek\data\eval\baseline_parts\ingestion.json
+[snapshot] === section ingestion finished in 31s
+[snapshot] wrote C:\Users\Prash\Downloads\SIH 2026\geoseek\data\eval\baseline_v1.json (0.19 MB). reproduction: {'REPRODUCED': 125, 'NOT_RUN': 20, 'NOT_REPRODUCED': 4}
+[snapshot]   NOT_REPRODUCED corpus.faiss_vectors: reported 101911 measured 105245.0
+[snapshot]   NOT_REPRODUCED corpus.sentinel2_embedded_tiles: reported 101911 measured 104089.0
+[snapshot]   NOT_REPRODUCED corpus.catalog_tiles_total: reported 104990 measured 108324.0
+[snapshot]   NOT_REPRODUCED corpus.scenes_total: reported 75 measured 81.0

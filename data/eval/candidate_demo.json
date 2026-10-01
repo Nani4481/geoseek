@@ -1,0 +1,4070 @@
+{
+ "schema": "geoseek.baseline_snapshot/1",
+ "corpus": {
+  "faiss_vectors": 105245,
+  "catalog_tiles_total": 108324,
+  "embedded_tiles_total": 105245,
+  "embedded_tiles_frozen_prefix": 101911,
+  "frozen_prefix_is_all_sentinel2": 1,
+  "sentinel2_embedded_tiles": 104089,
+  "maxar_embedded_tiles": 1156,
+  "sar_tiles_not_embedded": 3079,
+  "scenes_total": 81,
+  "observations_total": 81,
+  "faiss_ids_contiguous_from_zero": 1,
+  "faiss_count_equals_embedded_tiles": 1
+ },
+ "retrieval": {
+  "judgements": {
+   "source": "frozen Phase 7a judgements (data/eval_retrieval/judgments.json), independent of both models",
+   "n_queries": 16,
+   "n_low_confidence": 3,
+   "low_confidence_queries": [
+    "a bridge crossing a river",
+    "a dirt track or unpaved road",
+    "a paved road"
+   ]
+  },
+  "systems": {
+   "remoteclip": {
+    "model_key": "remoteclip-vitb32",
+    "weights_sha256": "60014e395d930a3f2963d1d89c8522bf4ad56775571e4356e866864789af85c4",
+    "vectors_source": "fresh re-embed via scripts/reembed.py (remoteclip_frozen101911.faiss)"
+   },
+   "vanilla": {
+    "model_key": "openclip-vitb32-openai",
+    "weights_sha256": "e6d1bd7789aa45192b3bf90570a789b478bae1b74ebcce7eddd908e83a2b7c31",
+    "vectors_source": "fresh re-embed via scripts/reembed.py (vanilla_frozen101911.faiss)"
+   }
+  },
+  "ayodhya_3267": {
+   "corpus_tiles": 3267,
+   "remoteclip": {
+    "all": {
+     "k1": {
+      "recall": 0.04006169631169631,
+      "precision": 0.5625,
+      "ndcg": 0.4375
+     },
+     "k5": {
+      "recall": 0.2279158279158279,
+      "precision": 0.425,
+      "ndcg": 0.3965378030377206
+     },
+     "k10": {
+      "recall": 0.36505693536943534,
+      "precision": 0.38125,
+      "ndcg": 0.418517300602807
+     },
+     "k20": {
+      "recall": 0.7046404577654578,
+      "precision": 0.35625,
+      "ndcg": 0.526025926264229
+     }
+    },
+    "excluding_low_confidence": {
+     "k1": {
+      "recall": 0.049306703152857,
+      "precision": 0.6923076923076923,
+      "ndcg": 0.5384615384615384
+     },
+     "k5": {
+      "recall": 0.24388175157405925,
+      "precision": 0.49230769230769234,
+      "ndcg": 0.4540349682919199
+     },
+     "k10": {
+      "recall": 0.4030554222861915,
+      "precision": 0.4461538461538462,
+      "ndcg": 0.4796620715004965
+     },
+     "k20": {
+      "recall": 0.6667003436234206,
+      "precision": 0.38076923076923075,
+      "ndcg": 0.5473598279424978
+     }
+    },
+    "n_queries": 16,
+    "n_queries_excluding_low_confidence": 13,
+    "topk_composition_k20": {
+     "judged_relevant": 0.35625,
+     "judged_zero": 0.64375,
+     "unjudged_ayodhya": 0.0,
+     "unjudged_other_region": 0.0
+    },
+    "per_query": [
+     {
+      "query": "newly built structures near a river",
+      "low_confidence": false,
+      "recall@1": 0.16666666666666666,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.5,
+      "precision@5": 0.6,
+      "ndcg@5": 0.6164336326286644,
+      "recall@10": 0.8333333333333334,
+      "precision@10": 0.5,
+      "ndcg@10": 0.7586453982379298,
+      "recall@20": 1.0,
+      "precision@20": 0.3,
+      "ndcg@20": 0.8404201159871018
+     },
+     {
+      "query": "settlement along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.1,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.3,
+      "precision@5": 0.6,
+      "ndcg@5": 0.7227265726449519,
+      "recall@10": 0.5,
+      "precision@10": 0.5,
+      "ndcg@10": 0.6480687733654913,
+      "recall@20": 0.9,
+      "precision@20": 0.45,
+      "ndcg@20": 0.8257289210858216
+     },
+     {
+      "query": "a river with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.08333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.25,
+      "precision@5": 0.6,
+      "ndcg@5": 0.6992148198508501,
+      "recall@10": 0.3333333333333333,
+      "precision@10": 0.4,
+      "ndcg@10": 0.5173633627401372,
+      "recall@20": 0.75,
+      "precision@20": 0.45,
+      "ndcg@20": 0.7076153460106223
+     },
+     {
+      "query": "dense urban buildings",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 1.0,
+      "precision@20": 0.05,
+      "ndcg@20": 0.24465054211822604
+     },
+     {
+      "query": "agricultural fields",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.1,
+      "precision@5": 0.6,
+      "ndcg@5": 0.34960740992542505,
+      "recall@10": 0.16666666666666666,
+      "precision@10": 0.5,
+      "ndcg@10": 0.323619187196739,
+      "recall@20": 0.3,
+      "precision@20": 0.45,
+      "ndcg@20": 0.29673055528057596
+     },
+     {
+      "query": "open bare ground",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.25,
+      "precision@5": 0.2,
+      "ndcg@5": 0.24630238874073,
+      "recall@10": 0.75,
+      "precision@10": 0.3,
+      "ndcg@10": 0.5028746730079328,
+      "recall@20": 1.0,
+      "precision@20": 0.2,
+      "ndcg@20": 0.6054078116261546
+     },
+     {
+      "query": "a water body",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 1.0,
+      "ndcg@5": 0.584790051318404,
+      "recall@10": 0.3333333333333333,
+      "precision@10": 1.0,
+      "ndcg@10": 0.7207358812863668,
+      "recall@20": 0.6666666666666666,
+      "precision@20": 1.0,
+      "ndcg@20": 0.818464465471254
+     },
+     {
+      "query": "cropland with visible field boundaries",
+      "low_confidence": false,
+      "recall@1": 0.02702702702702703,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.13513513513513514,
+      "precision@5": 1.0,
+      "ndcg@5": 0.7573857224418385,
+      "recall@10": 0.21621621621621623,
+      "precision@10": 0.8,
+      "ndcg@10": 0.6637426546230977,
+      "recall@20": 0.3783783783783784,
+      "precision@20": 0.7,
+      "ndcg@20": 0.6072852422398481
+     },
+     {
+      "query": "a paved road",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.14285714285714285,
+      "precision@5": 0.2,
+      "ndcg@5": 0.14606834984270645,
+      "recall@10": 0.14285714285714285,
+      "precision@10": 0.1,
+      "ndcg@10": 0.11838279295536291,
+      "recall@20": 0.8571428571428571,
+      "precision@20": 0.3,
+      "ndcg@20": 0.4543659389158074
+     },
+     {
+      "query": "riverside construction",
+      "low_confidence": false,
+      "recall@1": 0.07692307692307693,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.15384615384615385,
+      "precision@5": 0.4,
+      "ndcg@5": 0.5531464700081437,
+      "recall@10": 0.38461538461538464,
+      "precision@10": 0.5,
+      "ndcg@10": 0.5743371894486219,
+      "recall@20": 0.5384615384615384,
+      "precision@20": 0.35,
+      "ndcg@20": 0.5681438975086457
+     },
+     {
+      "query": "a bridge crossing a river",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.3333333333333333,
+      "precision@5": 0.2,
+      "ndcg@5": 0.2960819109658652,
+      "recall@10": 0.3333333333333333,
+      "precision@10": 0.1,
+      "ndcg@10": 0.2960819109658652,
+      "recall@20": 1.0,
+      "precision@20": 0.15,
+      "ndcg@20": 0.5230383710257068
+     },
+     {
+      "query": "dense vegetation along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 1.0,
+      "precision@5": 0.2,
+      "ndcg@5": 0.43067655807339306,
+      "recall@10": 1.0,
+      "precision@10": 0.1,
+      "ndcg@10": 0.43067655807339306,
+      "recall@20": 1.0,
+      "precision@20": 0.05,
+      "ndcg@20": 0.43067655807339306
+     },
+     {
+      "query": "an urban residential neighborhood",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.14285714285714285,
+      "precision@20": 0.05,
+      "ndcg@20": 0.06258116307550304
+     },
+     {
+      "query": "irrigated farmland",
+      "low_confidence": false,
+      "recall@1": 0.037037037037037035,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.14814814814814814,
+      "precision@5": 0.8,
+      "ndcg@5": 0.4569424070462355,
+      "recall@10": 0.2222222222222222,
+      "precision@10": 0.6,
+      "ndcg@10": 0.4990259181277378,
+      "recall@20": 0.4074074074074074,
+      "precision@20": 0.55,
+      "ndcg@20": 0.5227184884440034
+     },
+     {
+      "query": "a braided river channel with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.08333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 0.4,
+      "ndcg@5": 0.48522855511632257,
+      "recall@10": 0.5,
+      "precision@10": 0.6,
+      "ndcg@10": 0.596517333399007,
+      "recall@20": 0.5833333333333334,
+      "precision@20": 0.35,
+      "ndcg@20": 0.5852546563313227
+     },
+     {
+      "query": "a dirt track or unpaved road",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.125,
+      "precision@10": 0.1,
+      "ndcg@10": 0.046205176217229485,
+      "recall@20": 0.75,
+      "precision@20": 0.3,
+      "ndcg@20": 0.3233327470336768
+     }
+    ],
+    "ranking_vs_stored_phase7a_pools": {
+     "queries_with_identical_top20_list": 16,
+     "mean_top20_set_overlap": 1.0,
+     "of_queries": 16
+    }
+   },
+   "vanilla": {
+    "all": {
+     "k1": {
+      "recall": 0.018876689189189187,
+      "precision": 0.3125,
+      "ndcg": 0.28125
+     },
+     "k5": {
+      "recall": 0.062332163894663895,
+      "precision": 0.2625,
+      "ndcg": 0.23110726461767508
+     },
+     "k10": {
+      "recall": 0.11468872718872719,
+      "precision": 0.23750000000000002,
+      "ndcg": 0.22312278494940083
+     },
+     "k20": {
+      "recall": 0.22734867422367422,
+      "precision": 0.23125,
+      "ndcg": 0.25426245772198175
+     }
+    },
+    "excluding_low_confidence": {
+     "k1": {
+      "recall": 0.013617463617463616,
+      "precision": 0.3076923076923077,
+      "ndcg": 0.2692307692307692
+     },
+     "k5": {
+      "recall": 0.06710112479343248,
+      "precision": 0.3076923076923077,
+      "ndcg": 0.25651877981500465
+     },
+     "k10": {
+      "recall": 0.12192458730920269,
+      "precision": 0.27692307692307694,
+      "ndcg": 0.24389028159580634
+     },
+     "k20": {
+      "recall": 0.26058298365990673,
+      "precision": 0.27692307692307694,
+      "ndcg": 0.28221603270052126
+     }
+    },
+    "n_queries": 16,
+    "n_queries_excluding_low_confidence": 13,
+    "topk_composition_k20": {
+     "judged_relevant": 0.23125,
+     "judged_zero": 0.76875,
+     "unjudged_ayodhya": 0.0,
+     "unjudged_other_region": 0.0
+    },
+    "per_query": [
+     {
+      "query": "newly built structures near a river",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "settlement along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.1,
+      "precision@20": 0.05,
+      "ndcg@20": 0.056446226510177555
+     },
+     {
+      "query": "a river with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 0.4,
+      "ndcg@5": 0.30078518014914984,
+      "recall@10": 0.16666666666666666,
+      "precision@10": 0.2,
+      "ndcg@10": 0.19518900079066107,
+      "recall@20": 0.4166666666666667,
+      "precision@20": 0.25,
+      "ndcg@20": 0.3206760165314279
+     },
+     {
+      "query": "dense urban buildings",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "agricultural fields",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 1.0,
+      "ndcg@5": 0.849607409925425,
+      "recall@10": 0.26666666666666666,
+      "precision@10": 0.8,
+      "ndcg@10": 0.7275209197241654,
+      "recall@20": 0.4666666666666667,
+      "precision@20": 0.7,
+      "ndcg@20": 0.6619564731878629
+     },
+     {
+      "query": "open bare ground",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "a water body",
+      "low_confidence": false,
+      "recall@1": 0.03333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 0.5,
+      "recall@5": 0.16666666666666666,
+      "precision@5": 1.0,
+      "ndcg@5": 0.6069931323672637,
+      "recall@10": 0.26666666666666666,
+      "precision@10": 0.8,
+      "ndcg@10": 0.647433701622823,
+      "recall@20": 0.36666666666666664,
+      "precision@20": 0.55,
+      "ndcg@20": 0.5845118956993713
+     },
+     {
+      "query": "cropland with visible field boundaries",
+      "low_confidence": false,
+      "recall@1": 0.02702702702702703,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.13513513513513514,
+      "precision@5": 1.0,
+      "ndcg@5": 0.8930068676327362,
+      "recall@10": 0.21621621621621623,
+      "precision@10": 0.8,
+      "ndcg@10": 0.7292961943918133,
+      "recall@20": 0.40540540540540543,
+      "precision@20": 0.75,
+      "ndcg@20": 0.6659580979117311
+     },
+     {
+      "query": "a paved road",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "riverside construction",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.15384615384615385,
+      "precision@5": 0.4,
+      "ndcg@5": 0.34519134224686937,
+      "recall@10": 0.3076923076923077,
+      "precision@10": 0.4,
+      "ndcg@10": 0.3686580539482399,
+      "recall@20": 0.46153846153846156,
+      "precision@20": 0.3,
+      "ndcg@20": 0.4174867048011273
+     },
+     {
+      "query": "a bridge crossing a river",
+      "low_confidence": true,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "dense vegetation along a riverbank",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.0,
+      "precision@20": 0.0,
+      "ndcg@20": 0.0
+     },
+     {
+      "query": "an urban residential neighborhood",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.0,
+      "precision@10": 0.0,
+      "ndcg@10": 0.0,
+      "recall@20": 0.14285714285714285,
+      "precision@20": 0.05,
+      "ndcg@20": 0.07035680323970717
+     },
+     {
+      "query": "irrigated farmland",
+      "low_confidence": false,
+      "recall@1": 0.0,
+      "precision@1": 0.0,
+      "ndcg@1": 0.0,
+      "recall@5": 0.0,
+      "precision@5": 0.0,
+      "ndcg@5": 0.0,
+      "recall@10": 0.1111111111111111,
+      "precision@10": 0.3,
+      "ndcg@10": 0.137731531536635,
+      "recall@20": 0.4444444444444444,
+      "precision@20": 0.6,
+      "ndcg@20": 0.3663745267037451
+     },
+     {
+      "query": "a braided river channel with sandbars",
+      "low_confidence": false,
+      "recall@1": 0.08333333333333333,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.08333333333333333,
+      "precision@5": 0.2,
+      "ndcg@5": 0.3391602052736161,
+      "recall@10": 0.25,
+      "precision@10": 0.3,
+      "ndcg@10": 0.3647442587311445,
+      "recall@20": 0.5833333333333334,
+      "precision@20": 0.35,
+      "ndcg@20": 0.5250416805216263
+     },
+     {
+      "query": "a dirt track or unpaved road",
+      "low_confidence": true,
+      "recall@1": 0.125,
+      "precision@1": 1.0,
+      "ndcg@1": 1.0,
+      "recall@5": 0.125,
+      "precision@5": 0.2,
+      "ndcg@5": 0.36297209628774124,
+      "recall@10": 0.25,
+      "precision@10": 0.2,
+      "ndcg@10": 0.399390898444931,
+      "recall@20": 0.25,
+      "precision@20": 0.1,
+      "ndcg@20": 0.399390898444931
+     }
+    ],
+    "ranking_vs_stored_phase7a_pools": {
+     "queries_with_identical_top20_list": 16,
+     "mean_top20_set_overlap": 1.0,
+     "of_queries": 16
+    }
+   }
+  },
+  "full_101911": {
+   "corpus_tiles": 101911,
+   "remoteclip": {
+    "global": {
+     "k1": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k5": {
+      "recall": 0.015625,
+      "precision": 0.037500000000000006,
+      "ndcg": 0.025529906554211876
+     },
+     "k10": {
+      "recall": 0.027083333333333334,
+      "precision": 0.03125,
+      "ndcg": 0.02614678960412386
+     },
+     "k20": {
+      "recall": 0.10625,
+      "precision": 0.028125,
+      "ndcg": 0.04747626920517836
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.028125,
+      "judged_zero": 0.065625,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.90625
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.1,
+       "precision@10": 0.1,
+       "ndcg@10": 0.08384281207641174,
+       "recall@20": 0.2,
+       "precision@20": 0.1,
+       "ndcg@20": 0.13925254550923508
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 0.4,
+       "ndcg@5": 0.27727342735504823,
+       "recall@10": 0.25,
+       "precision@10": 0.3,
+       "ndcg@10": 0.24936270394794902,
+       "recall@20": 0.4166666666666667,
+       "precision@20": 0.25,
+       "ndcg@20": 0.3167358943899307
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 1.0,
+       "precision@20": 0.05,
+       "ndcg@20": 0.227670248696953
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.08333333333333333,
+       "precision@5": 0.2,
+       "ndcg@5": 0.13120507751234178,
+       "recall@10": 0.08333333333333333,
+       "precision@10": 0.1,
+       "ndcg@10": 0.08514311764162098,
+       "recall@20": 0.08333333333333333,
+       "precision@20": 0.05,
+       "ndcg@20": 0.07596161868673496
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      }
+     ]
+    },
+    "region_filtered_ayodhya": {
+     "k1": {
+      "recall": 0.04006169631169631,
+      "precision": 0.5625,
+      "ndcg": 0.4375
+     },
+     "k5": {
+      "recall": 0.2279158279158279,
+      "precision": 0.425,
+      "ndcg": 0.3965378030377206
+     },
+     "k10": {
+      "recall": 0.36505693536943534,
+      "precision": 0.38125,
+      "ndcg": 0.418517300602807
+     },
+     "k20": {
+      "recall": 0.7046404577654578,
+      "precision": 0.35625,
+      "ndcg": 0.526025926264229
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.35625,
+      "judged_zero": 0.64375,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.0
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.16666666666666666,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.5,
+       "precision@5": 0.6,
+       "ndcg@5": 0.6164336326286644,
+       "recall@10": 0.8333333333333334,
+       "precision@10": 0.5,
+       "ndcg@10": 0.7586453982379298,
+       "recall@20": 1.0,
+       "precision@20": 0.3,
+       "ndcg@20": 0.8404201159871018
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.1,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.3,
+       "precision@5": 0.6,
+       "ndcg@5": 0.7227265726449519,
+       "recall@10": 0.5,
+       "precision@10": 0.5,
+       "ndcg@10": 0.6480687733654913,
+       "recall@20": 0.9,
+       "precision@20": 0.45,
+       "ndcg@20": 0.8257289210858216
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.08333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.25,
+       "precision@5": 0.6,
+       "ndcg@5": 0.6992148198508501,
+       "recall@10": 0.3333333333333333,
+       "precision@10": 0.4,
+       "ndcg@10": 0.5173633627401372,
+       "recall@20": 0.75,
+       "precision@20": 0.45,
+       "ndcg@20": 0.7076153460106223
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 1.0,
+       "precision@20": 0.05,
+       "ndcg@20": 0.24465054211822604
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.1,
+       "precision@5": 0.6,
+       "ndcg@5": 0.34960740992542505,
+       "recall@10": 0.16666666666666666,
+       "precision@10": 0.5,
+       "ndcg@10": 0.323619187196739,
+       "recall@20": 0.3,
+       "precision@20": 0.45,
+       "ndcg@20": 0.29673055528057596
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.25,
+       "precision@5": 0.2,
+       "ndcg@5": 0.24630238874073,
+       "recall@10": 0.75,
+       "precision@10": 0.3,
+       "ndcg@10": 0.5028746730079328,
+       "recall@20": 1.0,
+       "precision@20": 0.2,
+       "ndcg@20": 0.6054078116261546
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 1.0,
+       "ndcg@5": 0.584790051318404,
+       "recall@10": 0.3333333333333333,
+       "precision@10": 1.0,
+       "ndcg@10": 0.7207358812863668,
+       "recall@20": 0.6666666666666666,
+       "precision@20": 1.0,
+       "ndcg@20": 0.818464465471254
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.02702702702702703,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.13513513513513514,
+       "precision@5": 1.0,
+       "ndcg@5": 0.7573857224418385,
+       "recall@10": 0.21621621621621623,
+       "precision@10": 0.8,
+       "ndcg@10": 0.6637426546230977,
+       "recall@20": 0.3783783783783784,
+       "precision@20": 0.7,
+       "ndcg@20": 0.6072852422398481
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.14285714285714285,
+       "precision@5": 0.2,
+       "ndcg@5": 0.14606834984270645,
+       "recall@10": 0.14285714285714285,
+       "precision@10": 0.1,
+       "ndcg@10": 0.11838279295536291,
+       "recall@20": 0.8571428571428571,
+       "precision@20": 0.3,
+       "ndcg@20": 0.4543659389158074
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.07692307692307693,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.15384615384615385,
+       "precision@5": 0.4,
+       "ndcg@5": 0.5531464700081437,
+       "recall@10": 0.38461538461538464,
+       "precision@10": 0.5,
+       "ndcg@10": 0.5743371894486219,
+       "recall@20": 0.5384615384615384,
+       "precision@20": 0.35,
+       "ndcg@20": 0.5681438975086457
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.3333333333333333,
+       "precision@5": 0.2,
+       "ndcg@5": 0.2960819109658652,
+       "recall@10": 0.3333333333333333,
+       "precision@10": 0.1,
+       "ndcg@10": 0.2960819109658652,
+       "recall@20": 1.0,
+       "precision@20": 0.15,
+       "ndcg@20": 0.5230383710257068
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 1.0,
+       "precision@5": 0.2,
+       "ndcg@5": 0.43067655807339306,
+       "recall@10": 1.0,
+       "precision@10": 0.1,
+       "ndcg@10": 0.43067655807339306,
+       "recall@20": 1.0,
+       "precision@20": 0.05,
+       "ndcg@20": 0.43067655807339306
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.14285714285714285,
+       "precision@20": 0.05,
+       "ndcg@20": 0.06258116307550304
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.037037037037037035,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.14814814814814814,
+       "precision@5": 0.8,
+       "ndcg@5": 0.4569424070462355,
+       "recall@10": 0.2222222222222222,
+       "precision@10": 0.6,
+       "ndcg@10": 0.4990259181277378,
+       "recall@20": 0.4074074074074074,
+       "precision@20": 0.55,
+       "ndcg@20": 0.5227184884440034
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.08333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 0.4,
+       "ndcg@5": 0.48522855511632257,
+       "recall@10": 0.5,
+       "precision@10": 0.6,
+       "ndcg@10": 0.596517333399007,
+       "recall@20": 0.5833333333333334,
+       "precision@20": 0.35,
+       "ndcg@20": 0.5852546563313227
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.125,
+       "precision@10": 0.1,
+       "ndcg@10": 0.046205176217229485,
+       "recall@20": 0.75,
+       "precision@20": 0.3,
+       "ndcg@20": 0.3233327470336768
+      }
+     ]
+    }
+   },
+   "vanilla": {
+    "global": {
+     "k1": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k5": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k10": {
+      "recall": 0.0,
+      "precision": 0.0,
+      "ndcg": 0.0
+     },
+     "k20": {
+      "recall": 0.010416666666666666,
+      "precision": 0.00625,
+      "ndcg": 0.006011160304004793
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.00625,
+      "judged_zero": 0.03125,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.9625
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.16666666666666666,
+       "precision@20": 0.1,
+       "ndcg@20": 0.0961785648640767
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      }
+     ]
+    },
+    "region_filtered_ayodhya": {
+     "k1": {
+      "recall": 0.018876689189189187,
+      "precision": 0.3125,
+      "ndcg": 0.28125
+     },
+     "k5": {
+      "recall": 0.062332163894663895,
+      "precision": 0.2625,
+      "ndcg": 0.23110726461767508
+     },
+     "k10": {
+      "recall": 0.11468872718872719,
+      "precision": 0.23750000000000002,
+      "ndcg": 0.22312278494940083
+     },
+     "k20": {
+      "recall": 0.22734867422367422,
+      "precision": 0.23125,
+      "ndcg": 0.25426245772198175
+     },
+     "topk_composition_k20": {
+      "judged_relevant": 0.23125,
+      "judged_zero": 0.76875,
+      "unjudged_ayodhya": 0.0,
+      "unjudged_other_region": 0.0
+     },
+     "per_query": [
+      {
+       "query": "newly built structures near a river",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "settlement along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.1,
+       "precision@20": 0.05,
+       "ndcg@20": 0.056446226510177555
+      },
+      {
+       "query": "a river with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 0.4,
+       "ndcg@5": 0.30078518014914984,
+       "recall@10": 0.16666666666666666,
+       "precision@10": 0.2,
+       "ndcg@10": 0.19518900079066107,
+       "recall@20": 0.4166666666666667,
+       "precision@20": 0.25,
+       "ndcg@20": 0.3206760165314279
+      },
+      {
+       "query": "dense urban buildings",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "agricultural fields",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 1.0,
+       "ndcg@5": 0.849607409925425,
+       "recall@10": 0.26666666666666666,
+       "precision@10": 0.8,
+       "ndcg@10": 0.7275209197241654,
+       "recall@20": 0.4666666666666667,
+       "precision@20": 0.7,
+       "ndcg@20": 0.6619564731878629
+      },
+      {
+       "query": "open bare ground",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "a water body",
+       "low_confidence": false,
+       "recall@1": 0.03333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 0.5,
+       "recall@5": 0.16666666666666666,
+       "precision@5": 1.0,
+       "ndcg@5": 0.6069931323672637,
+       "recall@10": 0.26666666666666666,
+       "precision@10": 0.8,
+       "ndcg@10": 0.647433701622823,
+       "recall@20": 0.36666666666666664,
+       "precision@20": 0.55,
+       "ndcg@20": 0.5845118956993713
+      },
+      {
+       "query": "cropland with visible field boundaries",
+       "low_confidence": false,
+       "recall@1": 0.02702702702702703,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.13513513513513514,
+       "precision@5": 1.0,
+       "ndcg@5": 0.8930068676327362,
+       "recall@10": 0.21621621621621623,
+       "precision@10": 0.8,
+       "ndcg@10": 0.7292961943918133,
+       "recall@20": 0.40540540540540543,
+       "precision@20": 0.75,
+       "ndcg@20": 0.6659580979117311
+      },
+      {
+       "query": "a paved road",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "riverside construction",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.15384615384615385,
+       "precision@5": 0.4,
+       "ndcg@5": 0.34519134224686937,
+       "recall@10": 0.3076923076923077,
+       "precision@10": 0.4,
+       "ndcg@10": 0.3686580539482399,
+       "recall@20": 0.46153846153846156,
+       "precision@20": 0.3,
+       "ndcg@20": 0.4174867048011273
+      },
+      {
+       "query": "a bridge crossing a river",
+       "low_confidence": true,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "dense vegetation along a riverbank",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.0,
+       "precision@20": 0.0,
+       "ndcg@20": 0.0
+      },
+      {
+       "query": "an urban residential neighborhood",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.0,
+       "precision@10": 0.0,
+       "ndcg@10": 0.0,
+       "recall@20": 0.14285714285714285,
+       "precision@20": 0.05,
+       "ndcg@20": 0.07035680323970717
+      },
+      {
+       "query": "irrigated farmland",
+       "low_confidence": false,
+       "recall@1": 0.0,
+       "precision@1": 0.0,
+       "ndcg@1": 0.0,
+       "recall@5": 0.0,
+       "precision@5": 0.0,
+       "ndcg@5": 0.0,
+       "recall@10": 0.1111111111111111,
+       "precision@10": 0.3,
+       "ndcg@10": 0.137731531536635,
+       "recall@20": 0.4444444444444444,
+       "precision@20": 0.6,
+       "ndcg@20": 0.3663745267037451
+      },
+      {
+       "query": "a braided river channel with sandbars",
+       "low_confidence": false,
+       "recall@1": 0.08333333333333333,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.08333333333333333,
+       "precision@5": 0.2,
+       "ndcg@5": 0.3391602052736161,
+       "recall@10": 0.25,
+       "precision@10": 0.3,
+       "ndcg@10": 0.3647442587311445,
+       "recall@20": 0.5833333333333334,
+       "precision@20": 0.35,
+       "ndcg@20": 0.5250416805216263
+      },
+      {
+       "query": "a dirt track or unpaved road",
+       "low_confidence": true,
+       "recall@1": 0.125,
+       "precision@1": 1.0,
+       "ndcg@1": 1.0,
+       "recall@5": 0.125,
+       "precision@5": 0.2,
+       "ndcg@5": 0.36297209628774124,
+       "recall@10": 0.25,
+       "precision@10": 0.2,
+       "ndcg@10": 0.399390898444931,
+       "recall@20": 0.25,
+       "precision@20": 0.1,
+       "ndcg@20": 0.399390898444931
+      }
+     ]
+    }
+   }
+  },
+  "checks": {
+   "region_filter_mask_equals_judged_ayodhya_mask": 1,
+   "deterministic_rankings_across_orderings": 1,
+   "vanilla_ayodhya_vectors_vs_phase7a_stored": {
+    "n": 3267,
+    "min_cosine": 0.9999995231628418,
+    "mean_cosine": 1.0,
+    "max_abs_diff": 3.5762786865234375e-07,
+    "tile_order_identical_to_phase7a": 1
+   },
+   "remoteclip_fresh_reembed_vs_production": {
+    "n": 101911,
+    "rows_byte_identical": 101054,
+    "fraction_byte_identical": 0.9915907016906909,
+    "max_abs_diff": 7.450580596923828e-07,
+    "mean_abs_diff": 3.5454916780253143e-10,
+    "min_cosine": 0.9999992847442627,
+    "mean_cosine": 1.0,
+    "mean_top10_neighbour_overlap": 1.0,
+    "top1_agreement": 1.0,
+    "n_queries": 200
+   }
+  }
+ },
+ "environment": {
+  "timestamp_utc": "2026-10-01T02:26:57Z",
+  "gpu": {
+   "available": true,
+   "name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+   "vram_total_mib": 8187.5,
+   "compute_capability": "8.9",
+   "cuda_runtime": "12.1",
+   "nvidia_smi_name": "NVIDIA GeForce RTX 4060 Laptop GPU",
+   "nvidia_smi_driver_version": "592.82",
+   "nvidia_smi_memory_total_mib": 8188.0,
+   "nvidia_smi_power_draw_w_at_capture": 11.78,
+   "nvidia_smi_sm_clock_mhz_at_capture": 2250.0,
+   "nvidia_smi_sm_clock_max_mhz": 3105.0
+  },
+  "power": {
+   "source": "AC",
+   "battery_percent": 99
+  },
+  "versions": {
+   "python": "3.11.16",
+   "torch": "2.2.2",
+   "numpy": "1.26.4",
+   "faiss": "1.12.0",
+   "open_clip": "3.3.0",
+   "rasterio": "1.4.4",
+   "ultralytics": "8.4.152"
+  },
+  "git": {
+   "sha": "3b7ee2498d5e543b46bc514c9743d510cac37dc4",
+   "branch": "main",
+   "dirty": true,
+   "n_changed_paths": 33,
+   "changed_paths": [
+    "dockerignore",
+    ".gitignore",
+    "Dockerfile",
+    "docker-compose.yml",
+    "src/geoseek/analyst/service.py",
+    "src/geoseek/catalog/migrate.py",
+    "src/geoseek/catalog/sqlite_repository.py",
+    "src/geoseek/change/analyze.py",
+    "src/geoseek/config.py",
+    "src/geoseek/ingest/embed.py",
+    "src/geoseek/ingest/store.py",
+    "src/geoseek/search/engine.py",
+    "src/geoseek/staging/download_sentinel1.py",
+    "src/geoseek/temporal/matcher.py",
+    ".env.example",
+    ".gcloudignore",
+    ".gitattributes",
+    "data/eval/",
+    "deploy/",
+    "docs/PHASE9.md",
+    "scripts/compare_to_baseline.py",
+    "scripts/reembed.py",
+    "scripts/snapshot_baseline.py",
+    "src/geoseek/catalog/embedding_map.py",
+    "src/geoseek/eval/",
+    "src/geoseek/ingest/reembed.py",
+    "src/geoseek/models/registry.py",
+    "src/geoseek/models/vanilla_clip.py",
+    "tests/test_cloud_config.py",
+    "tests/test_compare.py",
+    "tests/test_eval_retrieval.py",
+    "tests/test_reembed.py",
+    "tests/test_registry.py"
+   ],
+   "tracked_diff_sha256": "74effaca50b6c4bbe8e31e9c61e70db0dc5730996e6a9f6309582c398df3d4cf"
+  },
+  "host": {
+   "platform": "Windows-10-10.0.26200-SP0",
+   "cpu_logical_cores": 16
+  },
+  "vram_cap_fraction": 0.8,
+  "power_by_section": {
+   "retrieval": {
+    "start": {
+     "source": "AC",
+     "battery_percent": 99
+    },
+    "end": {
+     "source": "AC",
+     "battery_percent": 99
+    }
+   }
+  }
+ },
+ "meta": {
+  "snapshot_id": "cand_demo",
+  "created_at": "2026-10-01T02:27:29Z",
+  "sections_present": [
+   "env",
+   "corpus",
+   "retrieval"
+  ],
+  "frozen_corpus": "production faiss_id < 101911",
+  "inputs_sha256": {
+   "tiles.faiss": "00c8d73a44cb9fd721a59217f796551026f855bde329ad8e1dd1e9db6c955301",
+   "tiles.sqlite": "ee5c25e356ab16003ca671bc3d93cc1d34354482b419a81ff714fc2a3f146b58",
+   "judgments.json": "f73d80e86b7b17755807170c668c89ad7778ccb9c6ccba835f274690ba0091e7",
+   "queries.json": "08437a00e2f681af6d3679ee5874b548783ca479bb7ba3d12a3aa7ce78615ebe",
+   "weights:remoteclip-vitb32": "60014e395d930a3f2963d1d89c8522bf4ad56775571e4356e866864789af85c4",
+   "weights:openclip-vitb32-openai": "e6d1bd7789aa45192b3bf90570a789b478bae1b74ebcce7eddd908e83a2b7c31",
+   "weights:fc-siam-diff-oscd": "452ac062e3b3d56f7997b9a5bbf81bab41d148b525fc28621e964cbbd0a3bcab",
+   "weights:yolo26s-obb-dota15": "67f617170b608dd1541d63f4aedbd3b4752cbda9f67702e0d63f4aaaae31e113",
+   "candidate:remoteclip_frozen101911.faiss": "2b7ce1077c7730679f1628dcf25bdcf7bd793f5b6d33f25f16bdda9d1f660153",
+   "candidate:vanilla_frozen101911.faiss": "5480a1f9cc654995af4ddd4bf5622ac7b188be694acf30717dd5f54ea0932201"
+  },
+  "how_to_compare": "python scripts/compare_to_baseline.py data/eval/baseline_v1.json <candidate.json>"
+ },
+ "noise_bands": {
+  "retrieval.ayodhya_3267.remoteclip.all.k1.recall": {
+   "band": 0.02258418274043273
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.precision": {
+   "band": 0.25
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.ndcg": {
+   "band": 0.21875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.recall": {
+   "band": 0.11236926701770451
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.precision": {
+   "band": 0.15015624999999916
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.ndcg": {
+   "band": 0.12332218856127261
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.recall": {
+   "band": 0.13498455314861552
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.precision": {
+   "band": 0.140625
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.ndcg": {
+   "band": 0.11970479384463875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.recall": {
+   "band": 0.13120573011198
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.precision": {
+   "band": 0.1203125
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.ndcg": {
+   "band": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.recall": {
+   "band": 0.025390579188656108
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.ndcg": {
+   "band": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.recall": {
+   "band": 0.13385698198198187
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.precision": {
+   "band": 0.16153846153846155
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.ndcg": {
+   "band": 0.13258158294606495
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.recall": {
+   "band": 0.16091642678181128
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.precision": {
+   "band": 0.15000000000000002
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.ndcg": {
+   "band": 0.12974054523249465
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.recall": {
+   "band": 0.15692315413469254
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.precision": {
+   "band": 0.13846153846153847
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.ndcg": {
+   "band": 0.12818781434402604
+  },
+  "retrieval.full_101911.remoteclip.global.k1.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k5.recall": {
+   "band": 0.020833333333333332
+  },
+  "retrieval.full_101911.remoteclip.global.k5.precision": {
+   "band": 0.05
+  },
+  "retrieval.full_101911.remoteclip.global.k5.ndcg": {
+   "band": 0.034194701159057136
+  },
+  "retrieval.full_101911.remoteclip.global.k10.recall": {
+   "band": 0.03229166666666666
+  },
+  "retrieval.full_101911.remoteclip.global.k10.precision": {
+   "band": 0.0375
+  },
+  "retrieval.full_101911.remoteclip.global.k10.ndcg": {
+   "band": 0.031279667539919426
+  },
+  "retrieval.full_101911.remoteclip.global.k20.recall": {
+   "band": 0.1250130208333333
+  },
+  "retrieval.full_101911.remoteclip.global.k20.precision": {
+   "band": 0.031249999999999993
+  },
+  "retrieval.full_101911.remoteclip.global.k20.ndcg": {
+   "band": 0.04748549431611247
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.recall": {
+   "band": 0.02258418274043273
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.precision": {
+   "band": 0.25
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.21875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.recall": {
+   "band": 0.11236926701770451
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.precision": {
+   "band": 0.15015624999999916
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.12332218856127261
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.recall": {
+   "band": 0.13498455314861552
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.precision": {
+   "band": 0.140625
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.11970479384463875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.recall": {
+   "band": 0.13120573011198
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.precision": {
+   "band": 0.1203125
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.recall": {
+   "band": 0.016992011542792784
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.precision": {
+   "band": 0.21875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.ndcg": {
+   "band": 0.203125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.recall": {
+   "band": 0.03696705268970893
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.precision": {
+   "band": 0.1875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.ndcg": {
+   "band": 0.1493755024446742
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.recall": {
+   "band": 0.06106700450450443
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.precision": {
+   "band": 0.14687500000000003
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.ndcg": {
+   "band": 0.13531462382155962
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.recall": {
+   "band": 0.10268835671179417
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.precision": {
+   "band": 0.128125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.ndcg": {
+   "band": 0.12448569725423969
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.recall": {
+   "band": 0.012976437976437973
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923075
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.ndcg": {
+   "band": 0.21153846153846154
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.recall": {
+   "band": 0.04195319579934964
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.precision": {
+   "band": 0.20788461538461442
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.ndcg": {
+   "band": 0.17117729930968473
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.recall": {
+   "band": 0.06643977557439096
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.precision": {
+   "band": 0.16923076923076918
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.ndcg": {
+   "band": 0.14923851349799613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.recall": {
+   "band": 0.11385706448206448
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.precision": {
+   "band": 0.14615384615384613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.ndcg": {
+   "band": 0.1378845079714744
+  },
+  "retrieval.full_101911.vanilla.global.k1.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.recall": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.precision": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.ndcg": {
+   "band": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k20.recall": {
+   "band": 0.015625
+  },
+  "retrieval.full_101911.vanilla.global.k20.precision": {
+   "band": 0.009375000000000001
+  },
+  "retrieval.full_101911.vanilla.global.k20.ndcg": {
+   "band": 0.009016740456007189
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.recall": {
+   "band": 0.016992011542792784
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.precision": {
+   "band": 0.21875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.203125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.recall": {
+   "band": 0.03696705268970893
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.precision": {
+   "band": 0.1875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.1493755024446742
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.recall": {
+   "band": 0.06106700450450443
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.precision": {
+   "band": 0.14687500000000003
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.13531462382155962
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.recall": {
+   "band": 0.10268835671179417
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.precision": {
+   "band": 0.128125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.12448569725423969
+  }
+ },
+ "noise_detail": {
+  "retrieval.ayodhya_3267.remoteclip.all.k1.recall": {
+   "band": 0.02258418274043273,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.02258418274043273
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.precision": {
+   "band": 0.25,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.25
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k1.ndcg": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.recall": {
+   "band": 0.11236926701770451,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11236926701770451
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.precision": {
+   "band": 0.15015624999999916,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15015624999999916
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k5.ndcg": {
+   "band": 0.12332218856127261,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12332218856127261
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.recall": {
+   "band": 0.13498455314861552,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13498455314861552
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.precision": {
+   "band": 0.140625,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.140625
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k10.ndcg": {
+   "band": 0.11970479384463875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11970479384463875
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.recall": {
+   "band": 0.13120573011198,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13120573011198
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.precision": {
+   "band": 0.1203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1203125
+  },
+  "retrieval.ayodhya_3267.remoteclip.all.k20.ndcg": {
+   "band": 0.10417646722866505,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.recall": {
+   "band": 0.025390579188656108,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.025390579188656108
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923078,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k1.ndcg": {
+   "band": 0.23076923076923078,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.23076923076923078
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.recall": {
+   "band": 0.13385698198198187,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13385698198198187
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.precision": {
+   "band": 0.16153846153846155,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.16153846153846155
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.ndcg": {
+   "band": 0.13258158294606495,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13258158294606495
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.recall": {
+   "band": 0.16091642678181128,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.16091642678181128
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.precision": {
+   "band": 0.15000000000000002,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15000000000000002
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.ndcg": {
+   "band": 0.12974054523249465,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12974054523249465
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.recall": {
+   "band": 0.15692315413469254,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15692315413469254
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.precision": {
+   "band": 0.13846153846153847,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13846153846153847
+  },
+  "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.ndcg": {
+   "band": 0.12818781434402604,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12818781434402604
+  },
+  "retrieval.full_101911.remoteclip.global.k1.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k1.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.remoteclip.global.k5.recall": {
+   "band": 0.020833333333333332,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.020833333333333332
+  },
+  "retrieval.full_101911.remoteclip.global.k5.precision": {
+   "band": 0.05,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.05
+  },
+  "retrieval.full_101911.remoteclip.global.k5.ndcg": {
+   "band": 0.034194701159057136,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.034194701159057136
+  },
+  "retrieval.full_101911.remoteclip.global.k10.recall": {
+   "band": 0.03229166666666666,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.03229166666666666
+  },
+  "retrieval.full_101911.remoteclip.global.k10.precision": {
+   "band": 0.0375,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0375
+  },
+  "retrieval.full_101911.remoteclip.global.k10.ndcg": {
+   "band": 0.031279667539919426,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.031279667539919426
+  },
+  "retrieval.full_101911.remoteclip.global.k20.recall": {
+   "band": 0.1250130208333333,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1250130208333333
+  },
+  "retrieval.full_101911.remoteclip.global.k20.precision": {
+   "band": 0.031249999999999993,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.031249999999999993
+  },
+  "retrieval.full_101911.remoteclip.global.k20.ndcg": {
+   "band": 0.04748549431611247,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.04748549431611247
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.recall": {
+   "band": 0.02258418274043273,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.02258418274043273
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.precision": {
+   "band": 0.25,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.25
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.recall": {
+   "band": 0.11236926701770451,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11236926701770451
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.precision": {
+   "band": 0.15015624999999916,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.15015624999999916
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.12332218856127261,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12332218856127261
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.recall": {
+   "band": 0.13498455314861552,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13498455314861552
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.precision": {
+   "band": 0.140625,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.140625
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.11970479384463875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11970479384463875
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.recall": {
+   "band": 0.13120573011198,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13120573011198
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.precision": {
+   "band": 0.1203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1203125
+  },
+  "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.10417646722866505,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10417646722866505
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.recall": {
+   "band": 0.016992011542792784,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.016992011542792784
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.precision": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k1.ndcg": {
+   "band": 0.203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.203125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.recall": {
+   "band": 0.03696705268970893,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.03696705268970893
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.precision": {
+   "band": 0.1875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1875
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k5.ndcg": {
+   "band": 0.1493755024446742,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1493755024446742
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.recall": {
+   "band": 0.06106700450450443,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.06106700450450443
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.precision": {
+   "band": 0.14687500000000003,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14687500000000003
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k10.ndcg": {
+   "band": 0.13531462382155962,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13531462382155962
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.recall": {
+   "band": 0.10268835671179417,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10268835671179417
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.precision": {
+   "band": 0.128125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.128125
+  },
+  "retrieval.ayodhya_3267.vanilla.all.k20.ndcg": {
+   "band": 0.12448569725423969,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12448569725423969
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.recall": {
+   "band": 0.012976437976437973,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.012976437976437973
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.precision": {
+   "band": 0.23076923076923075,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.23076923076923075
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k1.ndcg": {
+   "band": 0.21153846153846154,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21153846153846154
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.recall": {
+   "band": 0.04195319579934964,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.04195319579934964
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.precision": {
+   "band": 0.20788461538461442,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.20788461538461442
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.ndcg": {
+   "band": 0.17117729930968473,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.17117729930968473
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.recall": {
+   "band": 0.06643977557439096,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.06643977557439096
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.precision": {
+   "band": 0.16923076923076918,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.16923076923076918
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.ndcg": {
+   "band": 0.14923851349799613,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14923851349799613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.recall": {
+   "band": 0.11385706448206448,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.11385706448206448
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.precision": {
+   "band": 0.14615384615384613,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14615384615384613
+  },
+  "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.ndcg": {
+   "band": 0.1378845079714744,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1378845079714744
+  },
+  "retrieval.full_101911.vanilla.global.k1.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k1.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k5.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.recall": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.precision": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k10.ndcg": {
+   "band": 0.0,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.0
+  },
+  "retrieval.full_101911.vanilla.global.k20.recall": {
+   "band": 0.015625,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.015625
+  },
+  "retrieval.full_101911.vanilla.global.k20.precision": {
+   "band": 0.009375000000000001,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.009375000000000001
+  },
+  "retrieval.full_101911.vanilla.global.k20.ndcg": {
+   "band": 0.009016740456007189,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.009016740456007189
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.recall": {
+   "band": 0.016992011542792784,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.016992011542792784
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.precision": {
+   "band": 0.21875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.21875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k1.ndcg": {
+   "band": 0.203125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.203125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.recall": {
+   "band": 0.03696705268970893,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.03696705268970893
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.precision": {
+   "band": 0.1875,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1875
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k5.ndcg": {
+   "band": 0.1493755024446742,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.1493755024446742
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.recall": {
+   "band": 0.06106700450450443,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.06106700450450443
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.precision": {
+   "band": 0.14687500000000003,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.14687500000000003
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k10.ndcg": {
+   "band": 0.13531462382155962,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.13531462382155962
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.recall": {
+   "band": 0.10268835671179417,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.10268835671179417
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.precision": {
+   "band": 0.128125,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.128125
+  },
+  "retrieval.full_101911.vanilla.region_filtered_ayodhya.k20.ndcg": {
+   "band": 0.12448569725423969,
+   "method": "max(spread over 3 query orderings, query-bootstrap 95% CI half-width)",
+   "ordering_or_rerun_spread": 0.0,
+   "bootstrap_ci95_halfwidth": 0.12448569725423969
+  }
+ },
+ "reproduction": {
+  "summary": {
+   "REPRODUCED": 60,
+   "NOT_RUN": 88,
+   "NOT_REPRODUCED": 4
+  },
+  "entries": [
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k1.recall",
+    "reported": 0.04,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.04006169631169631,
+    "abs_diff": 6.169631169630763e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k1.precision",
+    "reported": 0.563,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.5625,
+    "abs_diff": 0.0004999999999999449,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k1.ndcg",
+    "reported": 0.438,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.4375,
+    "abs_diff": 0.0005000000000000004,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k1.recall",
+    "reported": 0.019,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.018876689189189187,
+    "abs_diff": 0.00012331081081081233,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k1.precision",
+    "reported": 0.313,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.3125,
+    "abs_diff": 0.0005000000000000004,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k1.ndcg",
+    "reported": 0.281,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.28125,
+    "abs_diff": 0.00024999999999997247,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k5.recall",
+    "reported": 0.228,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.2279158279158279,
+    "abs_diff": 8.41720841721072e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k5.precision",
+    "reported": 0.425,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.425,
+    "abs_diff": 0.0,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k5.ndcg",
+    "reported": 0.397,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.3965378030377206,
+    "abs_diff": 0.0004621969622793931,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k5.recall",
+    "reported": 0.062,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.062332163894663895,
+    "abs_diff": 0.00033216389466389495,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k5.precision",
+    "reported": 0.263,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.2625,
+    "abs_diff": 0.0005000000000000004,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k5.ndcg",
+    "reported": 0.231,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.23110726461767508,
+    "abs_diff": 0.00010726461767507356,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k10.recall",
+    "reported": 0.365,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.36505693536943534,
+    "abs_diff": 5.693536943535138e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k10.precision",
+    "reported": 0.381,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.38125,
+    "abs_diff": 0.00024999999999997247,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k10.ndcg",
+    "reported": 0.419,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.418517300602807,
+    "abs_diff": 0.00048269939719297605,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k10.recall",
+    "reported": 0.115,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.11468872718872719,
+    "abs_diff": 0.00031127281127281414,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k10.precision",
+    "reported": 0.238,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.23750000000000002,
+    "abs_diff": 0.0004999999999999727,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k10.ndcg",
+    "reported": 0.223,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.22312278494940083,
+    "abs_diff": 0.00012278494940082263,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k20.recall",
+    "reported": 0.705,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.7046404577654578,
+    "abs_diff": 0.00035954223454215395,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k20.precision",
+    "reported": 0.356,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.35625,
+    "abs_diff": 0.000250000000000028,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.all.k20.ndcg",
+    "reported": 0.526,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.526025926264229,
+    "abs_diff": 2.5926264228925966e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k20.recall",
+    "reported": 0.227,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.22734867422367422,
+    "abs_diff": 0.0003486742236742113,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k20.precision",
+    "reported": 0.231,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.23125,
+    "abs_diff": 0.0002500000000000002,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.all.k20.ndcg",
+    "reported": 0.254,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.25426245772198175,
+    "abs_diff": 0.0002624577219817459,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.recall",
+    "reported": 0.244,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.24388175157405925,
+    "abs_diff": 0.00011824842594074236,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.precision",
+    "reported": 0.492,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.49230769230769234,
+    "abs_diff": 0.0003076923076923421,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k5.ndcg",
+    "reported": 0.454,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.4540349682919199,
+    "abs_diff": 3.496829191990125e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.recall",
+    "reported": 0.067,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.06710112479343248,
+    "abs_diff": 0.00010112479343248049,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.precision",
+    "reported": 0.308,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.3076923076923077,
+    "abs_diff": 0.0003076923076922866,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k5.ndcg",
+    "reported": 0.257,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.25651877981500465,
+    "abs_diff": 0.0004812201849953568,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.recall",
+    "reported": 0.403,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.4030554222861915,
+    "abs_diff": 5.542228619148659e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.precision",
+    "reported": 0.446,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.4461538461538462,
+    "abs_diff": 0.00015384615384617106,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k10.ndcg",
+    "reported": 0.48,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.4796620715004965,
+    "abs_diff": 0.00033792849950348147,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.recall",
+    "reported": 0.122,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.12192458730920269,
+    "abs_diff": 7.541269079730517e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.precision",
+    "reported": 0.277,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.27692307692307694,
+    "abs_diff": 7.692307692308553e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k10.ndcg",
+    "reported": 0.244,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.24389028159580634,
+    "abs_diff": 0.00010971840419365941,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.recall",
+    "reported": 0.667,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.6667003436234206,
+    "abs_diff": 0.0002996563765794713,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.precision",
+    "reported": 0.381,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.38076923076923075,
+    "abs_diff": 0.0002307692307692566,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.remoteclip.excluding_low_confidence.k20.ndcg",
+    "reported": 0.547,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.5473598279424978,
+    "abs_diff": 0.00035982794249778127,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.recall",
+    "reported": 0.261,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.26058298365990673,
+    "abs_diff": 0.00041701634009327915,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.precision",
+    "reported": 0.277,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.27692307692307694,
+    "abs_diff": 7.692307692308553e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.ayodhya_3267.vanilla.excluding_low_confidence.k20.ndcg",
+    "reported": 0.282,
+    "source": "EVALUATION_REPORT 7.2",
+    "measured": 0.28221603270052126,
+    "abs_diff": 0.00021603270052128476,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.k10.recall",
+    "reported": 0.027,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.027083333333333334,
+    "abs_diff": 8.333333333333456e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.k10.precision",
+    "reported": 0.031,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.03125,
+    "abs_diff": 0.0002500000000000002,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.k10.ndcg",
+    "reported": 0.026,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.02614678960412386,
+    "abs_diff": 0.0001467896041238599,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.k20.recall",
+    "reported": 0.106,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.10625,
+    "abs_diff": 0.0002500000000000002,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.k20.precision",
+    "reported": 0.028,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.028125,
+    "abs_diff": 0.0001250000000000001,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.k20.ndcg",
+    "reported": 0.048,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.04747626920517836,
+    "abs_diff": 0.0005237307948216391,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.recall",
+    "reported": 0.365,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.36505693536943534,
+    "abs_diff": 5.693536943535138e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.precision",
+    "reported": 0.381,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.38125,
+    "abs_diff": 0.00024999999999997247,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k10.ndcg",
+    "reported": 0.418,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.418517300602807,
+    "abs_diff": 0.0005173006028070248,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.recall",
+    "reported": 0.705,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.7046404577654578,
+    "abs_diff": 0.00035954223454215395,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.precision",
+    "reported": 0.356,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.35625,
+    "abs_diff": 0.000250000000000028,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.region_filtered_ayodhya.k20.ndcg",
+    "reported": 0.526,
+    "source": "EVALUATION_REPORT 7.3",
+    "measured": 0.526025926264229,
+    "abs_diff": 2.5926264228925966e-05,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.topk_composition_k20.judged_relevant",
+    "reported": 0.028,
+    "source": "EVALUATION_REPORT 7.3 composition table",
+    "measured": 0.028125,
+    "abs_diff": 0.0001250000000000001,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.topk_composition_k20.judged_zero",
+    "reported": 0.066,
+    "source": "EVALUATION_REPORT 7.3 composition table",
+    "measured": 0.065625,
+    "abs_diff": 0.00037500000000000033,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.topk_composition_k20.unjudged_ayodhya",
+    "reported": 0.0,
+    "source": "EVALUATION_REPORT 7.3 composition table",
+    "measured": 0.0,
+    "abs_diff": 0.0,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "retrieval.full_101911.remoteclip.global.topk_composition_k20.unjudged_other_region",
+    "reported": 0.906,
+    "source": "EVALUATION_REPORT 7.3 composition table",
+    "measured": 0.90625,
+    "abs_diff": 0.00024999999999997247,
+    "tolerance": 0.0015,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.precision",
+    "reported": 0.517,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.recall",
+    "reported": 0.61,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.f1",
+    "reported": 0.56,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.iou",
+    "reported": 0.38799999999999996,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.fpr",
+    "reported": 0.031,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.tp",
+    "reported": 96997,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.fp",
+    "reported": 90601,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p50.pooled.fn",
+    "reported": 62080,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.precision",
+    "reported": 0.603,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.recall",
+    "reported": 0.51,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.f1",
+    "reported": 0.5529999999999999,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.iou",
+    "reported": 0.382,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.fpr",
+    "reported": 0.0183,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.tp",
+    "reported": 81146,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.fp",
+    "reported": 53342,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.pooled.fn",
+    "reported": 77931,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.test_change_pixel_fraction",
+    "reported": 0.0517,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.test_pixels_total",
+    "reported": 3077936,
+    "source": "EVALUATION_REPORT 8.1",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.chosen_threshold_from_validation",
+    "reported": 0.8,
+    "source": "EVALUATION_REPORT 5.3 / 8",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.precision",
+    "reported": 0.743,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.recall",
+    "reported": 0.743,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.lasvegas.f1",
+    "reported": 0.743,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.precision",
+    "reported": 0.8420000000000001,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.recall",
+    "reported": 0.583,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.montpellier.f1",
+    "reported": 0.6890000000000001,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.precision",
+    "reported": 0.539,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.recall",
+    "reported": 0.626,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.brasilia.f1",
+    "reported": 0.579,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.precision",
+    "reported": 0.745,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.recall",
+    "reported": 0.456,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.chongqing.f1",
+    "reported": 0.5660000000000001,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.dubai.precision",
+    "reported": 0.591,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.dubai.recall",
+    "reported": 0.354,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.dubai.f1",
+    "reported": 0.44299999999999995,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.rio.precision",
+    "reported": 0.502,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.rio.recall",
+    "reported": 0.348,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.rio.f1",
+    "reported": 0.41100000000000003,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.milano.precision",
+    "reported": 0.77,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.milano.recall",
+    "reported": 0.22399999999999998,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.milano.f1",
+    "reported": 0.348,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.norcia.precision",
+    "reported": 0.20800000000000002,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.norcia.recall",
+    "reported": 0.465,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.norcia.f1",
+    "reported": 0.287,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.precision",
+    "reported": 0.172,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.recall",
+    "reported": 0.41100000000000003,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.saclay_w.f1",
+    "reported": 0.243,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.valencia.precision",
+    "reported": 0.022000000000000002,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.valencia.recall",
+    "reported": 0.138,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "change_detection.oscd_heldout.thr_0p80.per_region.valencia.f1",
+    "reported": 0.038,
+    "source": "EVALUATION_REPORT 8.3",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ground_vehicles.ap50",
+    "reported": 0.854,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ground_vehicles.ap50_ci_lo",
+    "reported": 0.786,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ground_vehicles.ap50_ci_hi",
+    "reported": 0.891,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ground_vehicles.ap50_95",
+    "reported": 0.471,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ships_and_aircraft.ap50",
+    "reported": 0.859,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ships_and_aircraft.ap50_ci_lo",
+    "reported": 0.735,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ships_and_aircraft.ap50_ci_hi",
+    "reported": 0.911,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.ships_and_aircraft.ap50_95",
+    "reported": 0.557,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.infrastructure.ap50",
+    "reported": 0.751,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.infrastructure.ap50_ci_lo",
+    "reported": 0.704,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.infrastructure.ap50_ci_hi",
+    "reported": 0.784,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.infrastructure.ap50_95",
+    "reported": 0.414,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.all_kept_classes.ap50",
+    "reported": 0.817,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.all_kept_classes.ap50_ci_lo",
+    "reported": 0.764,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.all_kept_classes.ap50_ci_hi",
+    "reported": 0.845,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.all_kept_classes.ap50_95",
+    "reported": 0.482,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "detector.dota_val_v15_full_image.small_vehicle.ap50_95",
+    "reported": 0.413,
+    "source": "EVALUATION_REPORT 15",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.text_search_k20.median_ms",
+    "reported": 27.8,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.text_search_k20.p95_ms",
+    "reported": 38.3,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.image_search_k20.median_ms",
+    "reported": 21.7,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.image_search_k20.p95_ms",
+    "reported": 29.8,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.point_seeded_knn.median_ms",
+    "reported": 20.0,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.point_seeded_knn.p95_ms",
+    "reported": 28.9,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.tile_seeded_knn.median_ms",
+    "reported": 18.0,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.tile_seeded_knn.p95_ms",
+    "reported": 24.5,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.bbox_filter.median_ms",
+    "reported": 0.29,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "latency.bbox_filter.p95_ms",
+    "reported": 0.54,
+    "source": "EVALUATION_REPORT 3.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "footprint.faiss_bytes_per_vector",
+    "reported": 2048.0,
+    "source": "EVALUATION_REPORT 2.3 (n x 512 x 4 B)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "footprint.datasets_mb",
+    "reported": 32396.4,
+    "source": "EVALUATION_REPORT 2.3 (raw staged imagery)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "footprint.models_mb",
+    "reported": 1210.4,
+    "source": "EVALUATION_REPORT 2.3 (RemoteCLIP + vanilla CLIP)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "footprint.data_dir_mb",
+    "reported": 34449.9,
+    "source": "EVALUATION_REPORT 2.3 (total data/)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "footprint.sqlite_bytes_per_catalog_tile",
+    "reported": 900.0,
+    "source": "EVALUATION_REPORT 2.3 (~0.9 KB/tile)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "footprint.index_bytes_per_embedded_tile",
+    "reported": 2900.0,
+    "source": "EVALUATION_REPORT 2.3 (~2.9 KB/tile)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "ingestion.end_to_end_tiles_per_s",
+    "reported": 207.5,
+    "source": "EVALUATION_REPORT 2.1 (AC, ~205-210)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "ingestion.pure_embed_tiles_per_s",
+    "reported": 384.0,
+    "source": "EVALUATION_REPORT 2.1 (AC, ~375-393)",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "ingestion.incremental_append_byte_identical_fraction",
+    "reported": 1.0,
+    "source": "EVALUATION_REPORT 2.2",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "corpus.embedded_tiles_frozen_prefix",
+    "reported": 101911,
+    "source": "EVALUATION_REPORT 1.1 (faiss_id < 101911)",
+    "measured": 101911.0,
+    "abs_diff": 0.0,
+    "tolerance": 0.0,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "corpus.faiss_vectors",
+    "reported": 101911,
+    "source": "EVALUATION_REPORT 1.1 (FAISS vectors)",
+    "measured": 105245.0,
+    "status": "NOT_REPRODUCED",
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "abs_diff": 3334.0,
+    "tolerance": 0.0
+   },
+   {
+    "metric": "corpus.sentinel2_embedded_tiles",
+    "reported": 101911,
+    "source": "EVALUATION_REPORT 1.1 (Sentinel-2 tiles, embedded)",
+    "measured": 104089.0,
+    "status": "NOT_REPRODUCED",
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "abs_diff": 2178.0,
+    "tolerance": 0.0
+   },
+   {
+    "metric": "corpus.catalog_tiles_total",
+    "reported": 104990,
+    "source": "EVALUATION_REPORT 1.1",
+    "measured": 108324.0,
+    "status": "NOT_REPRODUCED",
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "abs_diff": 3334.0,
+    "tolerance": 0.0
+   },
+   {
+    "metric": "corpus.scenes_total",
+    "reported": 75,
+    "source": "EVALUATION_REPORT 1.1",
+    "measured": 81.0,
+    "status": "NOT_REPRODUCED",
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "abs_diff": 6.0,
+    "tolerance": 0.0
+   },
+   {
+    "metric": "corpus.sar_tiles_not_embedded",
+    "reported": 3079,
+    "source": "EVALUATION_REPORT 1.1",
+    "measured": 3079.0,
+    "abs_diff": 0.0,
+    "tolerance": 0.0,
+    "status": "REPRODUCED"
+   },
+   {
+    "metric": "suite.passed",
+    "reported": 228,
+    "source": "EVALUATION_REPORT 13 / project rules file, rule 4",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "suite.failed",
+    "reported": 0,
+    "source": "project rules file, rule 4 ('never commit red')",
+    "measured": null,
+    "status": "NOT_RUN"
+   },
+   {
+    "metric": "suite.skipped",
+    "reported": 3,
+    "source": "EVALUATION_REPORT 13",
+    "measured": null,
+    "status": "NOT_RUN"
+   }
+  ],
+  "not_reproduced": [
+   {
+    "status": "NOT_REPRODUCED",
+    "metric": "corpus.faiss_vectors",
+    "reported": 101911,
+    "measured": 105245.0,
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "source": "EVALUATION_REPORT 1.1 (FAISS vectors)"
+   },
+   {
+    "status": "NOT_REPRODUCED",
+    "metric": "corpus.sentinel2_embedded_tiles",
+    "reported": 101911,
+    "measured": 104089.0,
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "source": "EVALUATION_REPORT 1.1 (Sentinel-2 tiles, embedded)"
+   },
+   {
+    "status": "NOT_REPRODUCED",
+    "metric": "corpus.catalog_tiles_total",
+    "reported": 104990,
+    "measured": 108324.0,
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "source": "EVALUATION_REPORT 1.1"
+   },
+   {
+    "status": "NOT_REPRODUCED",
+    "metric": "corpus.scenes_total",
+    "reported": 75,
+    "measured": 81.0,
+    "reason": "the live catalog has grown since the report: sentinel-2 embedded 104089 (report: 101,911 = the frozen faiss_id<101911 prefix, which still reproduces exactly), +1156 Maxar VHR tiles, 81 scenes (Phase 8 appended the Ayodhya 2025/2026 Sentinel-2 scenes and the Maxar Open Data observations). The report describes the Phase 7b state.",
+    "source": "EVALUATION_REPORT 1.1"
+   }
+  ]
+ }
+}

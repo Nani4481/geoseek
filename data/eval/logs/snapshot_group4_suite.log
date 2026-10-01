@@ -1,0 +1,13 @@
+[snapshot] === section: suite
+[snapshot] section 'suite' written -> C:\Users\Prash\Downloads\SIH 2026\geoseek\data\eval\baseline_parts\suite.json
+[snapshot] === section suite finished in 110s
+[snapshot] wrote C:\Users\Prash\Downloads\SIH 2026\geoseek\data\eval\baseline_v1.json (0.21 MB). reproduction: {'REPRODUCED': 143, 'NOT_REPRODUCED': 9}
+[snapshot]   NOT_REPRODUCED footprint.datasets_mb: reported 32396.4 measured 145898.432683
+[snapshot]   NOT_REPRODUCED footprint.models_mb: reported 1210.4 measured 1299.137671
+[snapshot]   NOT_REPRODUCED footprint.data_dir_mb: reported 34449.9 measured 329847.483307
+[snapshot]   NOT_REPRODUCED corpus.faiss_vectors: reported 101911 measured 105245.0
+[snapshot]   NOT_REPRODUCED corpus.sentinel2_embedded_tiles: reported 101911 measured 104089.0
+[snapshot]   NOT_REPRODUCED corpus.catalog_tiles_total: reported 104990 measured 108324.0
+[snapshot]   NOT_REPRODUCED corpus.scenes_total: reported 75 measured 81.0
+[snapshot]   NOT_REPRODUCED suite.passed: reported 228 measured 495.0
+[snapshot]   NOT_REPRODUCED suite.failed: reported 0 measured 4.0

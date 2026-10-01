@@ -1,0 +1,102 @@
+{
+ "section": "ingestion",
+ "metrics": {
+  "scene": "S2B_44QMK_20240103_0_L2A",
+  "tiles_per_run": 1024,
+  "power_source": "AC",
+  "end_to_end_tiles_per_s": 204.92295377226336,
+  "pure_embed_tiles_per_s": 389.5597974289053,
+  "peak_vram_mb": 738.9755859375,
+  "cold_first_run_tiles_per_s": 196.46968534151958,
+  "runs": [
+   {
+    "tiles": 1024,
+    "wall_s": 5.212,
+    "tiles_per_s": 196.46968534151958,
+    "pure_embed_tiles_per_s": 372.43947858472995,
+    "peak_vram_mb": 738.9755859375
+   },
+   {
+    "tiles": 1024,
+    "wall_s": 5.06,
+    "tiles_per_s": 202.3715415019763,
+    "pure_embed_tiles_per_s": 389.5597974289053,
+    "peak_vram_mb": 738.9755859375
+   },
+   {
+    "tiles": 1024,
+    "wall_s": 4.997,
+    "tiles_per_s": 204.92295377226336,
+    "pure_embed_tiles_per_s": 386.24951718810354,
+    "peak_vram_mb": 738.9755859375
+   },
+   {
+    "tiles": 1024,
+    "wall_s": 4.987,
+    "tiles_per_s": 205.33386805694806,
+    "pure_embed_tiles_per_s": 390.01560062402496,
+    "peak_vram_mb": 738.9755859375
+   }
+  ],
+  "incremental_append_byte_identical_fraction": 1.0,
+  "incremental_append": {
+   "vectors_before": 1024,
+   "vectors_after": 2113,
+   "tiles_added": 1089,
+   "no_rebuild": 1
+  },
+  "reembed": {
+   "remoteclip": {
+    "n_tiles": 101911,
+    "shards": 21,
+    "shard_size": 5000,
+    "batch_size": 64,
+    "tiles_per_s": 295.2726703791483,
+    "shard_seconds_total": 345.142,
+    "min_shard_tiles_per_s": 271.13,
+    "max_shard_tiles_per_s": 339.96,
+    "peak_vram_allocated_mb": 738.9,
+    "peak_vram_reserved_mb": 818.0,
+    "vram_total_mb": 8187.5,
+    "projected_full_corpus_wall_min_at_this_rate": 5.752366666666666,
+    "run_was_interrupted_and_resumed": 1
+   },
+   "vanilla": {
+    "n_tiles": 101911,
+    "shards": 21,
+    "shard_size": 5000,
+    "batch_size": 64,
+    "tiles_per_s": 277.56715092684897,
+    "shard_seconds_total": 367.15799999999996,
+    "min_shard_tiles_per_s": 258.09,
+    "max_shard_tiles_per_s": 318.55,
+    "peak_vram_allocated_mb": 776.9,
+    "peak_vram_reserved_mb": 856.0,
+    "vram_total_mb": 8187.5,
+    "projected_full_corpus_wall_min_at_this_rate": 6.119299999999999,
+    "run_was_interrupted_and_resumed": 0
+   }
+  }
+ },
+ "noise_bands": {
+  "ingestion.end_to_end_tiles_per_s": {
+   "band": 2.962326554971753
+  },
+  "ingestion.pure_embed_tiles_per_s": {
+   "band": 3.7660834359214164
+  }
+ },
+ "noise_detail": {},
+ "extra": {},
+ "power": {
+  "start": {
+   "source": "AC",
+   "battery_percent": 99
+  },
+  "end": {
+   "source": "AC",
+   "battery_percent": 99
+  }
+ },
+ "written_at": "2026-10-01T02:08:57Z"
+}
