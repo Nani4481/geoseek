@@ -29,6 +29,7 @@ _analyst = None            # geoseek.analyst.service.AnalystService (built at st
 _analyst_error: str | None = None
 
 _WEB_DIR = Path(__file__).resolve().parents[1] / "analyst" / "web"
+_REACT_DIR = Path(__file__).resolve().parents[1] / "analyst" / "web_react"
 
 
 @asynccontextmanager
@@ -498,14 +499,59 @@ def detect_tile_image(observation_id: str, row: int, col: int):
     return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
 
 
+# ==========================================================================
+# React console support (/ui/*) - read-only projections, see geoseek.analyst.ui_support
+# ==========================================================================
+
+
+@app.get("/ui/metrics")
+def ui_metrics():
+    """Dashboard stat-card figures (counts, sensors, change-model F1, detector AP50, findings by region), each
+    with the source it was read from."""
+    from geoseek.analyst.ui_support import console_metrics
+
+    return console_metrics(_get_analyst())
+
+
+@app.get("/ui/latency")
+def ui_latency():
+    """Search latency measured now on a few fixed queries (cached ~30 s)."""
+    from geoseek.analyst.ui_support import latency_probe
+
+    return latency_probe(_get_engine())
+
+
+@app.get("/ui/candidates/{candidate_id}/timeline")
+def ui_candidate_timeline(candidate_id: str):
+    from geoseek.analyst.ui_support import candidate_timeline
+
+    tl = candidate_timeline(_get_analyst(), candidate_id)
+    if tl is None:
+        raise HTTPException(status_code=404, detail=f"no candidate {candidate_id!r}")
+    return tl
+
+
+@app.get("/ui/tiles")
+def ui_tiles(ids: str = Query(..., description="comma-separated tile_id list (max 100)")):
+    from geoseek.analyst.ui_support import tile_footprints
+
+    return {"tiles": tile_footprints(_get_analyst().repo, [i.strip() for i in ids.split(",") if i.strip()])}
+
+
 # the offline single-page frontend - served by this same process, no CDN.
 if _WEB_DIR.is_dir():
     app.mount("/app", StaticFiles(directory=str(_WEB_DIR), html=True), name="analyst-web")
 
 
+# the parallel React console (frontend-react/ -> `npm run build` -> analyst/web_react/). Same process, same offline
+# rule; the existing /app mount above is untouched and keeps serving.
+if _REACT_DIR.is_dir():
+    app.mount("/react", StaticFiles(directory=str(_REACT_DIR), html=True), name="analyst-web-react")
+
+
 @app.get("/")
 def _root():
-    return {"service": "geoseek analyst interface", "ui": "/app/", "docs": "/docs",
+    return {"service": "geoseek analyst interface", "ui": "/app/", "react_ui": "/react/", "docs": "/docs",
             "endpoints": ["/search/text", "/search/image", "/candidates", "/candidates/{id}",
                           "/candidates/{id}/imagery", "/candidates/{id}/decision", "/audit",
                           "/export", "/health", "/stats", "/presentation/summary", "/regions",

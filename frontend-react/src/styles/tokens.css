@@ -1,0 +1,48 @@
+@font-face { font-family: 'Inter'; font-weight: 400; font-display: swap; src: url('@webfonts/Inter-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 500; font-display: swap; src: url('@webfonts/Inter-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 600; font-display: swap; src: url('@webfonts/Inter-SemiBold.woff2') format('woff2'); }
+@font-face { font-family: 'Inter'; font-weight: 700; font-display: swap; src: url('@webfonts/Inter-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 400; font-display: swap; src: url('@webfonts/JetBrainsMono-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 500; font-display: swap; src: url('@webfonts/JetBrainsMono-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'JetBrains Mono'; font-weight: 600; font-display: swap; src: url('@webfonts/JetBrainsMono-SemiBold.woff2') format('woff2'); }
+
+:root {
+  --bg: #050a17;
+  --bg-2: #08102a;
+  --panel: #0b1633;
+  --panel-2: #101e42;
+  --panel-3: #16275a;
+  --line: rgba(120, 160, 255, 0.14);
+  --line-2: rgba(120, 160, 255, 0.26);
+  --ink: #e9efff;
+  --ink-2: #bcc8ea;
+  --ink-3: #8d9cc6;
+  --ink-4: #62729f;
+  --cyan: #4cc9f0;
+  --blue: #5b8cff;
+  --amber: #f5a524;
+  --green: #34d399;
+  --red: #ff6b7a;
+  --violet: #a78bfa;
+  --radius: 10px;
+  --sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --rail-w: 72px;
+  --top-h: 56px;
+}
+
+/* high-contrast variant used by briefing mode */
+.hc {
+  --bg: #000;
+  --panel: #000;
+  --panel-2: #0a0a0a;
+  --line: rgba(255, 255, 255, 0.55);
+  --line-2: rgba(255, 255, 255, 0.8);
+  --ink: #fff;
+  --ink-2: #fff;
+  --ink-3: #e6e6e6;
+  --cyan: #00e5ff;
+  --amber: #ffc400;
+  --green: #00ff9c;
+  --red: #ff4d5e;
+}
