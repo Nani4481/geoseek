@@ -286,6 +286,13 @@ class SearchEngine:
         scene_key = scene.scene_id if scene is not None else obs.scene_id  # keys the radiometry config
 
         scene_dir = self.settings.datasets_dir / (obs.dataset_dir or obs.observation_id)
+        # A catalogued tile whose band rasters are not on this machine (e.g. a Maxar scene whose COGs were never
+        # staged) is "not found", not a server fault: KeyError is what the API maps to 404. Only absence is
+        # translated - a file that exists but cannot be read still surfaces as the 500 it is.
+        missing = [b for b in RGB_BANDS if not (scene_dir / f"{b}.tif").is_file()]
+        if missing:
+            raise KeyError(f"imagery for tile '{tile_id}' is not staged on this machine "
+                           f"(missing {', '.join(missing)} under {scene_dir.name})")
         return _render_thumbnail_bytes(str(scene_dir), tile.row, tile.col, scene_key)
 
     def count(self) -> int:
