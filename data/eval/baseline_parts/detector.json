@@ -1,0 +1,373 @@
+{
+ "section": "detector",
+ "metrics": {
+  "dota_val_v15_full_image": {
+   "model_key": "yolo26s-obb-dota15",
+   "weights_sha256": "67f617170b608dd1541d63f4aedbd3b4752cbda9f67702e0d63f4aaaae31e113",
+   "n_val_images": 458,
+   "n_gt_difficult_ignored": 35325,
+   "operating_confidence_chosen_on_monitor": 0.525,
+   "bootstrap_resamples": 100,
+   "eval_wall_s": 393.2111132144928,
+   "ground_vehicles": {
+    "ap50": 0.8536019102777724,
+    "ap50_95": 0.47121558778780626,
+    "n_gt": 14902,
+    "ap50_ci_lo": 0.7860122333027734,
+    "ap50_ci_hi": 0.8913080385130424,
+    "ap50_95_ci_lo": 0.42449174545100066,
+    "ap50_95_ci_hi": 0.5075305725968158,
+    "op_precision": 0.6455955516534972,
+    "op_recall": 0.8882029257817743,
+    "op_f1": 0.7477121229239635
+   },
+   "ships_and_aircraft": {
+    "ap50": 0.8593038834715881,
+    "ap50_95": 0.5570084418543273,
+    "n_gt": 12752,
+    "ap50_ci_lo": 0.7349289690030014,
+    "ap50_ci_hi": 0.9110244157373436,
+    "ap50_95_ci_lo": 0.4771988135193175,
+    "ap50_95_ci_hi": 0.5984879497743418,
+    "op_precision": 0.8969436916591388,
+    "op_recall": 0.9343632371392723,
+    "op_f1": 0.9152711630050698
+   },
+   "infrastructure": {
+    "ap50": 0.7512342089030802,
+    "ap50_95": 0.4142374832498852,
+    "n_gt": 4398,
+    "ap50_ci_lo": 0.7043749956882922,
+    "ap50_ci_hi": 0.7837836413816263,
+    "ap50_95_ci_lo": 0.38980360532583064,
+    "ap50_95_ci_hi": 0.44115679923026085,
+    "op_precision": 0.8064588979223125,
+    "op_recall": 0.8119599818099136,
+    "op_f1": 0.8092000906412871
+   },
+   "all_kept_classes": {
+    "ap50": 0.8173522622099437,
+    "ap50_95": 0.4820211188610313,
+    "n_gt": 32052,
+    "ap50_ci_lo": 0.7635014605321376,
+    "ap50_ci_hi": 0.845293824984725,
+    "ap50_95_ci_lo": 0.44690649696140333,
+    "ap50_95_ci_hi": 0.49845720059769255,
+    "op_precision": 0.7516093578269744,
+    "op_recall": 0.8961063272182703,
+    "op_f1": 0.8175219878746477
+   },
+   "per_class": {
+    "small_vehicle": {
+     "ap50": 0.8453594422897622,
+     "ap50_95": 0.4130210514908158,
+     "n_gt": 10290,
+     "ap50_ci_lo": 0.7375266838725283,
+     "ap50_ci_hi": 0.9052936627155128,
+     "ap50_95_ci_lo": 0.3381005044021979,
+     "ap50_95_ci_hi": 0.4707510769300468,
+     "op_precision": 0.5968680089485459,
+     "op_recall": 0.9074829931972789,
+     "op_f1": 0.7201079622132254
+    },
+    "large_vehicle": {
+     "ap50": 0.8618443782657826,
+     "ap50_95": 0.5294101240847967,
+     "n_gt": 4612,
+     "ap50_ci_lo": 0.8230145498632522,
+     "ap50_ci_hi": 0.8960841043952112,
+     "ap50_95_ci_lo": 0.49097266333316425,
+     "ap50_95_ci_hi": 0.5629396016121719,
+     "op_precision": 0.8025530162651843,
+     "op_recall": 0.8451864700780573,
+     "op_f1": 0.8233181962192417
+    },
+    "ship": {
+     "ap50": 0.9384821356176194,
+     "ap50_95": 0.5879539626394115,
+     "n_gt": 10206,
+     "ap50_ci_lo": 0.905015772045769,
+     "ap50_ci_hi": 0.9610670534084884,
+     "ap50_95_ci_lo": 0.5497171199757979,
+     "ap50_95_ci_hi": 0.6275294162997451,
+     "op_precision": 0.893534686172723,
+     "op_recall": 0.9275916127767979,
+     "op_f1": 0.9102446997740493
+    },
+    "plane": {
+     "ap50": 0.9836725259675454,
+     "ap50_95": 0.7426814807005846,
+     "n_gt": 2469,
+     "ap50_ci_lo": 0.9684038344154983,
+     "ap50_ci_hi": 0.9929965887014222,
+     "ap50_95_ci_lo": 0.6845591215317472,
+     "ap50_95_ci_hi": 0.7830524792938987,
+     "op_precision": 0.9162844036697247,
+     "op_recall": 0.9708383961117861,
+     "op_f1": 0.9427728613569321
+    },
+    "helicopter": {
+     "ap50": 0.6557569888295997,
+     "ap50_95": 0.34038988222298583,
+     "n_gt": 77,
+     "ap50_ci_lo": 0.30473897540346506,
+     "ap50_ci_hi": 0.8147658590025035,
+     "ap50_95_ci_lo": 0.16224524013172661,
+     "ap50_95_ci_hi": 0.43602669222791707,
+     "op_precision": 0.6986301369863014,
+     "op_recall": 0.6623376623376623,
+     "op_f1": 0.68
+    },
+    "storage_tank": {
+     "ap50": 0.9190550016938204,
+     "ap50_95": 0.6102626119037895,
+     "n_gt": 1888,
+     "ap50_ci_lo": 0.871150971981182,
+     "ap50_ci_hi": 0.9529609348963068,
+     "ap50_95_ci_lo": 0.565802368188965,
+     "ap50_95_ci_hi": 0.6547279331910006,
+     "op_precision": 0.8718085106382979,
+     "op_recall": 0.868114406779661,
+     "op_f1": 0.8699575371549895
+    },
+    "harbor": {
+     "ap50": 0.782098587977573,
+     "ap50_95": 0.4153839448239537,
+     "n_gt": 2083,
+     "ap50_ci_lo": 0.7182004477226579,
+     "ap50_ci_hi": 0.8255777549877805,
+     "ap50_95_ci_lo": 0.37897269013403406,
+     "ap50_95_ci_hi": 0.45583702351613237,
+     "op_precision": 0.7756119673617408,
+     "op_recall": 0.8214114258281325,
+     "op_f1": 0.7978549778503149
+    },
+    "bridge": {
+     "ap50": 0.5525490370378473,
+     "ap50_95": 0.2170658930219124,
+     "n_gt": 427,
+     "ap50_ci_lo": 0.43678049023081683,
+     "ap50_ci_hi": 0.644618397676259,
+     "ap50_95_ci_lo": 0.1721152218143587,
+     "ap50_95_ci_hi": 0.2632052034953939,
+     "op_precision": 0.6461988304093568,
+     "op_recall": 0.5175644028103045,
+     "op_f1": 0.5747724317295189
+    }
+   },
+   "small_vehicle": {
+    "ap50_95": 0.4130210514908158
+   }
+  }
+ },
+ "noise_bands": {
+  "detector.dota_val_v15_full_image.ground_vehicles.ap50": {
+   "band": 0.05264790260513452
+  },
+  "detector.dota_val_v15_full_image.ground_vehicles.ap50_95": {
+   "band": 0.04151941357290756
+  },
+  "detector.dota_val_v15_full_image.ships_and_aircraft.ap50": {
+   "band": 0.0880477233671711
+  },
+  "detector.dota_val_v15_full_image.ships_and_aircraft.ap50_95": {
+   "band": 0.06064456812751218
+  },
+  "detector.dota_val_v15_full_image.infrastructure.ap50": {
+   "band": 0.03970432284666703
+  },
+  "detector.dota_val_v15_full_image.infrastructure.ap50_95": {
+   "band": 0.02567659695221511
+  },
+  "detector.dota_val_v15_full_image.all_kept_classes.ap50": {
+   "band": 0.04089618222629371
+  },
+  "detector.dota_val_v15_full_image.all_kept_classes.ap50_95": {
+   "band": 0.02577535181814461
+  },
+  "detector.dota_val_v15_full_image.per_class.small_vehicle.ap50": {
+   "band": 0.08388348942149226
+  },
+  "detector.dota_val_v15_full_image.per_class.small_vehicle.ap50_95": {
+   "band": 0.06632528626392445
+  },
+  "detector.dota_val_v15_full_image.per_class.large_vehicle.ap50": {
+   "band": 0.036534777265979534
+  },
+  "detector.dota_val_v15_full_image.per_class.large_vehicle.ap50_95": {
+   "band": 0.03598346913950384
+  },
+  "detector.dota_val_v15_full_image.per_class.ship.ap50": {
+   "band": 0.02802564068135971
+  },
+  "detector.dota_val_v15_full_image.per_class.ship.ap50_95": {
+   "band": 0.03890614816197363
+  },
+  "detector.dota_val_v15_full_image.per_class.plane.ap50": {
+   "band": 0.012296377142961945
+  },
+  "detector.dota_val_v15_full_image.per_class.plane.ap50_95": {
+   "band": 0.0492466788810757
+  },
+  "detector.dota_val_v15_full_image.per_class.helicopter.ap50": {
+   "band": 0.25501344179951924
+  },
+  "detector.dota_val_v15_full_image.per_class.helicopter.ap50_95": {
+   "band": 0.1368907260480952
+  },
+  "detector.dota_val_v15_full_image.per_class.storage_tank.ap50": {
+   "band": 0.04090498145756244
+  },
+  "detector.dota_val_v15_full_image.per_class.storage_tank.ap50_95": {
+   "band": 0.04446278250101782
+  },
+  "detector.dota_val_v15_full_image.per_class.harbor.ap50": {
+   "band": 0.05368865363256131
+  },
+  "detector.dota_val_v15_full_image.per_class.harbor.ap50_95": {
+   "band": 0.03843216669104915
+  },
+  "detector.dota_val_v15_full_image.per_class.bridge.ap50": {
+   "band": 0.10391895372272106
+  },
+  "detector.dota_val_v15_full_image.per_class.bridge.ap50_95": {
+   "band": 0.045544990840517594
+  }
+ },
+ "noise_detail": {
+  "detector.dota_val_v15_full_image.ground_vehicles.ap50": {
+   "band": 0.05264790260513452,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.05264790260513452
+  },
+  "detector.dota_val_v15_full_image.ground_vehicles.ap50_95": {
+   "band": 0.04151941357290756,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.04151941357290756
+  },
+  "detector.dota_val_v15_full_image.ships_and_aircraft.ap50": {
+   "band": 0.0880477233671711,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.0880477233671711
+  },
+  "detector.dota_val_v15_full_image.ships_and_aircraft.ap50_95": {
+   "band": 0.06064456812751218,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.06064456812751218
+  },
+  "detector.dota_val_v15_full_image.infrastructure.ap50": {
+   "band": 0.03970432284666703,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.03970432284666703
+  },
+  "detector.dota_val_v15_full_image.infrastructure.ap50_95": {
+   "band": 0.02567659695221511,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.02567659695221511
+  },
+  "detector.dota_val_v15_full_image.all_kept_classes.ap50": {
+   "band": 0.04089618222629371,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.04089618222629371
+  },
+  "detector.dota_val_v15_full_image.all_kept_classes.ap50_95": {
+   "band": 0.02577535181814461,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.02577535181814461
+  },
+  "detector.dota_val_v15_full_image.per_class.small_vehicle.ap50": {
+   "band": 0.08388348942149226,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.08388348942149226
+  },
+  "detector.dota_val_v15_full_image.per_class.small_vehicle.ap50_95": {
+   "band": 0.06632528626392445,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.06632528626392445
+  },
+  "detector.dota_val_v15_full_image.per_class.large_vehicle.ap50": {
+   "band": 0.036534777265979534,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.036534777265979534
+  },
+  "detector.dota_val_v15_full_image.per_class.large_vehicle.ap50_95": {
+   "band": 0.03598346913950384,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.03598346913950384
+  },
+  "detector.dota_val_v15_full_image.per_class.ship.ap50": {
+   "band": 0.02802564068135971,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.02802564068135971
+  },
+  "detector.dota_val_v15_full_image.per_class.ship.ap50_95": {
+   "band": 0.03890614816197363,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.03890614816197363
+  },
+  "detector.dota_val_v15_full_image.per_class.plane.ap50": {
+   "band": 0.012296377142961945,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.012296377142961945
+  },
+  "detector.dota_val_v15_full_image.per_class.plane.ap50_95": {
+   "band": 0.0492466788810757,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.0492466788810757
+  },
+  "detector.dota_val_v15_full_image.per_class.helicopter.ap50": {
+   "band": 0.25501344179951924,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.25501344179951924
+  },
+  "detector.dota_val_v15_full_image.per_class.helicopter.ap50_95": {
+   "band": 0.1368907260480952,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.1368907260480952
+  },
+  "detector.dota_val_v15_full_image.per_class.storage_tank.ap50": {
+   "band": 0.04090498145756244,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.04090498145756244
+  },
+  "detector.dota_val_v15_full_image.per_class.storage_tank.ap50_95": {
+   "band": 0.04446278250101782,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.04446278250101782
+  },
+  "detector.dota_val_v15_full_image.per_class.harbor.ap50": {
+   "band": 0.05368865363256131,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.05368865363256131
+  },
+  "detector.dota_val_v15_full_image.per_class.harbor.ap50_95": {
+   "band": 0.03843216669104915,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.03843216669104915
+  },
+  "detector.dota_val_v15_full_image.per_class.bridge.ap50": {
+   "band": 0.10391895372272106,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.10391895372272106
+  },
+  "detector.dota_val_v15_full_image.per_class.bridge.ap50_95": {
+   "band": 0.045544990840517594,
+   "method": "bootstrap 95% CI half-width over val images (n_boot resamples)",
+   "bootstrap_ci95_halfwidth": 0.045544990840517594
+  }
+ },
+ "extra": {
+  "scratch_results": "C:\\Users\\Prash\\Downloads\\SIH 2026\\geoseek\\data\\eval\\detector_run\\eval_results.json"
+ },
+ "power": {
+  "start": {
+   "source": "AC",
+   "battery_percent": 99
+  },
+  "end": {
+   "source": "AC",
+   "battery_percent": 99
+  }
+ },
+ "written_at": "2026-10-01T02:17:13Z"
+}

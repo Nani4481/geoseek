@@ -1,0 +1,24 @@
+{
+ "section": "corpus",
+ "metrics": {
+  "faiss_vectors": 105245,
+  "catalog_tiles_total": 108324,
+  "embedded_tiles_total": 105245,
+  "embedded_tiles_frozen_prefix": 101911,
+  "frozen_prefix_is_all_sentinel2": 1,
+  "sentinel2_embedded_tiles": 104089,
+  "maxar_embedded_tiles": 1156,
+  "sar_tiles_not_embedded": 3079,
+  "scenes_total": 81,
+  "observations_total": 81,
+  "faiss_ids_contiguous_from_zero": 1,
+  "faiss_count_equals_embedded_tiles": 1
+ },
+ "noise_bands": {},
+ "noise_detail": {},
+ "extra": {
+  "definition": "frozen prefix = production faiss_id < 101911 (the Phase 7b tier-3 corpus)"
+ },
+ "power": {},
+ "written_at": "2026-10-01T02:06:41Z"
+}

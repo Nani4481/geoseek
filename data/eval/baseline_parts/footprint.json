@@ -1,0 +1,44 @@
+{
+ "section": "footprint",
+ "metrics": {
+  "live_index": {
+   "faiss_bytes": 215541805,
+   "faiss_mb": 215.541805,
+   "sqlite_bytes": 95887360,
+   "sqlite_mb": 95.88736,
+   "n_vectors": 105245,
+   "n_catalog_tiles": 108324
+  },
+  "faiss_bytes_per_vector": 2048.0004275737565,
+  "faiss_file_overhead_bytes": 45,
+  "sqlite_bytes_per_catalog_tile": 885.1903548613419,
+  "index_bytes_per_embedded_tile": 2959.0875100954913,
+  "faiss_persist_ms_to_scratch": 153.68369995849207,
+  "datasets_mb": 145898.432683,
+  "models_mb": 1299.137671,
+  "data_dir_mb": 329847.483307,
+  "frozen_101911": {
+   "faiss_bytes": 208713773,
+   "faiss_mb": 208.713773,
+   "bytes_per_vector": 2048.000441561755
+  }
+ },
+ "noise_bands": {
+  "footprint.faiss_persist_ms_to_scratch": {
+   "band": 13.48839997081086
+  }
+ },
+ "noise_detail": {},
+ "extra": {},
+ "power": {
+  "start": {
+   "source": "AC",
+   "battery_percent": 99
+  },
+  "end": {
+   "source": "AC",
+   "battery_percent": 99
+  }
+ },
+ "written_at": "2026-10-01T02:08:26Z"
+}

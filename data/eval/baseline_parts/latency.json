@@ -1,0 +1,206 @@
+{
+ "section": "latency",
+ "metrics": {
+  "n_vectors": 105245,
+  "passes": 3,
+  "warm": 1,
+  "index": "scratch COPY of the production index",
+  "method": "scripts/measure_tier.py query sets and seeds; 3 discarded warm-ups; samples pooled over 3 passes",
+  "text_search_k20": {
+   "n": 120,
+   "median_ms": 31.620502471923828,
+   "p95_ms": 51.26833915710449,
+   "p99_ms": 52.70671844482422,
+   "max_ms": 56.05030059814453,
+   "pass_medians_ms": [
+    24.723172187805176,
+    33.36894512176514,
+    34.191012382507324
+   ]
+  },
+  "image_search_k20": {
+   "n": 360,
+   "median_ms": 16.708731651306152,
+   "p95_ms": 21.826982498168945,
+   "p99_ms": 23.568391799926758,
+   "max_ms": 25.926828384399414,
+   "pass_medians_ms": [
+    17.061829566955566,
+    16.591191291809082,
+    16.85917377471924
+   ]
+  },
+  "point_seeded_knn": {
+   "n": 450,
+   "median_ms": 17.51,
+   "p95_ms": 23.59,
+   "p99_ms": 27.67,
+   "max_ms": 33.34,
+   "pass_medians_ms": [
+    17.51,
+    17.585,
+    17.259999999999998
+   ]
+  },
+  "tile_seeded_knn": {
+   "n": 450,
+   "median_ms": 17.03,
+   "p95_ms": 22.34,
+   "p99_ms": 25.49,
+   "max_ms": 28.08,
+   "pass_medians_ms": [
+    17.1,
+    17.1,
+    16.655
+   ]
+  },
+  "bbox_filter": {
+   "n": 720,
+   "median_ms": 0.2820999943651259,
+   "p95_ms": 0.42990001384168863,
+   "p99_ms": 0.636399956420064,
+   "max_ms": 1.8588000093586743,
+   "pass_medians_ms": [
+    0.30360001255758107,
+    0.27114999829791486,
+    0.27689995476976037
+   ]
+  }
+ },
+ "noise_bands": {
+  "latency.text_search_k20.median_ms": {
+   "band": 9.467840194702148
+  },
+  "latency.text_search_k20.p95_ms": {
+   "band": 24.378299713134766
+  },
+  "latency.text_search_k20.p99_ms": {
+   "band": 24.205684661865234
+  },
+  "latency.image_search_k20.median_ms": {
+   "band": 0.4706382751464844
+  },
+  "latency.image_search_k20.p95_ms": {
+   "band": 2.9611587524414062
+  },
+  "latency.image_search_k20.p99_ms": {
+   "band": 3.3266544342041016
+  },
+  "latency.point_seeded_knn.median_ms": {
+   "band": 0.32500000000000284
+  },
+  "latency.point_seeded_knn.p95_ms": {
+   "band": 0.9600000000000009
+  },
+  "latency.point_seeded_knn.p99_ms": {
+   "band": 1.9299999999999997
+  },
+  "latency.tile_seeded_knn.median_ms": {
+   "band": 0.4450000000000003
+  },
+  "latency.tile_seeded_knn.p95_ms": {
+   "band": 1.8599999999999994
+  },
+  "latency.tile_seeded_knn.p99_ms": {
+   "band": 1.5399999999999991
+  },
+  "latency.bbox_filter.median_ms": {
+   "band": 0.032450014259666204
+  },
+  "latency.bbox_filter.p95_ms": {
+   "band": 0.09929999941959977
+  },
+  "latency.bbox_filter.p99_ms": {
+   "band": 0.5101999850012362
+  }
+ },
+ "noise_detail": {
+  "latency.text_search_k20.median_ms": {
+   "band": 9.467840194702148,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 9.467840194702148
+  },
+  "latency.text_search_k20.p95_ms": {
+   "band": 24.378299713134766,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 24.378299713134766
+  },
+  "latency.text_search_k20.p99_ms": {
+   "band": 24.205684661865234,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 24.205684661865234
+  },
+  "latency.image_search_k20.median_ms": {
+   "band": 0.4706382751464844,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 0.4706382751464844
+  },
+  "latency.image_search_k20.p95_ms": {
+   "band": 2.9611587524414062,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 2.9611587524414062
+  },
+  "latency.image_search_k20.p99_ms": {
+   "band": 3.3266544342041016,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 3.3266544342041016
+  },
+  "latency.point_seeded_knn.median_ms": {
+   "band": 0.32500000000000284,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 0.32500000000000284
+  },
+  "latency.point_seeded_knn.p95_ms": {
+   "band": 0.9600000000000009,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 0.9600000000000009
+  },
+  "latency.point_seeded_knn.p99_ms": {
+   "band": 1.9299999999999997,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 1.9299999999999997
+  },
+  "latency.tile_seeded_knn.median_ms": {
+   "band": 0.4450000000000003,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 0.4450000000000003
+  },
+  "latency.tile_seeded_knn.p95_ms": {
+   "band": 1.8599999999999994,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 1.8599999999999994
+  },
+  "latency.tile_seeded_knn.p99_ms": {
+   "band": 1.5399999999999991,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 1.5399999999999991
+  },
+  "latency.bbox_filter.median_ms": {
+   "band": 0.032450014259666204,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 0.032450014259666204
+  },
+  "latency.bbox_filter.p95_ms": {
+   "band": 0.09929999941959977,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 0.09929999941959977
+  },
+  "latency.bbox_filter.p99_ms": {
+   "band": 0.5101999850012362,
+   "method": "spread (max-min) of the per-pass statistic over 3 passes",
+   "ordering_or_rerun_spread": 0.5101999850012362
+  }
+ },
+ "extra": {},
+ "power": {
+  "start": {
+   "source": "AC",
+   "battery_percent": 99
+  },
+  "end": {
+   "source": "AC",
+   "battery_percent": 99
+  }
+ },
+ "written_at": "2026-10-01T02:08:20Z"
+}

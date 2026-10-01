@@ -1,0 +1,23 @@
+{
+ "section": "suite",
+ "metrics": {
+  "passed": 495,
+  "failed": 4,
+  "skipped": 3,
+  "errors": 0,
+  "wall_s": 109.5258858203888
+ },
+ "noise_bands": {},
+ "noise_detail": {},
+ "extra": {
+  "summary_line": "4 failed, 495 passed, 3 skipped in 107.58s (0:01:47)",
+  "failed_tests": [
+   "tests/test_frontend_offline.py::test_no_external_urls_in_text_asset[vendor/chart.umd.js]",
+   "tests/test_frontend_offline.py::test_no_external_urls_in_text_asset[vendor/leaflet/leaflet.css]",
+   "tests/test_frontend_offline.py::test_no_external_urls_in_text_asset[vendor/leaflet/leaflet.js]",
+   "tests/test_frontend_offline.py::test_no_external_urls_in_text_asset[vendor/three.module.min.js]"
+  ]
+ },
+ "power": {},
+ "written_at": "2026-10-01T02:21:22Z"
+}
