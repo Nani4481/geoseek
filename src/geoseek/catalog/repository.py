@@ -129,6 +129,31 @@ class MetadataRepository(abc.ABC):
     @abc.abstractmethod
     def count_tiles(self) -> int: ...
 
+    # -- per-tile spectral descriptor (Phase 10) ------------------------------
+    # Non-abstract on purpose: a backend without spectral support still satisfies the seam.
+
+    def upsert_tile_spectral(self, rows: "Sequence[Mapping[str, object]]") -> int:
+        """Insert/update descriptor rows (``tile_id`` + the fields in ``geoseek.spectral.fields``). Returns rows written."""
+        raise NotImplementedError
+
+    def set_tile_spectral_context(self, rows: "Sequence[tuple[str, float | None, float | None]]") -> int:
+        """Set ``dist_river_m`` / ``dist_water_m`` for already-described tiles: ``(tile_id, dist_river, dist_water)``."""
+        raise NotImplementedError
+
+    def get_tile_spectral(self, tile_id: str) -> "dict | None":
+        raise NotImplementedError
+
+    def list_tile_spectral(self, tile_ids: "Sequence[str] | None" = None) -> "dict[str, dict]":
+        """``{tile_id: descriptor dict}`` for the given tiles (all described tiles when None)."""
+        raise NotImplementedError
+
+    def spectral_tile_ids(self, *, version: "int | None" = None) -> "set[str]":
+        raise NotImplementedError
+
+    def table_fingerprints(self, tables: "Sequence[str] | None" = None) -> "dict[str, str]":
+        """SHA256 of each catalog table's rows in primary-key order - proves a migration left existing rows untouched."""
+        raise NotImplementedError
+
     # -- analyst audit trail (PS 2.2.5) -----------------------------------
     # Append-only. ``record_analyst_decision`` only ever INSERTs; there is no
     # update or delete method on the interface by design.
