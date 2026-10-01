@@ -138,7 +138,8 @@ data/
 
 Each seam is a small ABC with one production implementation. Swapping an
 implementation touches **no caller**. `grep -rn "import sqlite3\|import faiss"
-src/` returns only the two seam modules + the schema-tool `catalog/migrate.py`.
+src/` returns only the two seam modules + the schema-tool `catalog/migrate.py` + `catalog/embedding_map.py`
+(Phase 9: the mapping database of a re-embedded candidate index; it never touches the production schema).
 
 ### 3.1 `MetadataRepository` — the catalog swap-point
 

@@ -35,6 +35,7 @@ and is **not** claimed here.
 13. [Reproduction — clean checkout, offline after staging](#13-reproduction)
 14. [Limitations](#14-limitations)
 15. [Object detector (Phase 8F-2) — a separate track, summarised here](#15-object-detector)
+16. [Offline guarantee — what is claimed, and how it is checked](#16-offline-guarantee--what-is-claimed-and-how-it-is-checked)
 
 ---
 
@@ -982,12 +983,16 @@ and the stratified cluster sample are all seeded. The incremental-ingest proofs
 the same top-K and the same metrics.
 
 **Seam check** (an acceptance criterion — no app code imports `sqlite3` / `faiss`
-outside the two seam modules):
+outside the seam modules):
 
 ```bash
 grep -rn "import sqlite3\|import faiss" src/
-# -> only catalog/{sqlite_repository,migrate}.py and vectorindex/faiss_flat.py
+# -> only catalog/{sqlite_repository,migrate,embedding_map}.py and vectorindex/faiss_flat.py
 ```
+
+`catalog/embedding_map.py` (added in Phase 9) is the third `sqlite3` importer: it holds the `faiss_id ↔ tile_id`
+mapping database that ships next to a *re-embedded candidate* index (`scripts/reembed.py --finalize`), so the production
+catalog is never touched by a re-embed. It lives in the catalog package and does not use the production schema.
 
 ---
 
@@ -1081,6 +1086,49 @@ On the staged **Maxar** tiles (no ground truth) the detector reliably finds airc
 DOTA-calibrated operating point; a controlled blur explains only ~4 points of that gap, so the vehicle numbers above do **not** transfer to that product
 (`docs/PHASE8F2.md` §7). The evaluator's own disagreement with Ultralytics' validator was measured and attributed (§6.8).
 Licence: `ultralytics` and the weights are AGPL-3.0 (optional extra, isolated behind the interface); the fine-tuned weights are non-commercial.
+
+---
+
+## 16. Offline guarantee — what is claimed, and how it is checked
+
+**Claim: zero external network requests at runtime.** It is *not* "zero external URL strings in shipped assets":
+vendored third-party libraries legitimately contain attribution banners, XML namespace identifiers, browser-bug
+citations and diagnostic text. A reader who greps `vendor/` will find them; none is ever fetched.
+
+**What is in the vendored assets** (`src/geoseek/analyst/web/vendor/`; found by the offline guard, classified one by one,
+12 flagged occurrences = 8 distinct URLs, plus 2 relative `sourceMappingURL` comments and one regex-source fragment):
+
+| file | URL string | class |
+|---|---|---|
+| `chart.umd.js` | `https://www.chartjs.org`; `https://github.com/kurkle/color#readme` | attribution comment (licence banners) |
+| `chart.umd.js` | `sourceMappingURL=chart.umd.js.map` | sourcemap comment — relative, `.map` not shipped, devtools-only |
+| `leaflet.css` | `bugs.chromium.org/p/chromium/issues/detail?id=600120`; `bugzilla.mozilla.org/show_bug.cgi?id=888319` | other — comments citing browser bugs |
+| `leaflet.js` | `https://leafletjs.com` (header) | attribution comment |
+| `leaflet.js` | `https://leafletjs.com` (inside a string) | other — `<a href>` in the default attribution-control HTML; never rendered, the app sets `attributionControl: false` |
+| `leaflet.js` | `http://www.w3.org/2000/svg` (×3) | other — XML namespace identifier, never dereferenced |
+| `leaflet.js` | `sourceMappingURL=leaflet.js.map` | sourcemap comment (as above) |
+| `three.module.min.js` | `http://www.w3.org/1999/xhtml` | other — XML namespace identifier |
+| `three.module.min.js` | `https://discourse.threejs.org/t/updates-to-lighting-in-three-js-r155/53733` (×2) | other — text inside a `console.warn` |
+| `three.module.min.js` | `https?://` (regex source, ×2) | other — URL-detection regex text, not a URL |
+
+**Live runtime fetches: none.** This was established by tracing network *sinks*, not by grepping for `http`:
+no non-vendored file contains an `http(s)` string; Leaflet is constructed with `attributionControl: false` and used only
+through `L.imageOverlay(<same-origin API URL>)` (there is no `L.tileLayer`, i.e. no tile-server fetch); every three.js
+texture is loaded via `new URL(name, "../vendor/earth/")`; the generic loaders inside the libraries (`fetch(`, `.src =`)
+only ever receive URLs the app passes them. This is a static argument plus the guard below; the end-to-end check that
+backs it at runtime is the network-disabled UI run described in `RUN.md`.
+
+**How it is kept true.** `tests/test_frontend_offline.py` scans every text file under the web root, requires each vendored
+file's URL strings to be enumerated in the provenance manifest, and (since Phase 10) requires **every** vendored file —
+URL-bearing or not — to be pinned by SHA256 (`OrbitControls.js` previously passed a hash check it was never subjected to).
+The allowlist content is committed in `geoseek.staging.vendor_provenance` and regenerated offline with
+`python -m geoseek.staging.vendor_provenance`, because the manifest itself is git-ignored.
+
+**A portability trap found on the way.** With `core.autocrlf=true` (the Windows default) a checkout rewrites the vendored
+JavaScript with CRLF line endings: `three.module.min.js` hashed `8acd07f8…` on disk against `3e690ac7…` for the committed
+(upstream) bytes. A hash allowlist recorded from such a working tree fails on every LF checkout (Linux CI, a fresh clone,
+a Docker build). `.gitattributes` now marks `src/geoseek/analyst/web/vendor/** -text`, so vendored bytes are identical on every
+platform and the pinned hashes are the upstream/blob hashes.
 
 ---
 

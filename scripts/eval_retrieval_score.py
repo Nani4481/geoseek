@@ -173,7 +173,7 @@ def main() -> None:
         "k_values": list(KS),
         "systems": {
             "remoteclip": "production SearchEngine (RemoteCLIP ViT-B/32, FAISS IP)",
-            "vanilla_clip": "OpenCLIP ViT-B/32 laion2b, force_quick_gelu=True",
+            "vanilla_clip": "OpenAI CLIP ViT-B/32 (open_clip pretrained='openai'; weights SHA256 e6d1bd7789aa45192b3bf90570a789b478bae1b74ebcce7eddd908e83a2b7c31), force_quick_gelu=True",
         },
         "judgement_signal": rationale["methodology"]["judge_signal"],
         "circularity_avoidance": rationale["methodology"]["circularity_avoidance"],
