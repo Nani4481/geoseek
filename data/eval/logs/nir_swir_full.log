@@ -1,0 +1,91 @@
+[nir-swir] power source: battery
+[nir-swir] plan: 74 scenes (104089 tiles); 1 already complete; 73 to do
+[nir-swir] [1/73] S2A_44RPQ_20210304_1_L2A_scaled: 1089 tiles (1089 usable), wait 0s, describe 10.2s; elapsed 0.2 min
+[nir-swir] [2/73] S2A_44RPQ_20240308_0_L2A_scaled: 1089 tiles (1089 usable), wait 0s, describe 10.5s; elapsed 0.3 min
+[nir-swir] [3/73] S2B_44RPQ_20190330_1_L2A_scaled: 1089 tiles (1089 usable), wait 0s, describe 10.5s; elapsed 0.5 min
+[nir-swir] [4/73] S2B_44RPQ_20250308_0_L2A_scaled: 1089 tiles (1089 usable), wait 0s, describe 10.4s; elapsed 0.7 min
+[nir-swir] [5/73] S2C_44RPQ_20260308_0_L2A_scaled: 1089 tiles (1089 usable), wait 0s, describe 10.2s; elapsed 0.9 min
+[nir-swir] [6/73] S2A_43QGU_20231212_0_L2A: 1820 tiles (1817 usable), wait 141s, describe 17.4s; elapsed 3.5 min
+[nir-swir] [7/73] S2A_43QGU_20240207_0_L2A: 516 tiles (511 usable), wait 24s, describe 5.5s; elapsed 4.0 min
+[nir-swir] [8/73] S2A_43QGU_20240217_0_L2A: 559 tiles (553 usable), wait 35s, describe 5.6s; elapsed 4.7 min
+[nir-swir] [9/73] S2A_43QGU_20240227_0_L2A: 558 tiles (553 usable), wait 33s, describe 5.7s; elapsed 5.3 min
+[nir-swir] [10/73] S2B_43QGU_20231025_0_L2A: 557 tiles (552 usable), wait 32s, describe 5.8s; elapsed 6.0 min
+[nir-swir] [11/73] S2B_43QGU_20231117_0_L2A: 1815 tiles (1812 usable), wait 108s, describe 17.4s; elapsed 8.1 min
+[nir-swir] [12/73] S2B_43QGU_20231227_0_L2A: 1056 tiles (1056 usable), wait 114s, describe 9.9s; elapsed 10.1 min
+[nir-swir] [13/73] S2B_43QGU_20240303_0_L2A: 516 tiles (511 usable), wait 43s, describe 5.7s; elapsed 10.9 min
+[nir-swir] [14/73] S2A_43RGP_20231026_0_L2A: 1849 tiles (1849 usable), wait 131s, describe 18.4s; elapsed 13.4 min
+[nir-swir] [15/73] S2A_43RGP_20231105_0_L2A: 1849 tiles (1849 usable), wait 143s, describe 18.3s; elapsed 16.1 min
+[nir-swir] [16/73] S2A_43RGP_20231105_1_L2A: 1849 tiles (1849 usable), wait 115s, describe 18.3s; elapsed 18.4 min
+[nir-swir] [17/73] S2A_43RGP_20231115_0_L2A: 1849 tiles (1849 usable), wait 169s, describe 18.5s; elapsed 21.5 min
+[nir-swir] [18/73] S2B_43RGP_20231011_0_L2A: 1849 tiles (1849 usable), wait 149s, describe 18.6s; elapsed 24.3 min
+[nir-swir] [19/73] S2B_43RGP_20231220_0_L2A: 1849 tiles (1849 usable), wait 146s, describe 18.2s; elapsed 27.0 min
+[nir-swir] [20/73] S2B_43RGP_20240228_0_L2A: 1849 tiles (1849 usable), wait 170s, describe 18.5s; elapsed 30.2 min
+[nir-swir] [21/73] S2A_44RKU_20231112_0_L2A: 1196 tiles (1187 usable), wait 91s, describe 13.1s; elapsed 31.9 min
+[nir-swir] [22/73] S2A_44RKU_20231115_0_L2A: 1720 tiles (1715 usable), wait 134s, describe 17.7s; elapsed 34.4 min
+[nir-swir] [23/73] S2A_44RKU_20231122_0_L2A: 1153 tiles (1143 usable), wait 90s, describe 12.6s; elapsed 36.1 min
+[nir-swir] [24/73] S2B_44RKU_20231117_0_L2A: 1153 tiles (1143 usable), wait 83s, describe 12.8s; elapsed 37.7 min
+[nir-swir] [25/73] S2A_43RFM_20231205_0_L2A: 1849 tiles (1849 usable), wait 153s, describe 18.4s; elapsed 40.6 min
+[nir-swir] [26/73] S2B_43RFM_20231011_0_L2A: 1849 tiles (1849 usable), wait 111s, describe 15.3s; elapsed 42.7 min
+[nir-swir] [27/73] S2B_43RFM_20231021_0_L2A: 1849 tiles (1849 usable), wait 136s, describe 15.2s; elapsed 45.2 min
+[nir-swir] [28/73] S2A_43RGM_20231006_0_L2A: 1849 tiles (1849 usable), wait 138s, describe 15.9s; elapsed 47.8 min
+[nir-swir] [29/73] S2A_43RGM_20231205_0_L2A: 1849 tiles (1849 usable), wait 118s, describe 15.9s; elapsed 50.0 min
+[nir-swir] [30/73] S2B_43RGM_20231021_0_L2A: 1849 tiles (1849 usable), wait 117s, describe 15.7s; elapsed 52.2 min
+[nir-swir] [31/73] S2B_43RGM_20231210_0_L2A: 1849 tiles (1849 usable), wait 114s, describe 15.9s; elapsed 54.4 min
+[nir-swir] [32/73] S2B_43RGM_20240408_0_L2A: 1849 tiles (1849 usable), wait 102s, describe 16.2s; elapsed 56.4 min
+[nir-swir] [33/73] S2B_42RXQ_20240315_0_L2A: 1849 tiles (1849 usable), wait 101s, describe 15.6s; elapsed 58.3 min
+[nir-swir] [34/73] S2A_42RYQ_20231002_0_L2A: 1849 tiles (1849 usable), wait 104s, describe 15.9s; elapsed 60.3 min
+[nir-swir] [35/73] S2A_42RYQ_20231111_0_L2A: 1849 tiles (1849 usable), wait 94s, describe 16.2s; elapsed 62.2 min
+[nir-swir] [36/73] S2A_42RYQ_20240120_0_L2A: 1849 tiles (1849 usable), wait 96s, describe 16.2s; elapsed 64.1 min
+[nir-swir] [37/73] S2B_42RYQ_20231007_0_L2A: 1849 tiles (1849 usable), wait 99s, describe 15.8s; elapsed 66.0 min
+[nir-swir] [38/73] S2B_42RYQ_20231216_0_L2A: 1849 tiles (1849 usable), wait 97s, describe 16.0s; elapsed 67.9 min
+[nir-swir] [39/73] S2B_42RYQ_20240315_0_L2A: 1849 tiles (1849 usable), wait 103s, describe 15.9s; elapsed 69.8 min
+[nir-swir] [40/73] S2A_42RYR_20231111_0_L2A: 1849 tiles (1849 usable), wait 109s, describe 16.1s; elapsed 71.9 min
+[nir-swir] [41/73] S2A_42RYR_20240120_0_L2A: 1849 tiles (1849 usable), wait 98s, describe 16.1s; elapsed 73.8 min
+[nir-swir] [42/73] S2A_44QMK_20240108_0_L2A: 1806 tiles (1806 usable), wait 114s, describe 15.8s; elapsed 76.0 min
+[nir-swir] [43/73] S2A_44QMK_20240217_0_L2A: 1806 tiles (1806 usable), wait 144s, describe 15.8s; elapsed 78.7 min
+[nir-swir] [44/73] S2A_44QMK_20240308_0_L2A: 1024 tiles (1024 usable), wait 171s, describe 9.7s; elapsed 81.7 min
+[nir-swir] [45/73] S2A_44QMK_20240417_0_L2A: 1806 tiles (1806 usable), wait 137s, describe 15.1s; elapsed 84.2 min
+[nir-swir] [46/73] S2B_44QMK_20231224_0_L2A: 1806 tiles (1806 usable), wait 111s, describe 15.5s; elapsed 86.3 min
+[nir-swir] [47/73] S2B_44QMK_20240103_0_L2A: 1024 tiles (1024 usable), wait 185s, describe 9.9s; elapsed 89.6 min
+[nir-swir] [48/73] S2B_44QMK_20240113_0_L2A: 1806 tiles (1806 usable), wait 182s, describe 15.3s; elapsed 92.9 min
+[nir-swir] [49/73] S2B_44QMK_20240313_0_L2A: 1806 tiles (1806 usable), wait 149s, describe 15.6s; elapsed 95.6 min
+[nir-swir] [50/73] S2B_44QMK_20240323_0_L2A: 1806 tiles (1806 usable), wait 236s, describe 15.6s; elapsed 99.8 min
+[nir-swir] [51/73] S2A_43PFL_20240118_0_L2A: 1615 tiles (1609 usable), wait 190s, describe 13.9s; elapsed 103.2 min
+[nir-swir] [52/73] S2A_43PFL_20240121_0_L2A: 607 tiles (603 usable), wait 27s, describe 6.1s; elapsed 103.8 min
+[nir-swir] [53/73] S2B_43PFL_20231214_0_L2A: 1621 tiles (1615 usable), wait 114s, describe 14.3s; elapsed 105.9 min
+[nir-swir] [54/73] S2B_43PFL_20240205_0_L2A: 587 tiles (580 usable), wait 44s, describe 5.9s; elapsed 106.7 min
+[nir-swir] [55/73] S2A_43PFM_20240121_0_L2A: 974 tiles (965 usable), wait 73s, describe 9.9s; elapsed 108.1 min
+[nir-swir] [56/73] S2A_43PFM_20240131_0_L2A: 956 tiles (952 usable), wait 77s, describe 9.4s; elapsed 109.5 min
+[nir-swir] [57/73] S2A_43PFM_20240220_0_L2A: 950 tiles (943 usable), wait 63s, describe 9.3s; elapsed 110.8 min
+[nir-swir] [58/73] S2A_42QXM_20240110_0_L2A: 1849 tiles (1849 usable), wait 113s, describe 15.9s; elapsed 112.9 min
+[nir-swir] [59/73] S2A_42QXM_20240120_0_L2A: 1849 tiles (1849 usable), wait 101s, describe 15.9s; elapsed 114.9 min
+[nir-swir] [60/73] S2A_42QXM_20240209_0_L2A: 875 tiles (870 usable), wait 54s, describe 6.9s; elapsed 115.9 min
+[nir-swir] [61/73] S2A_42QXM_20240209_1_L2A: 1378 tiles (1372 usable), wait 76s, describe 12.1s; elapsed 117.3 min
+[nir-swir] [62/73] S2B_42QXM_20240105_0_L2A: 1849 tiles (1849 usable), wait 123s, describe 15.8s; elapsed 119.6 min
+[nir-swir] [63/73] S2B_42QXM_20240214_0_L2A: 1849 tiles (1849 usable), wait 102s, describe 16.0s; elapsed 121.6 min
+[nir-swir] [64/73] S2B_42QXM_20240224_0_L2A: 1849 tiles (1849 usable), wait 120s, describe 15.7s; elapsed 123.9 min
+[nir-swir] [65/73] S2A_45QXE_20231217_0_L2A: 220 tiles (216 usable), wait 4s, describe 1.9s; elapsed 124.0 min
+[nir-swir] [66/73] S2A_45QXE_20240309_0_L2A: 1849 tiles (1849 usable), wait 192s, describe 15.9s; elapsed 127.4 min
+[nir-swir] [67/73] S2B_45QXE_20240101_0_L2A: 226 tiles (220 usable), wait 16s, describe 2.0s; elapsed 127.7 min
+[nir-swir] [68/73] S2B_45QXE_20240301_0_L2A: 183 tiles (178 usable), wait 14s, describe 1.6s; elapsed 128.0 min
+[nir-swir] [69/73] S2A_45QYE_20231230_0_L2A: 707 tiles (699 usable), wait 56s, describe 6.8s; elapsed 129.0 min
+[nir-swir] [70/73] S2A_45QYE_20240208_0_L2A: 731 tiles (724 usable), wait 67s, describe 7.0s; elapsed 130.2 min
+[nir-swir] [71/73] S2A_45QYE_20240228_0_L2A: 703 tiles (698 usable), wait 52s, describe 6.7s; elapsed 131.2 min
+[nir-swir] [72/73] S2A_45QYE_20240306_0_L2A: 990 tiles (985 usable), wait 61s, describe 8.2s; elapsed 132.4 min
+[nir-swir] [73/73] S2B_45QYE_20240104_0_L2A: 693 tiles (687 usable), wait 63s, describe 6.7s; elapsed 133.5 min
+[nir-swir] context ayodhya_44RPQ_scaled_82km: 219 water components, river = 14635 cells, 5445 tiles updated
+[nir-swir] context deccan_43QGU_diverse: 764 water components, river = 30146 cells, 7397 tiles updated
+[nir-swir] context dehradun_43RGP_diverse: 311 water components, river = 2152 cells, 12943 tiles updated
+[nir-swir] context dehradun_44RKU_diverse: 262 water components, river = 23697 cells, 5222 tiles updated
+[nir-swir] context delhi_ncr_43RFM_diverse: 309 water components, river = 1102 cells, 5547 tiles updated
+[nir-swir] context delhi_ncr_43RGM_diverse: 461 water components, river = 5382 cells, 9245 tiles updated
+[nir-swir] context jaisalmer_42RXQ_diverse: 22 water components, river = 2497 cells, 3698 tiles updated
+[nir-swir] context jaisalmer_42RYQ_diverse: 35 water components, river = 300 cells, 11094 tiles updated
+[nir-swir] context jaisalmer_42RYR_diverse: 14 water components, river = 2930 cells, 3698 tiles updated
+[nir-swir] context kanha_44QMK_diverse: 318 water components, river = 8247 cells, 14690 tiles updated
+[nir-swir] context kerala_backwaters_43PFL_diverse: 552 water components, river = 3215078 cells, 4430 tiles updated
+[nir-swir] context kerala_backwaters_43PFM_diverse: 363 water components, river = 1280123 cells, 2880 tiles updated
+[nir-swir] context kutch_42QXM_diverse: 602 water components, river = 1531696 cells, 11498 tiles updated
+[nir-swir] context sundarbans_45QXE_diverse: 2038 water components, river = 887009 cells, 2478 tiles updated
+[nir-swir] context sundarbans_45QYE_diverse: 1352 water components, river = 2116399 cells, 3824 tiles updated
+[nir-swir] catalog integrity: tables identical=True, faiss unchanged=True, tile_spectral rows=104089

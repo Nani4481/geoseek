@@ -38,7 +38,8 @@ from geoseek.catalog.entities import (
     WatchNotification,
 )
 from geoseek.catalog.repository import MetadataRepository
-from geoseek.catalog.schema import CATALOG_TABLES, SCHEMA_SQL, TILE_RTREE_SQL
+from geoseek.catalog.schema import CATALOG_TABLES, SCHEMA_SQL, SPECTRAL_SQL, SPECTRAL_TABLE, TILE_RTREE_SQL
+from geoseek.spectral.fields import ALL_FIELDS, DESCRIPTOR_VERSION, SPECTRAL_FIELDS
 from geoseek.config import get_settings
 
 
@@ -78,6 +79,7 @@ class SQLiteMetadataRepository(MetadataRepository):
     def _ensure_schema(self) -> None:
         with self._lock:
             self._conn.executescript(SCHEMA_SQL)
+            self._conn.executescript(SPECTRAL_SQL)
             self._has_rtree = self._ensure_tile_rtree()
             self._ensure_decision_reopen_value()
             self._conn.commit()
@@ -731,3 +733,78 @@ class SQLiteMetadataRepository(MetadataRepository):
                 t: int(self._conn.execute(f"SELECT COUNT(*) FROM {t}").fetchone()[0])
                 for t in CATALOG_TABLES
             }
+
+    # -- per-tile spectral descriptor (Phase 10) -----------------------------------------------------------------
+
+    _SPECTRAL_DESCRIPTOR_COLS = ("descriptor_version", "usable", "valid_frac", "n_valid", *SPECTRAL_FIELDS)
+
+    def upsert_tile_spectral(self, rows) -> int:
+        """Insert or update descriptor rows. The region-context columns (``dist_*``) are NOT touched by an update, so
+        re-describing a tile never discards a previously computed river distance."""
+        cols = ("tile_id", *self._SPECTRAL_DESCRIPTOR_COLS, "computed_at")
+        updates = ", ".join(f"{c}=excluded.{c}" for c in cols[1:])
+        sql = (f"INSERT INTO {SPECTRAL_TABLE} ({', '.join(cols)}) VALUES ({', '.join('?' * len(cols))}) "
+               f"ON CONFLICT(tile_id) DO UPDATE SET {updates}")
+        now = datetime.now(timezone.utc).isoformat()
+        data = [tuple(r["tile_id"] if c == "tile_id" else (r.get("computed_at") or now) if c == "computed_at"
+                      else (DESCRIPTOR_VERSION if c == "descriptor_version" and r.get(c) is None else r.get(c))
+                      for c in cols) for r in rows]
+        with self._lock:
+            self._conn.executemany(sql, data)
+            self._conn.commit()
+        return len(data)
+
+    def set_tile_spectral_context(self, rows) -> int:
+        sql = f"UPDATE {SPECTRAL_TABLE} SET dist_river_m=?, dist_water_m=? WHERE tile_id=?"
+        data = [(r[1], r[2], r[0]) for r in rows]
+        with self._lock:
+            cur = self._conn.executemany(sql, data)
+            self._conn.commit()
+        return cur.rowcount
+
+    def get_tile_spectral(self, tile_id: str) -> dict | None:
+        cols = ("tile_id", *ALL_FIELDS)
+        with self._lock:
+            row = self._conn.execute(f"SELECT {', '.join(cols)} FROM {SPECTRAL_TABLE} WHERE tile_id=?", (tile_id,)).fetchone()
+        return dict(zip(cols, row)) if row else None
+
+    def list_tile_spectral(self, tile_ids=None) -> dict[str, dict]:
+        cols = ("tile_id", *ALL_FIELDS)
+        out: dict[str, dict] = {}
+        with self._lock:
+            if tile_ids is None:
+                rows = self._conn.execute(f"SELECT {', '.join(cols)} FROM {SPECTRAL_TABLE}").fetchall()
+            else:
+                ids = list(tile_ids)
+                rows = []
+                for i in range(0, len(ids), 500):                      # stay under SQLite's bound-parameter limit
+                    chunk = ids[i:i + 500]
+                    rows += self._conn.execute(
+                        f"SELECT {', '.join(cols)} FROM {SPECTRAL_TABLE} WHERE tile_id IN ({','.join('?' * len(chunk))})",
+                        chunk).fetchall()
+        for r in rows:
+            out[r[0]] = dict(zip(cols, r))
+        return out
+
+    def spectral_tile_ids(self, *, version: int | None = None) -> set[str]:
+        sql, params = f"SELECT tile_id FROM {SPECTRAL_TABLE}", ()
+        if version is not None:
+            sql, params = sql + " WHERE descriptor_version=?", (version,)
+        with self._lock:
+            return {r[0] for r in self._conn.execute(sql, params).fetchall()}
+
+    def table_fingerprints(self, tables=None) -> dict[str, str]:
+        import hashlib
+
+        out: dict[str, str] = {}
+        for t in tables or CATALOG_TABLES:
+            h = hashlib.sha256()
+            with self._lock:
+                cur = self._conn.execute(f"SELECT * FROM {t} ORDER BY 1")
+                n = 0
+                for row in cur:
+                    h.update(json.dumps(list(row), default=str, sort_keys=True).encode("utf-8"))
+                    h.update(b"\n")
+                    n += 1
+            out[t] = f"{h.hexdigest()}:{n}"
+        return out

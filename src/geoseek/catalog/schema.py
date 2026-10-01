@@ -178,3 +178,24 @@ AUDIT_TABLES = ("analyst_decisions",)
 
 # Phase 8 Step C: also independent of the scene->tile lineage.
 WATCH_TABLES = ("watch_areas", "watch_notifications")
+
+
+# --- per-tile spectral descriptor (Phase 10) ---------------------------------
+# A MIGRATION, not a rewrite: CREATE TABLE IF NOT EXISTS leaves every existing table and row untouched, and the
+# repository applies it on open (like the R*Tree). One row per tile that could be described (Sentinel-2 tiles with
+# NIR+SWIR on disk); Maxar / SAR tiles simply have no row. Standard SQL, ports to PostGIS unchanged.
+from geoseek.spectral.fields import ALL_FIELDS, HEADER_FIELDS, INDEXED_FIELDS  # noqa: E402
+
+# REAL columns = every descriptor field except the integer header fields (valid_frac is a real fraction)
+_REAL_FIELDS = [f for f in ALL_FIELDS if f not in HEADER_FIELDS or f == "valid_frac"]
+SPECTRAL_TABLE = "tile_spectral"
+SPECTRAL_SQL = (
+    "CREATE TABLE IF NOT EXISTS tile_spectral (\n"
+    "    tile_id            TEXT PRIMARY KEY REFERENCES tiles(tile_id),\n"
+    "    descriptor_version INTEGER NOT NULL,\n"
+    "    usable             INTEGER NOT NULL,\n"
+    "    n_valid            INTEGER,\n"
+    + "".join(f"    {f} REAL,\n" for f in _REAL_FIELDS)
+    + "    computed_at        TEXT NOT NULL DEFAULT ''\n);\n"
+    + "".join(f"CREATE INDEX IF NOT EXISTS ix_tile_spectral_{f} ON tile_spectral({f});\n" for f in INDEXED_FIELDS)
+)
