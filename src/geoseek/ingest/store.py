@@ -63,8 +63,8 @@ class TileStore:
         settings = get_settings()
         self.index_dir = index_dir or settings.index_dir
         self.index_dir.mkdir(parents=True, exist_ok=True)
-        self.index_path = self.index_dir / INDEX_FILENAME
-        self.db_path = self.index_dir / DB_FILENAME
+        self.index_path = self.index_dir / INDEX_FILENAME if index_dir is not None else settings.faiss_index_path
+        self.db_path = self.index_dir / DB_FILENAME if index_dir is not None else settings.database_path
 
         self.vector_index = FaissFlatIPIndex(self.index_path)
         self.repo = SQLiteMetadataRepository(self.db_path)

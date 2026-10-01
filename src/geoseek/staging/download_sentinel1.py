@@ -284,7 +284,7 @@ def register_sentinel1_catalog() -> dict:
     from geoseek.staging.manifest import load_manifest
 
     settings = get_settings()
-    repo = SQLiteMetadataRepository(settings.index_dir / "tiles.sqlite")
+    repo = SQLiteMetadataRepository(settings.database_path)
     sec = load_manifest()["sentinel1"]
 
     existing_s1_tiles = sum(

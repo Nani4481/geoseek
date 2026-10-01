@@ -166,7 +166,7 @@ def migrate(
     verify: bool = True,
 ) -> MigrationReport:
     settings = get_settings()
-    db_path = Path(db_path) if db_path is not None else settings.index_dir / "tiles.sqlite"
+    db_path = Path(db_path) if db_path is not None else settings.database_path
     datasets_dir = Path(datasets_dir) if datasets_dir is not None else settings.datasets_dir
     manifest_path = Path(manifest_path) if manifest_path is not None else settings.provenance_manifest_path
     faiss_path = db_path.parent / "tiles.faiss"
@@ -609,7 +609,7 @@ def main(argv: list[str] | None = None) -> None:
     args = p.parse_args(argv)
 
     settings = get_settings()
-    db_path = args.db or (settings.index_dir / "tiles.sqlite")
+    db_path = args.db or (settings.database_path)
 
     if args.verify:
         v = verify_migration(db_path)

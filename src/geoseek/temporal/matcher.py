@@ -272,7 +272,7 @@ def _build_repo():
     from geoseek.catalog.sqlite_repository import SQLiteMetadataRepository
     from geoseek.config import get_settings
 
-    return SQLiteMetadataRepository(get_settings().index_dir / "tiles.sqlite")
+    return SQLiteMetadataRepository(get_settings().database_path)
 
 
 def main(argv: list[str] | None = None) -> None:

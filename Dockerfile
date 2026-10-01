@@ -1,10 +1,8 @@
 # geoseek - offline-first geospatial ML platform.
 #
 # CPU-only by default (portable: no host CUDA/nvidia-container-toolkit
-# required). The app already picks cuda if torch reports it available
-# (src/geoseek/config.py::select_device) and falls back to cpu otherwise, so
-# running this same image with `--gpus all` on a host that has the nvidia
-# container runtime installed picks up the GPU with no image change.
+# required). GPU serving would require a separately validated CUDA image;
+# adding --gpus alone cannot enable CUDA in this CPU-only torch build.
 #
 # `data/` is intentionally NOT baked into the image - it holds staged model
 # weights and the ingested tile/index catalog (gigabytes, machine-specific,
@@ -37,8 +35,9 @@ RUN mkdir -p src/geoseek && touch src/geoseek/__init__.py
 # CPU-only torch build - the default pip resolution on Linux already
 # prefers this, pinned explicitly here so the image never silently pulls a
 # multi-gigabyte CUDA wheel it can't use without --gpus.
-RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
-RUN pip install --no-cache-dir -e ".[detect]"
+RUN pip install --no-cache-dir torch torchvision --index-url https://download.pytorch.org/whl/cpu
+ARG GEOSEEK_EXTRAS=detect
+RUN if [ -n "$GEOSEEK_EXTRAS" ]; then pip install --no-cache-dir -e ".[${GEOSEEK_EXTRAS}]"; else pip install --no-cache-dir -e .; fi
 
 COPY . .
 
@@ -54,4 +53,5 @@ EXPOSE 8000
 # (enforced by tests/test_frontend_offline.py and friends), not about which
 # interface it listens on - and 127.0.0.1 *inside* the container would be
 # unreachable from the host through Docker's own port mapping.
-CMD ["uvicorn", "geoseek.search.api:app", "--host", "0.0.0.0", "--port", "8000"]
+ENV GEOSEEK_DEVICE=cpu PYTHONUNBUFFERED=1 HF_HUB_OFFLINE=1
+CMD ["sh", "-c", "exec uvicorn geoseek.search.api:app --host 0.0.0.0 --port ${PORT:-8000} --workers 1"]
