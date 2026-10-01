@@ -61,3 +61,8 @@ data/basemap_src/
 # raw fetch of scripts/stage_earth_textures.py's sources, re-fetched on demand -
 # only the resized src/geoseek/analyst/web/vendor/earth/*.jpg ships with the app
 data/earth_textures_src/
+
+# React console (frontend-react/): dependencies are re-installed from package-lock.json; the BUILD OUTPUT
+# (src/geoseek/analyst/web_react/) is committed so an air-gapped machine needs no Node at all.
+frontend-react/node_modules/
+frontend-react/.vite/

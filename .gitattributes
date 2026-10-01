@@ -3,3 +3,7 @@ deploy/gcp/*.sh text eol=lf
 # Vendored third-party files must be byte-identical to upstream on every platform: their SHA256 is pinned in the
 # provenance manifest and checked by tests/test_frontend_offline.py. No line-ending conversion.
 src/geoseek/analyst/web/vendor/** -text
+
+# The React build output is byte-pinned by SHA-256 (frontend-react/build-pins.json, checked by tests/test_frontend_offline.py): no
+# line-ending conversion on any platform.
+src/geoseek/analyst/web_react/** -text
