@@ -1,0 +1,12 @@
+{
+ "taken_from": "data/index.zip (archived production catalog, 2026-09-30 08:29) - an independent copy that pre-dates this work; its tiles.faiss is byte-identical to the live one",
+ "backup_file_sha256": "2401b6258e30840bf79ac4dcec8fc6f60b64f05f5c45a8506712251f07a42c3a",
+ "faiss_sha256": "00c8d73a44cb9fd721a59217f796551026f855bde329ad8e1dd1e9db6c955301",
+ "tables": {
+  "collections": "2515fd471e01eca0128b1c3318123f88480c786e34cf86639937c32ee5e94c55:3",
+  "scenes": "4690e214b1cc80bbc1d01debf3d5879dba0e5f9d82d5d8b9d4de36f044de6680:81",
+  "observations": "042b2a526829d3fea86d82d316eff05ce47d3f596a1f4cefb49cc0b72fb26fb4:81",
+  "tiles": "fa50f7b7ac70be010f36d4dcd7c1392795941ed14ead93084934533321b4932b:108324",
+  "derived": "e1aa62069b9f91f054ddc176d16bf6cba2cc7941ea3fa40a0abebd029e43db9a:12"
+ }
+}

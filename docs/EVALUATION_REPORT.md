@@ -481,6 +481,62 @@ are second-order polish.** This is the architectural answer — *filter cheap
 metadata first, then semantic-rank* — and it is how an analyst actually searches
 (a sector, not the whole archive).
 
+### 7.4 Full judge coverage — what the §7.3 collapse really was (Phase 10, Block A)
+
+*Source: `scripts/stage_nir_swir_and_describe.py` → catalog table `tile_spectral` (104,089 Sentinel-2 tiles);
+`scripts/eval_judge_coverage.py` → `data/eval/phase10_blockA.json`; corpus = the **frozen** 101,911-tile corpus
+(`faiss_id < 101911`).*
+
+§7.3 attributed the global-precision collapse to unjudged tiles but could not score them. Block A can: B08/B11 were
+staged for the 8 diverse regions (74 scenes, 15.6 GB downloaded, grid-identical to the existing crops) and a per-tile
+spectral descriptor was computed in the same pass; the **unchanged Phase 7a graders** were then applied to every tile.
+The mixed judge reproduces all 852 frozen Phase 7a judgements on the pool (852/852), so on Ayodhya it *is* the frozen
+judge. Per-query precision under the two judges:
+
+| RemoteCLIP, 16 queries | global, Phase 9 (unjudged = 0) | global, **full coverage** | Ayodhya-filtered |
+|---|--:|--:|--:|
+| P@5  | 0.038 | **0.287** | 0.425 |
+| P@10 | 0.031 | **0.300** | 0.381 |
+| P@20 | 0.028 | **0.306** | 0.356 |
+
+**Claim 1 — "~78% of the collapse is a judge-coverage artifact": confirmed, and as a lower bound.** Full coverage
+recovers 64.5% (K=5), 76.8% (K=10) and 84.8% (K=20) of the P@K gap between the raw global number and the region-filtered
+one for RemoteCLIP (vanilla CLIP: 86% / 95% / 104%). Every disagreement between this judge and the blind visual pass
+runs towards MORE relevance (below), so the true figure is at least this large.
+
+**Claim 2 — "81% of the unjudged high-rank tiles are on-target": not reproduced by the spectral judge.** On the same
+179 other-region tiles the visual pass called 81.0% on-target, the spectral judge calls **28.5%** (all 187 annotated
+pairs: 77.5% vs 27.3%); across all unjudged top-20 slots it grades 30.7% relevant (20.0% at grade 2). The two agree where
+the criterion is physical (water body 11/11, open bare ground 11/12, dense urban 9/11) and disagree where the spectral
+criterion is narrower than the query text: "agricultural fields" 0/12 and "irrigated farmland" 0/12 — the visually
+accepted tiles are Deccan/Thar fields in Oct–Mar with median NDVI 0.12–0.15 (fallow, spectrally bare; the Phase 7a rule
+means *green* cropland at Ayodhya's peak-rabi phenology) — and the river-relative queries (0/10 for "settlement along a
+riverbank"), where "the largest water component of the region" is not the river (median 90 km away). The judge has no
+false positives against the visual negatives (0 of 10) but recalls only 33% of the visual positives. So **81% is neither
+confirmed nor refuted**: it is a single-labeller, RGB-only call (the labeller sees what the model sees), and the spectral
+31% is a conservative floor. The corrected global P@20 lies above 0.306; pinning it down needs a stratified random sample
+labelled by independent annotators, which this evaluation does not have.
+
+**Claim 3 — "the region pre-filter is a 12.7× precision lever (P@20 0.028 → 0.356)": the numbers reproduce, the reading
+is withdrawn.** With every tile judged, global P@20 is 0.306 against 0.356 filtered: **1.16×, not 12.7×**. Against chance
+(a random top-K scores the candidate set's prevalence of relevant tiles: 15.3% over the corpus, 13.6% inside Ayodhya)
+RemoteCLIP lifts 2.01× globally and 2.62× inside the sector (1.3× apart). On the 7 "core" queries (no river-relative or
+sub-pixel grader) the filter is *worse*: P@20 0.507 unfiltered vs 0.429 filtered (lift 1.79× vs 1.58×). Per query it can
+destroy relevance ("dense urban buildings" 0.70 → 0.05, "open bare ground" 0.95 → 0.20, "an urban residential
+neighborhood" 0.60 → 0.05: Ayodhya has none to retrieve). A region filter is a **scoping tool** (answer the question
+*inside this sector*), not a way to make the same question more precise.
+
+**Where the judge itself is weak (read every number above with this).** Thresholds were calibrated on Ayodhya's cropland;
+outside it they are applied as-is. The "built-up" signature (NDBI > −0.05, NDVI < 0.30, NDWI < 0) fires on arid bare soil,
+so "dense urban buildings" and "residential" are graded relevant for 44% and 48% of the corpus — precision for those queries is
+mostly base rate. Raw-band descriptors reproduce the stored Ayodhya features (correlation 0.93–0.999; 96.6% grade
+agreement over all queries) except for a threshold-sensitive shift in three queries (dense urban, residential, irrigated:
+±10 points) because the Phase 7a features come from radiometrically *normalized* index rasters; the "uniform" judge variant
+(descriptor everywhere, Ayodhya included) moves global P@20 by < 0.001 and the filtered figure from 0.356 to 0.353. Metric
+definitions change under full coverage: precision keeps the baseline definition (so the coverage effect is isolated), while
+NDCG's ideal and Recall's denominator are now the whole candidate set (see `geoseek.eval.full_judge`); only precision is
+comparable with the Phase 9 baseline row by row.
+
 ---
 
 ## 8. Change-detection metrics
