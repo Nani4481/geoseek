@@ -80,22 +80,20 @@
       "bytes": 1291,
       "external_urls": []
     },
-    "assets/Briefing-D_IxWufK.js": {
-      "sha256": "7cfaf09d0eecd96511d8d7d6aef7bc656e2d14fa2c358d63065651ff67838a73",
+    "assets/Briefing-DNoaRHh_.js": {
+      "sha256": "efbe06faba40dadb9bf73c33702fac2c2d39d4783b4c34dacbef3517a2da016f",
       "bytes": 8838,
       "external_urls": []
     },
-    "assets/Changes-D-1NQuyF.js": {
-      "sha256": "9436ce5648cd2c3c8d14a92c25851ecbd0605b3e84f8c4ea20eab53861ae6731",
-      "bytes": 6741,
+    "assets/Changes-BliCRnVO.js": {
+      "sha256": "b15e2f7b0b5fb51c695ca20e0e9a418d1fef73ac64956dcdd938fe08a75b8360",
+      "bytes": 21572,
       "external_urls": []
     },
-    "assets/Data-Bjd9opt1.js": {
-      "sha256": "faf43a8efb58481d9730e1a4be6f5000ae4659a099bc4098134a19d73d2c5b03",
-      "bytes": 58304,
-      "external_urls": [
-        "https://github.com/geotiffjs/geotiff.js/issues"
-      ]
+    "assets/Data-D1wVByyx.js": {
+      "sha256": "8d3aafc33c25f6b70c1f4df00d05aedb768122d5e3679e2174dae25a64a57760",
+      "bytes": 27786,
+      "external_urls": []
     },
     "assets/day-CDIlSrW5.jpg": {
       "sha256": "4fef0615b983a0880a311a6d2a6f33e2ad618d43f9e856bc673a7a948a5c4ba7",
@@ -107,29 +105,29 @@
       "bytes": 179,
       "external_urls": []
     },
-    "assets/Detect-CMHy_X99.js": {
-      "sha256": "4e40fe621833a60957c650aa44a46c05fbf5d81a7e4cb50168a9b66f43b904e8",
+    "assets/Detect-Ceyu7Yb7.js": {
+      "sha256": "7c52abca81b5acad18eaacf903404b399aea4bd7b865e98f2bda1cef98ea667e",
       "bytes": 13136,
       "external_urls": []
     },
-    "assets/Discovery-DI6QneoV.js": {
-      "sha256": "4d28d33be4abde0aac1514105b6b5e2fc49c8164aac8bd861ab0f589faf77597",
-      "bytes": 6157,
+    "assets/Discovery-N1rG6KIr.js": {
+      "sha256": "4308ff4845634ce7691e3d79a27cd48e22bc76c7da473c5adb4a854f062819e0",
+      "bytes": 19688,
       "external_urls": []
     },
-    "assets/Fingerprints-DwKQhy3u.js": {
-      "sha256": "9a449d9b35078161349aaf841e1e39123816bf2d4b68b4b50242a7b3d5450d1c",
-      "bytes": 6843,
+    "assets/Fingerprints-7FmhIpQ1.js": {
+      "sha256": "aba28bd63889a5e4eda0a0de2d765e95b419c93a84dbf3dd72f3d6fa6ebabf1d",
+      "bytes": 6848,
       "external_urls": []
     },
-    "assets/index-BQmJK8lM.css": {
-      "sha256": "3ebcaa77af3705d72530f8fc2d4f5c8ff37d93c960d702ea1787054ca38d184c",
-      "bytes": 43114,
+    "assets/index-Dr--TYf3.css": {
+      "sha256": "d0b3fa1bce2f89d9c4e1ae13c6e55b8752616fe45423d635889ee2aec47f43eb",
+      "bytes": 60599,
       "external_urls": []
     },
-    "assets/index-CnnQY9iu.js": {
-      "sha256": "f2a1fe6addf2c027852ba603d1144e6d29f11e329911386ba6b47549f2dd074a",
-      "bytes": 967443,
+    "assets/index-WH8NHk1f.js": {
+      "sha256": "4a39db2ceefbf3b4439bc2343020aa2d610e76bd3f3fa6ac15f56960cf369f3d",
+      "bytes": 975818,
       "external_urls": [
         "http://www.w3.org/1998/Math/MathML",
         "http://www.w3.org/1999/xhtml",
@@ -181,9 +179,9 @@
       "bytes": 10808,
       "external_urls": []
     },
-    "assets/lerc-DlSP4p9M.js": {
-      "sha256": "d7421b50f36f784a3a5f1489f7bc9c1f2262af73fe5e5cc3e34fbff473f0d43f",
-      "bytes": 96988,
+    "assets/lerc-CDGRfjms.js": {
+      "sha256": "432212c2b4b3e40c70bd5bee4f853dffb8c14c17ced961d9f1a092b393ae045e",
+      "bytes": 96991,
       "external_urls": []
     },
     "assets/lzw-D2FslT4L.js": {
@@ -211,9 +209,14 @@
       "bytes": 46608,
       "external_urls": []
     },
-    "assets/Panel-DX0ILk8Y.js": {
-      "sha256": "c1445448ac96b66187d2d4ad5e91245042243e85e4021a566ec102e3b8bc6754",
-      "bytes": 17298,
+    "assets/Panel-C8Lar1TT.js": {
+      "sha256": "1e403abafd7a894832285fbf5b673748d484138ee2e9c4782ee4b572c4b67412",
+      "bytes": 16992,
+      "external_urls": []
+    },
+    "assets/Pipeline-bPHkGehy.js": {
+      "sha256": "d1e60c7300c92cb1078caf43605d684e6bf37cd0b30798800ca7c34be2eca4e3",
+      "bytes": 15258,
       "external_urls": []
     },
     "assets/raw-A-vJRPpa.js": {
@@ -221,15 +224,32 @@
       "bytes": 115,
       "external_urls": []
     },
-    "assets/Search-D_cwkzNe.js": {
-      "sha256": "c9a18d25223c73b10ed38fda21335abf2298ab929887592a50b7b6f40708d6cd",
-      "bytes": 21367,
+    "assets/Search-CFoqLtvr.js": {
+      "sha256": "2985b1adb2e0ff2db3d20984cba2504fce0faa2fcd4b3bb6c6810fd03532b990",
+      "bytes": 16682,
       "external_urls": []
     },
-    "assets/Settings-Cpk0Cy-5.js": {
-      "sha256": "4d5de67018c75467bf51b7fa048eb83234e2516079a0da42b5fec0c6352cb2f4",
-      "bytes": 5405,
+    "assets/Settings-Cyy0dSvb.js": {
+      "sha256": "46714de6581defec31af6b75c5b19eaae270a0808c6700d954e5b1d652a73021",
+      "bytes": 5400,
       "external_urls": []
+    },
+    "assets/SpectralEvidence-YpUsXbbD.js": {
+      "sha256": "6042bc8d08a4892faa3953b568b9f0cc091e7c8e5f382dfd7af956efd5e52ae6",
+      "bytes": 5950,
+      "external_urls": []
+    },
+    "assets/Temporal--GKLWX8g.js": {
+      "sha256": "626fbc9692791d34f727702bb01fe461168f22dafa822e3c907c1060498b2586",
+      "bytes": 31490,
+      "external_urls": []
+    },
+    "assets/uploads-Dg4tdH_s.js": {
+      "sha256": "b0e105e58d0f7379b78b72131aecc0fd75d4db2050c0bb76cb73515073837872",
+      "bytes": 55774,
+      "external_urls": [
+        "https://github.com/geotiffjs/geotiff.js/issues"
+      ]
     },
     "assets/webimage-zQMH-_zR.js": {
       "sha256": "f3fbf99dd066b6c3bac3e71b6193f28c1fa7e887a22b1e8cf0349dbd04ac3567",
@@ -242,14 +262,14 @@
       "external_urls": []
     },
     "favicon.svg": {
-      "sha256": "9ce21a1f5a8334eb3fa43b34f2393916af5d3fc3ba5574af572335896e56f23b",
-      "bytes": 239,
+      "sha256": "bc0a5d4a8be42afb8dab9b5acbb5ee1fabb4713d08b90f3fa40dc8c6604f83ec",
+      "bytes": 649,
       "external_urls": [
         "http://www.w3.org/2000/svg"
       ]
     },
     "index.html": {
-      "sha256": "1bbd03bc524b6d2d67726f79d3e076e6beffc3885b85eee823f6db344a9464f9",
+      "sha256": "1f0804d245adcc5f9747b20aca523735f91376a95800e90127e3f71615ca4533",
       "bytes": 886,
       "external_urls": []
     }
