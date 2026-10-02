@@ -11,11 +11,12 @@ const Detect = lazy(() => import('@/screens/Detect').then((m) => ({ default: m.D
 const Discovery = lazy(() => import('@/screens/Discovery').then((m) => ({ default: m.Discovery })));
 const Fingerprints = lazy(() => import('@/screens/Fingerprints').then((m) => ({ default: m.Fingerprints })));
 const Briefing = lazy(() => import('@/screens/Briefing').then((m) => ({ default: m.Briefing })));
-const Roadmap = lazy(() => import('@/screens/Roadmap').then((m) => ({ default: m.Roadmap })));
+const Data = lazy(() => import('@/screens/Data').then((m) => ({ default: m.Data })));
+const Settings = lazy(() => import('@/screens/Settings').then((m) => ({ default: m.Settings })));
 
 const TITLES: Record<string, string> = {
   dashboard: 'Situation dashboard', search: 'Archive search', changes: 'Change review queue', detect: 'Object detection',
-  discovery: 'Discovery & clustering', fingerprints: 'Structural fingerprint gallery', briefing: 'Briefing mode', roadmap: 'Roadmap mockups',
+  discovery: 'Discovery & clustering', fingerprints: 'Structural fingerprint gallery', briefing: 'Briefing mode', data: 'Data management', settings: 'Settings',
 };
 
 export function App() {
@@ -37,7 +38,8 @@ export function App() {
           {name === 'detect' && <Detect />}
           {name === 'discovery' && <Discovery />}
           {name === 'fingerprints' && <Fingerprints seed={route.param} />}
-          {name === 'roadmap' && <Roadmap panel={route.param} />}
+          {name === 'data' && <Data />}
+          {name === 'settings' && <Settings />}
         </Suspense>
       </main>
     </div>

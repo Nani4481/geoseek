@@ -49,6 +49,9 @@ dev = ["pytest>=8.0", "httpx>=0.27"]
 # while geoseek is Apache-2.0 - so it is an OPTIONAL extra, imported only inside geoseek.models.yolo_obb. See
 # geoseek/staging/download_yolo.py for the licence discussion.
 detect = ["ultralytics>=8.4"]
+# Offline 3-D projection of the embeddings (scripts/compute_projection.py); BSD-3-Clause. Only needed to RECOMPUTE the projection - the
+# console reads the finished artifact.
+projection = ["umap-learn>=0.5"]
 
 [tool.setuptools.packages.find]
 where = ["src"]

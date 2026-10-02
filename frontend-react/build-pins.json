@@ -2,10 +2,19 @@
   "generated_by": "python -m geoseek.staging.react_build_pins",
   "note": "Hash pins for src/geoseek/analyst/web_react/ (the React console build). tests/test_frontend_offline.py fails if any file drifts from its pin, if a file is added or missing, or if a URL string is not classified in geoseek/staging/react_build_pins.py::ALLOWED_URLS.",
   "build_toolchain": {
-    "package_lock_sha256": "7caaeb8cffb0143ef9dba0c4a3bfa1a097e7440d42db7d0ccbc7b8d32af59a4d",
+    "package_lock_sha256": "8f374cc30614b6e43e699604218ab352c2c04e1bdd1f05b7886416273dd4611c",
     "versions": {
       "react": "19.3.0",
       "react-dom": "19.3.0",
+      "geotiff": "3.0.5",
+      "pako": "2.2.0",
+      "lerc": "3.0.0",
+      "zstddec": "0.2.0",
+      "quick-lru": "6.1.2",
+      "xml-utils": "1.10.2",
+      "web-worker": "1.5.0",
+      "parse-headers": "2.0.6",
+      "@petamoriken/float16": "3.9.3",
       "vite": "8.3.2",
       "typescript": "5.9.3",
       "@vitejs/plugin-react": "6.1.1",
@@ -55,45 +64,72 @@
       "note": "three.js console.warn text about a lighting-units change; string content only."
     },
     {
+      "url": "https://github.com/geotiffjs/geotiff.js/issues",
+      "kind": "diagnostic_message_text",
+      "note": "geotiff.js appends this to the text of an Error it throws when a 64-bit TIFF offset exceeds Number.MAX_SAFE_INTEGER (DataView64). String content only; nothing requests it. The console reads file headers only, via a Blob in this browser."
+    },
+    {
       "url": "https://leafletjs.com",
       "kind": "attribution_link",
       "note": "href inside Leaflet's default attribution prefix. The console builds every map with attributionControl:false, so the markup is never created or rendered, and the page CSP would block a navigation fetch anyway."
     }
   ],
   "files": {
-    "assets/Briefing-BHIMQb7q.js": {
-      "sha256": "f43352ca1ed4d0f0a6f97d4364bdbbc17e17d25f278fd705776556ee89ef73b5",
-      "bytes": 8873,
+    "assets/basedecoder-BuG7fe0q.js": {
+      "sha256": "75e9fcda3d7bba0fee379de7aaa82db388b3633bf632ce3acd081395f81a5c0b",
+      "bytes": 1291,
       "external_urls": []
     },
-    "assets/Changes-ByFKqcoZ.js": {
-      "sha256": "5eb4a28913b295bef94a00d30572ede2c7e636f401b3ea889b1279bcb921664c",
-      "bytes": 6721,
+    "assets/Briefing-D_IxWufK.js": {
+      "sha256": "7cfaf09d0eecd96511d8d7d6aef7bc656e2d14fa2c358d63065651ff67838a73",
+      "bytes": 8838,
       "external_urls": []
+    },
+    "assets/Changes-D-1NQuyF.js": {
+      "sha256": "9436ce5648cd2c3c8d14a92c25851ecbd0605b3e84f8c4ea20eab53861ae6731",
+      "bytes": 6741,
+      "external_urls": []
+    },
+    "assets/Data-Bjd9opt1.js": {
+      "sha256": "faf43a8efb58481d9730e1a4be6f5000ae4659a099bc4098134a19d73d2c5b03",
+      "bytes": 58304,
+      "external_urls": [
+        "https://github.com/geotiffjs/geotiff.js/issues"
+      ]
     },
     "assets/day-CDIlSrW5.jpg": {
       "sha256": "4fef0615b983a0880a311a6d2a6f33e2ad618d43f9e856bc673a7a948a5c4ba7",
       "bytes": 350413,
       "vendor_source": "vendor/earth/day.jpg"
     },
-    "assets/Detect-D1pgpCPT.js": {
-      "sha256": "e6f865318e951209ff41d8d4d9ef3306ce7bb3d7d2341d92c1db25918d00bb4d",
-      "bytes": 7040,
+    "assets/deflate-DocyS5zn.js": {
+      "sha256": "f538b57249dd73d6bcc358e03c5a640afb3df709a6617961d5a265a80d2d44cf",
+      "bytes": 179,
       "external_urls": []
     },
-    "assets/Discovery-DOijzYEO.js": {
-      "sha256": "bd38045c1e97fae01f34725c5e6b0a96e8c8b0b10600897ad286c4a8524af8bb",
-      "bytes": 4346,
+    "assets/Detect-CMHy_X99.js": {
+      "sha256": "4e40fe621833a60957c650aa44a46c05fbf5d81a7e4cb50168a9b66f43b904e8",
+      "bytes": 13136,
       "external_urls": []
     },
-    "assets/Fingerprints-TkGtxKg1.js": {
-      "sha256": "9615dfd3451be9c7b01c533d373c874b64622430f831eca6540de212ea0a493a",
-      "bytes": 6400,
+    "assets/Discovery-DI6QneoV.js": {
+      "sha256": "4d28d33be4abde0aac1514105b6b5e2fc49c8164aac8bd861ab0f589faf77597",
+      "bytes": 6157,
       "external_urls": []
     },
-    "assets/index-DfQJi4cX.js": {
-      "sha256": "c4e38060d038a66e971bed8bad43fd8b4b67c1168d8025dc675399a8dac5eb05",
-      "bytes": 934864,
+    "assets/Fingerprints-DwKQhy3u.js": {
+      "sha256": "9a449d9b35078161349aaf841e1e39123816bf2d4b68b4b50242a7b3d5450d1c",
+      "bytes": 6843,
+      "external_urls": []
+    },
+    "assets/index-BQmJK8lM.css": {
+      "sha256": "3ebcaa77af3705d72530f8fc2d4f5c8ff37d93c960d702ea1787054ca38d184c",
+      "bytes": 43114,
+      "external_urls": []
+    },
+    "assets/index-CnnQY9iu.js": {
+      "sha256": "f2a1fe6addf2c027852ba603d1144e6d29f11e329911386ba6b47549f2dd074a",
+      "bytes": 967443,
       "external_urls": [
         "http://www.w3.org/1998/Math/MathML",
         "http://www.w3.org/1999/xhtml",
@@ -104,11 +140,6 @@
         "https://leafletjs.com",
         "https://react.dev/errors/"
       ]
-    },
-    "assets/index-DN5aWSYp.css": {
-      "sha256": "f880b6208ad00a3b6df3d23d978d02801f57c93440b524f66ead445d6eb11057",
-      "bytes": 33385,
-      "external_urls": []
     },
     "assets/Inter-Bold-BOs3KVhN.woff2": {
       "sha256": "fa888127b6da015b65569f0351f3b5c391ad928904951f1c20e9f8462a8d95ea",
@@ -145,6 +176,21 @@
       "bytes": 94472,
       "vendor_source": "fonts/JetBrainsMono-SemiBold.woff2"
     },
+    "assets/jpeg-Di1AymDI.js": {
+      "sha256": "76bd2e7848513b5c0ea11d31b6758a46811e5b5399010416a7d1989f9d734247",
+      "bytes": 10808,
+      "external_urls": []
+    },
+    "assets/lerc-DlSP4p9M.js": {
+      "sha256": "d7421b50f36f784a3a5f1489f7bc9c1f2262af73fe5e5cc3e34fbff473f0d43f",
+      "bytes": 96988,
+      "external_urls": []
+    },
+    "assets/lzw-D2FslT4L.js": {
+      "sha256": "f4d18dd479e3914b6ede31544289bd88cc1f82551ea8dcbfd2e299bc16b787de",
+      "bytes": 1449,
+      "external_urls": []
+    },
     "assets/marker-icon-hN30_KVU.png": {
       "sha256": "574c3a5cca85f4114085b6841596d62f00d7c892c7b03f28cbfa301deb1dc437",
       "bytes": 1466,
@@ -155,19 +201,44 @@
       "bytes": 196613,
       "vendor_source": "vendor/earth/night.jpg"
     },
-    "assets/Panel-DrVCwH_W.js": {
-      "sha256": "63ad7fefc1306e30a51f9e364b95dc1ec302c7c12f4f2f14e09661bd864994cc",
-      "bytes": 14666,
+    "assets/packbits-DCimUQ1T.js": {
+      "sha256": "820940add27265cac2befc5627fefbfdd1b1f1ec3d53f7613457649d2fa5b131",
+      "bytes": 347,
       "external_urls": []
     },
-    "assets/Roadmap-CEF5pfxL.js": {
-      "sha256": "2e8220d82d432643aee263d16c1424e0832ea5bf3a83e7452d8172fd15825403",
-      "bytes": 12385,
+    "assets/pako.esm-Ch1S5qKo.js": {
+      "sha256": "0742841f9f082745767492b028750c30b056dd4f84b44b5f53be52a73eaf560d",
+      "bytes": 46608,
       "external_urls": []
     },
-    "assets/Search-BHjIBIew.js": {
-      "sha256": "f6fa29af7621ef580f53d2258e0130f7304cee299170e80e98020832bff4b9e4",
-      "bytes": 6958,
+    "assets/Panel-DX0ILk8Y.js": {
+      "sha256": "c1445448ac96b66187d2d4ad5e91245042243e85e4021a566ec102e3b8bc6754",
+      "bytes": 17298,
+      "external_urls": []
+    },
+    "assets/raw-A-vJRPpa.js": {
+      "sha256": "e44d3f26ae64a4ad2db183730d3bb074307db80200cda79831f234f1e35cdbd5",
+      "bytes": 115,
+      "external_urls": []
+    },
+    "assets/Search-D_cwkzNe.js": {
+      "sha256": "c9a18d25223c73b10ed38fda21335abf2298ab929887592a50b7b6f40708d6cd",
+      "bytes": 21367,
+      "external_urls": []
+    },
+    "assets/Settings-Cpk0Cy-5.js": {
+      "sha256": "4d5de67018c75467bf51b7fa048eb83234e2516079a0da42b5fec0c6352cb2f4",
+      "bytes": 5405,
+      "external_urls": []
+    },
+    "assets/webimage-zQMH-_zR.js": {
+      "sha256": "f3fbf99dd066b6c3bac3e71b6193f28c1fa7e887a22b1e8cf0349dbd04ac3567",
+      "bytes": 936,
+      "external_urls": []
+    },
+    "assets/zstd-i4Jwubnx.js": {
+      "sha256": "5c6276c4367b135b1e9a494a802c84af948e17e9a59e41084b9e98f266cb84e7",
+      "bytes": 81026,
       "external_urls": []
     },
     "favicon.svg": {
@@ -178,7 +249,7 @@
       ]
     },
     "index.html": {
-      "sha256": "ec54dd4f4a9ae375cb859bfc9712ca0dbc8ebf6146c48ddb977d78074f8aa481",
+      "sha256": "1bbd03bc524b6d2d67726f79d3e076e6beffc3885b85eee823f6db344a9464f9",
       "bytes": 886,
       "external_urls": []
     }

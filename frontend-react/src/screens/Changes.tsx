@@ -56,8 +56,8 @@ export function Changes({ id }: { id: string | null }) {
 
   return (
     <div className="changes-grid">
-      <div className="col">
-        <Panel title="Review queue" tier="live" actions={<button className="btn sm" onClick={doExport} title="GeoJSON for everything matching the filters">⇩ Export filtered</button>}>
+      <div className="col queue-col">
+        <Panel title="Review queue" grow stack actions={<button className="btn sm" onClick={doExport} title="GeoJSON for everything matching the filters">⇩ Export filtered</button>}>
           <div className="filters" style={{ marginBottom: 10 }}>
             <label className="field">Change type
               <select className="input" value={changeType} onChange={(e) => setChangeType(e.target.value)}>
@@ -125,14 +125,14 @@ export function Changes({ id }: { id: string | null }) {
       </div>
 
       <div className="col">
-        {!active ? <Panel title="Candidate" tier="live"><div className="empty">Select a candidate from the queue.</div></Panel> : (
+        {!active ? <Panel title="Candidate"><div className="empty">Select a candidate from the queue.</div></Panel> : (
           <>
-            <TemporalPanel tl={bundle.timeline} active={pair.active} onPick={pair.setActive} error={bundle.error} />
+            <TemporalPanel tl={bundle.timeline} pair={pair} error={bundle.error} />
             <div className="wb-grid">
               <ComparePanel id={active} pair={pair} tl={bundle.timeline} />
               <ConfidencePanel d={bundle.detail} error={bundle.error} />
               <DetailsPanel d={bundle.detail} error={bundle.error} />
-              <DecisionPanel d={bundle.detail} onChanged={() => { bundle.reload(); list.reload(); }} />
+              <DecisionPanel d={bundle.detail} tl={bundle.timeline} before={pair.before} after={pair.active} onChanged={() => { bundle.reload(); list.reload(); }} />
             </div>
             <LocationPanel d={bundle.detail} />
           </>

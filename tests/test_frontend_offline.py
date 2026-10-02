@@ -404,22 +404,29 @@ def test_react_index_html_references_only_local_assets():
         assert r.startswith("/react/") or r.startswith("#"), f"index.html references a non-local asset: {r}"
 
 
-def test_react_app_source_contains_no_external_url_and_no_tile_layer():
-    """Source-level guard, stricter than the build scan: the app's own code has NO external URL at all (no allowlist),
-    and never creates a Leaflet tile layer (there are no tiles offline)."""
+def test_react_app_source_contains_no_external_url_and_only_the_local_basemap_tile_layer():
+    """Source-level guard, stricter than the build scan: the app's own code has NO external URL at all (no allowlist).
+    The one Leaflet tile layer that may exist is the local basemap: created once, in GeoMap.tsx, from a root-relative
+    ``/ui/basemap/{z}/{x}/{y}`` template served by this same process (no scheme, no host, no tile service)."""
     assert REACT_SRC.is_dir(), f"{REACT_SRC} missing"
     bad: list[str] = []
+    tile_layers: list[str] = []
     for p in sorted(REACT_SRC.rglob("*")):
         if not p.is_file() or p.suffix.lower() not in {".ts", ".tsx", ".css", ".html", ".json"}:
             continue
         text = p.read_text(encoding="utf-8", errors="replace")
         for bucket, hits in rbp.external_references(text).items():
             bad += [f"{p.relative_to(REACT_SRC)}: {bucket}: {h}" for h in hits]
-        if re.search(r"\btileLayer\s*\(", text):
-            bad.append(f"{p.relative_to(REACT_SRC)}: creates a Leaflet tile layer")
+        for m in re.finditer(r"\btileLayer\s*\(\s*([^,)]*)", text):
+            tile_layers.append(f"{p.relative_to(REACT_SRC).as_posix()}: {m.group(1).strip()}")
     index_html = (rbp.FRONTEND_DIR / "index.html").read_text(encoding="utf-8")
     for bucket, hits in rbp.external_references(index_html).items():
         bad += [f"index.html: {bucket}: {h}" for h in hits]
+    assert len(tile_layers) == 1, f"expected exactly one tile layer (the local basemap), found: {tile_layers}"
+    where, template = tile_layers[0].split(": ", 1)
+    same_origin = re.fullmatch(r"`/ui/basemap/\{z\}/\{x\}/\{y\}(\$\{[^}]*\})?`", template)
+    if where != "components/GeoMap.tsx" or not same_origin:
+        bad.append(f"the tile layer is not the same-origin basemap: {tile_layers[0]}")
     assert not bad, "\n".join(bad)
 
 
@@ -431,6 +438,8 @@ def test_react_build_toolchain_is_locked():
     for section in ("dependencies", "devDependencies"):
         for name, ver in pkg.get(section, {}).items():
             assert re.fullmatch(r"\d+\.\d+\.\d+", ver), f"{name} is not exact-pinned: {ver!r}"
-    assert set(pkg.get("dependencies", {})) == {"react", "react-dom"}, "runtime dependencies changed - re-review the offline surface"
+    # geotiff (MIT) is the one addition to react / react-dom: it parses GeoTIFF headers in the browser for the Data screen. It is
+    # bundled into the build (no CDN, no worker, no WebAssembly is instantiated: only headers are read, never pixels).
+    assert set(pkg.get("dependencies", {})) == {"react", "react-dom", "geotiff"}, "runtime dependencies changed - re-review the offline surface"
     assert _react_pins()["build_toolchain"]["package_lock_sha256"] == rbp.sha256_file(lock), (
         "package-lock.json changed since the build was pinned - rebuild and re-pin")

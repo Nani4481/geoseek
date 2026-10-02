@@ -1,8 +1,10 @@
 # React console (`/react/`)
 
 A **parallel** analyst console built with Vite + React + TypeScript, styled as a dark-navy dashboard (icon rail, 3D globe
-hero with region pins, stat cards, alert feed, temporal strip, before/after slider, change-details and confidence
-panels). It is served by the same FastAPI process as the existing frontend and makes **zero external requests**.
+hero with region pins, stat cards, alert feed, animated temporal evidence, before/after slider, change-details and confidence
+panels, threat rings, tactical dossier, embedding-space view, spectral evidence, raster header check). It is served by the
+same FastAPI process as the existing frontend and makes **zero external requests**. Every screen is a working feature: there
+is no mock-up, roadmap or "not implemented" chrome anywhere.
 
 * Existing frontend: `/app/` — **unchanged** (nothing under `src/geoseek/analyst/web/` is modified; it is only *read*,
   see §6).
@@ -13,7 +15,7 @@ panels). It is served by the same FastAPI process as the existing frontend and m
 | | |
 |---|---|
 | Toolchain used | Node **v24.14.0**, npm **11.9.0**, Python 3.11.16 (the `geoseek` conda env) |
-| Runtime dependencies | `react` 19.3.0, `react-dom` 19.3.0 — nothing else (no router, state, chart, CSS or map library) |
+| Runtime dependencies | `react` 19.3.0, `react-dom` 19.3.0 and `geotiff` 3.0.5 (MIT; used only to parse GeoTIFF *headers* for the Data screen) with its own eight small runtime dependencies, all bundled into the build — no router, state, chart, CSS or map library |
 | Build dependencies | `vite` 8.3.2, `@vitejs/plugin-react` 6.1.1, `typescript` 5.9.3, `@types/react` / `@types/react-dom` 19.3.0, `@types/leaflet` 1.9.22 |
 | Pinning | exact versions in `package.json` + `package-lock.json` (a test asserts exact pins, the two-package runtime set, and that the lockfile matches the pinned build) |
 | Reused, already-vendored libraries | three.js, OrbitControls, Leaflet 1.9.4, the Blue Marble textures and Inter / JetBrains Mono fonts — aliased straight from `analyst/web/vendor` and `analyst/web/fonts`, so the shipped bytes are the already-hash-pinned ones |
@@ -24,6 +26,7 @@ cd frontend-react
 npm ci                     # exact versions from package-lock.json
 npm run build              # tsc --noEmit && vite build  ->  ../src/geoseek/analyst/web_react/
 npm run build:pinned       # build, then re-pin:  python -m geoseek.staging.react_build_pins
+node tools/selftest-lib.mjs  # unit checks of src/lib (also run from pytest, see §5)
 npm run dev                # Vite dev server on :5173, proxying the API to 127.0.0.1:8000
 npm run verify:offline     # runtime network audit against a running backend (see §4)
 ```
@@ -36,54 +39,106 @@ no npm, no network — and the committed bytes are exactly what the tests pin. R
 then re-pin (`npm run build:pinned`). `.gitattributes` marks `web_react/**` as `-text` so no checkout converts line endings
 and breaks the hashes; `node_modules/` is git- and docker-ignored.
 
-## 2. The three tiers — what is live, what is surfaced, what is a mockup
+## 2. What the console does
 
-Every screen section is a `Panel` that carries its tier **in its own header**, and the rail marks each destination:
-**green dot = live**, **cyan dot = live UI over existing backend**, **dashed amber marker = roadmap**.
+Rail: **Dashboard · Search · Changes · Detect · Discover · Similar · Brief · Data · Settings**. Every panel has the same
+treatment (title + optional actions); a feature is either wired to the backend or it is not in the product.
 
-| Tier | Badge on the panel | Dashed frame? | Features |
-|---|---|---|---|
-| **1 — LIVE** (wired to the real API) | `● LIVE` | no | see below |
-| **2 — LIVE UI · EXISTING BACKEND** | `● LIVE UI · EXISTING BACKEND` | no | see below |
-| **3 — ROADMAP — NOT IMPLEMENTED** | amber `ROADMAP — NOT IMPLEMENTED` pill + a "requires …" strip inside the panel chrome + diagonal watermark | **yes**, amber, hatched header | see below |
-
-### Tier 1 — live
-
-| Feature | Screen | Backend |
+| Feature | Screen | Backend (all read-only unless noted) |
 |---|---|---|
-| Semantic text search, ranked, with date / cloud / box filters; measured latency per query | Search | `GET /search/text` |
-| Find more like this — from a result tile, or by clicking any map point | Search | `POST /search/image`, `GET /discovery/similar` |
-| Bounding-box spatial filter — drag a box on the map, or pick a region | Search, Changes | `bbox` param on the above and on `GET /candidates`; `GET /regions` |
-| Change candidates: filterable queue, before/after slider (mouse, touch, arrow keys), spectral type + index anomalies, confidence ring with its breakdown and five evidence gates, SAR-corroboration status | Changes, Dashboard | `GET /candidates`, `GET /candidates/{id}`, `GET /candidates/{id}/imagery` |
-| Object detection: stored oriented boxes drawn over the scene, class toggles, hover details, measured accuracy and the backend's own caveats | Detect | `GET /detect/*` |
-| Discovery / clustering: 19-cluster table, cluster map, seed explorer | Discover | `GET /discovery/clusters`, `/discovery/cluster-map.png`, `/candidates/{id}/similar` |
-| Review queue: confirm / reject / reopen with a note, append-only audit trail, GeoJSON export (one candidate or the whole filtered set) | Changes | `POST /candidates/{id}/decision`, `GET /audit`, `POST /export` |
-| Dashboard stat cards, alert feed, globe pins | Dashboard | `GET /ui/metrics`, `/ui/latency`, `/notifications`, `/restricted-zones`, `/candidates` |
+| Situation dashboard: tiles / scenes / regions / sensors / change candidates / analyst decisions / search latency, findings by region and by change type, globe, alert feed | Dashboard | `GET /ui/metrics`, `/ui/latency`, `/notifications`, `/restricted-zones`, `/candidates` |
+| **Animated temporal evidence** (§2.1) | Changes, Dashboard | `GET /ui/candidates/{id}/timeline`, `/candidates/{id}/imagery` |
+| Candidate workbench: filterable queue, before/after slider, change mask, spectral type, confidence ring and five evidence gates, SAR status, bookmark, review (confirm / reject / reopen, append-only audit trail), GeoJSON export | Changes | `GET /candidates`, `/candidates/{id}`; `POST /candidates/{id}/decision`, `POST /export` (the existing write paths) |
+| **Tactical dossier export** (§2.2) | Changes → *Dossier* | `GET /ui/candidates/{id}/dossier` + the candidate record |
+| **Threat buffer rings** (§2.3) | Changes (candidate map), Detect (detection map) | `GET /ui/threat-rings`, `/ui/detections/{obs}/points` |
+| Semantic search with date / cloud / box filters, more-like-this, click-the-map search | Search | `GET /search/text`, `POST /search/image`, `GET /discovery/similar` |
+| **3-D vector-space visualiser** (§2.4) | Search (beside the map) | `GET /ui/projection`, `/ui/projection/lookup` |
+| **Spectral evidence** (§2.5) | Search (*Evidence* on a result) | `GET /ui/tiles/{id}/spectral`, `/ui/tiles/{id}/spectral/{index}.png` |
+| Object detection: stored oriented boxes over the scene, class toggles, measured accuracy and the backend's caveats | Detect | `GET /detect/*` |
+| Discovery / clustering, structural-similarity gallery, briefing mode (keyframe tour, annotation, spotlight) | Discover, Similar, Brief | `GET /discovery/*`, `/candidates/{id}/similar`, `/ui/tiles` |
+| **Ad-hoc raster header check** (§2.6) and archive inventory | Data | none for the check (it runs in the browser); `GET /ui/metrics`, `/regions` for the inventory |
+| **System / model performance**: change-model F1 / precision / recall / IoU and detector AP50 (DOTA val + xView transfer) with their caveats; system status; analyst profile | Settings | `GET /ui/metrics`, `/health` |
 
-### Tier 2 — live UI over backend computation that already existed
+The model-evaluation figures live under **Settings → System / model performance**, not on the analyst's home screen: they are a
+real strength of the product but an operator does not need a benchmark on their situation screen.
 
-| Feature | What is rendered | Where it comes from |
-|---|---|---|
-| **Temporal timeline + onset slider** | The catalog's real acquisition dates, placed at their true calendar position (they are uneven); a dashed bracket for the window in which the change must have occurred; the first date that shows it; per-interval changed/stable with probability; persistence as **"N of M observations"** (e.g. `4 of 5`). Only dates that exist in the catalog are drawn. | `GET /ui/candidates/{id}/timeline`, a read-only projection of the change pipeline's own trajectory (`geoseek.temporal.persistence`) |
-| **Structural fingerprint gallery** | Visually similar tiles, with a similarity comparison panel along only the axes the catalog can measure: appearance (exact vector similarity), **proximity** (great-circle km between tile centres), **footprint** (tile ground area from catalog geometry), cluster membership, cloud cover. **There is no thermal axis** — the system has no thermal band. | `GET /candidates/{id}/similar`, `/discovery/similar`, `GET /ui/tiles` |
-| **Briefing mode** | Full-screen; control panels hidden on demand; high-contrast theme; pointer spotlight; a keyframe camera tour that arcs between sites (bookmarked sites, or the featured findings the backend itself highlights); canvas annotation (pen, arrow, box, undo, clear — kept per site). **Pure frontend.** | none (bookmarks live in the viewer's `localStorage`, guarded) |
+### 2.1 Animated temporal evidence
 
-### Tier 3 — roadmap mockups (non-functional, placeholder content)
+The playhead sweeps the **real** acquisition dates on load and on *Play*; nodes light as it passes; the "change occurred in this
+window" bracket is drawn in by the playhead; the before/after imagery cross-fades by playhead position. There are *Play / Pause /
+Replay*, a scrub range input and mouse-drag scrubbing on the timeline. Under `prefers-reduced-motion` there is no automatic
+sweep and no blending: *Play* steps date by date. The animation is presentation only — the time axis is the real, uneven
+calendar (`src/lib/timelapse.ts`: positions proportional to elapsed days), only catalogued dates are drawn, and any
+interaction with the slider or the date pickers cancels a sweep that has not started yet. Playback state lives outside React
+(`hooks/usePlayback.ts`) so a 60 fps playhead does not re-render whole screens.
 
-| Panel | Badge note (shown in the panel chrome) | What the mockup does |
-|---|---|---|
-| Tactical dossier export (PDF preview) | requires MGRS conversion + STAC sun-elevation/off-nadir capture at ingest | Static paper layout with placeholder MGRS/UTM, before/after/diff chips, sensor-provenance block, sign-off block. The export button is disabled. |
-| Drag-and-drop ad-hoc raster ingestion | requires runtime single-scene ingest path | Dropzone that **reads nothing and uploads nothing** (it says so); header-parse badges all read "— not run". |
-| 3D vector-space visualizer | requires offline-precomputed UMAP projection | three.js scatter of **synthetic** random blobs, labelled as such. No projection exists in the archive, so none is shown. |
-| Threat buffer rings | requires an infrastructure feature layer to intersect against | Concentric circles at fixed illustrative radii on the offline map; feature counts read "—". |
-| Attention / XAI overlay | requires ViT-L/14 migration — current ViT-B/32 resolves to **~366 m** patches (computed live, see §5) | Hand-painted heat blobs on a patch grid, labelled as concept only. |
+### 2.2 Tactical dossier
+
+*Dossier* on the workbench opens a paper-style sheet built only from the candidate's own record: coordinates with **MGRS and UTM
+computed offline** (`src/lib/geo.ts`, Krüger series; no dependency), region, before / after / difference chips for the dates
+selected in the workbench, change type, confidence, persistence ("N of M"), acquisition dates, the gate trace, **sensor provenance**
+(platform, acquisition date, cloud cover of the nearest catalogued tile, ground resolution, processing baseline, scene id, CRS),
+the analyst decision and its append-only audit trail. Export is the browser's own print-to-PDF: a print stylesheet shows just the
+sheet (`@page` A4) and the button calls `window.print()`. No PDF service, nothing uploaded.
+
+**Sun elevation and off-nadir angle are not shown, because the catalog does not hold them.** The endpoint scans every catalogued
+metadata blob (scene, observation, collection, tile flags) for `sun_elevation` / `sun_azimuth` / `off_nadir` and reports a field only
+if it finds a number; for the current archive none exists (checked across all JSON columns of `tiles.sqlite`: 0 matches), so the
+dossier omits them entirely rather than printing placeholders. To capture them, the ingest step would need to copy the standard
+STAC `view:` properties from the source item into the scene's `metadata` (`view:sun_elevation`, `view:sun_azimuth`,
+`view:off_nadir`, where the provider's item carries them) - the catalogued scene metadata currently holds only the
+footprint source, acquisition-time precision and BOA-offset notes (Sentinel-2) and `stac_item` / orbit fields (Sentinel-1). The dossier will pick them up unchanged once they are in the catalog.
+
+### 2.3 Threat buffer rings
+
+Right-click a candidate (Changes) or a detection (Detect): concentric rings at configurable radii (default 500 m / 1 / 2.5 / 5 km, up
+to eight, 10 m – 200 km, validated in the UI and on the server) are drawn on the vendored Leaflet, and everything inside each ring is
+listed with its **exact distance**. The layers intersected are the ones the system actually has: the restricted zones that produce the
+restricted-zone alerts (and their names), every change-candidate footprint, every stored object detection and the watch areas. There
+is **no road / building / infrastructure layer in the catalog**, so none is searched or implied; the response lists each layer and
+how many features it holds. Distances are point-to-footprint geodesic distances in an azimuthal-equidistant projection centred on
+the point (0 m = the footprint contains it), checked in `tests/test_threat_rings.py` against an independent `pyproj.Geod`.
+
+### 2.4 3-D vector-space visualiser
+
+`scripts/compute_projection.py` reduces the tile embeddings with PCA-50 and UMAP (3-D, cosine, seed 42) **offline** and writes
+`data/discovery/projection_3d.npz` + `.meta.json` (and a provenance record). The console draws it with the vendored three.js,
+coloured by region or cluster; **text-search results are highlighted** in the scatter (looked up exactly, so they show even if they
+fall outside the drawn sample); **clicking a point pans the Search map to that tile**. 105,245 points would render, but the console
+draws a deterministic **20,000-point uniform sample** and says so in the caption (`20,000-point sample of 105,245 tiles`); a stale
+projection (index has grown since) is flagged. UMAP preserves neighbourhoods, not distances - the caption says that too.
+UMAP is an optional extra (`pip install umap-learn`); the console only reads the finished artifact.
+
+### 2.5 Spectral evidence (replaces the "attention overlay" idea)
+
+There is deliberately **no attention heat-map**: ViT-B/32 sees a 224 px input as a 7 × 7 grid, so over a 2.56 km tile one patch is
+~366 m — far too coarse to localise a structure or a riverbank, and an overlay implying otherwise would be false. Instead *Evidence*
+on a search result shows **per-pixel NDWI, NDBI and NDVI at the native 10 m**, computed from the B03/B04/B08/B11 bands (NIR and SWIR
+the retrieval model never sees) with the **same functions and valid-pixel mask as the catalog's per-tile spectral descriptor** (the
+statistics shown equal the stored `tile_spectral` row to 1e-6, asserted on real tiles). Each index is toggleable with a legend drawn from
+the same colour stops as the PNG, mean / p10 / p50 / p90, and the descriptor's surface-class fractions with their rules. For a text
+query the indices that bear on its words are pre-selected and flagged (water → NDWI; building / urban / road → NDBI; vegetation → NDVI;
+bare / dry / sand → NDVI + NDBI), with the matched terms and reason shown. A tile without NIR/SWIR on disk (Maxar, Sentinel-1) answers
+404 "not staged" - no overlay is fabricated. The patch size quoted in the caveat is computed from the tile's own footprint.
+
+### 2.6 Ad-hoc raster header check
+
+On *Data*, drop (or choose) up to six GeoTIFFs. `geotiff.js` (bundled) reads **only the header** in the browser (for a 160 MB staged
+band: ~0.2 s, no pixel decoder is even fetched): size, bands, sample type, CRS/EPSG, the affine transform, native bounds, lon/lat
+bounds (WGS 84, Web Mercator and WGS 84 UTM invert offline; other CRSs are reported as "not bundled", never guessed), pixel size,
+nodata, layout, and an acquisition timestamp **only if the header carries one** (a GDAL metadata item such as `ACQUISITION_DATE`; the
+TIFF `DateTime` tag is shown separately as "when the file was written"). The validation badge is the real result: CRS present,
+geotransform present, north-up, square pixels, footprint placeable. After validation the panel says plainly what the file contains,
+which archive regions it overlaps (from `/regions`) and that **nothing was ingested** - staging is done through the ingest pipeline
+(`python -m geoseek.ingest.pipeline ingest <scene_dir>` with per-band GeoTIFFs). There is no upload and no progress bar. Every field
+is checked against rasterio in `tests/test_react_lib_selftest.py`.
 
 ### Deliberately not built
 
-No UI exists — not as a mockup, a disabled button or a menu entry — for **InSAR / interferometric fringes** (the system
-ingests Sentinel-1 **GRD**; interferometric phase is not recoverable from GRD) or for **change-rate / velocity /
-completion-horizon estimation** (the catalog holds five acquisition dates, over an uneven 7-year span, which cannot support
-a defensible rate estimate). An end-to-end test asserts none of those terms appears on any of the 11 content routes.
+No UI exists for **InSAR / interferometric fringes** (the system ingests Sentinel-1 **GRD**; interferometric phase is not
+recoverable from GRD) or for **change-rate / velocity / completion-horizon estimation** (the catalog holds five acquisition dates,
+over an uneven 7-year span, which cannot support a defensible rate estimate). An end-to-end test asserts none of those terms appears
+on any content route.
 
 ## 3. Where every displayed number comes from
 
@@ -95,21 +150,27 @@ endpoint fails, and (for the figures with a measurement behind them) carries its
 | Tiles indexed | tile count (+ searchable vector count) | `/ui/metrics` → `repo.count_tiles()`, engine vector count |
 | Scenes / Regions / Sensors | scene count; region count; distinct sensors | `/ui/metrics` → `repo.list_scenes()`, `list_regions()`, distinct `Collection.sensor` |
 | Search latency | median of 5 fixed probe queries, p95 beside it, "measured now" | `/ui/latency` → engine-reported `latency_ms` after a discarded warm-up; cached 30 s |
-| Change detection F1 | held-out OSCD test F1 at the deployed 0.80 operating point, with P / R | `/ui/metrics` → `model_card.eval.test_at_precision_favouring` embedded in the change-model checkpoint |
-| Object detection AP50 | **0.845** small-vehicle, **0.854** ground vehicles (DOTA official val, 458 images, with bootstrap CI) | `/ui/metrics` → `data/detect_eval/eval_results.json#val_full_image_v15` |
-| Change candidates | candidate count, analyst-decision count | `/ui/metrics` |
+| Change candidates / Analyst decisions | candidate count; decision-row count | `/ui/metrics` |
+| *(Settings)* Change detection F1, P, R, IoU | held-out OSCD test figures at the deployed 0.80 operating point | `/ui/metrics` → `model_card.eval.test_at_precision_favouring` embedded in the change-model checkpoint |
+| *(Settings)* Object detection AP50 | **0.845** small-vehicle, **0.854** ground vehicles (DOTA official val, 458 images, with bootstrap CI), xView transfer 0.531 / 0.315 | `/ui/metrics` → `data/detect_eval/eval_results.json#val_full_image_v15` |
+| Threat-ring distances and counts | per request | `/ui/threat-rings` (geometry computed per request) |
+| Dossier coordinates | MGRS / UTM of the candidate centroid | computed in the browser; cross-checked against pyproj and the catalog's own Sentinel-2 tile names |
+| Dossier sensor block | platform, acquisition date, cloud cover, resolution, baseline, scene | `/ui/candidates/{id}/dossier` (catalog) |
+| Embedding-space counts | points drawn / points in the projection / run time / power source | `/ui/projection` (the artifact's own metadata) |
+| Spectral statistics and legends | index statistics, class fractions, colour stops | `/ui/tiles/{id}/spectral` (computed from the staged bands) |
+| Raster header fields | everything on the Data card | parsed from the dropped file in the browser |
 | Findings by region / by change type | candidates per region (point-in-box) and per change type, as bar lists on the Dashboard | `/ui/metrics` → `findings_by_region`, `findings_by_type` |
 | Every confidence / persistence / area figure | per candidate | `/candidates`, `/candidates/{id}`, `/ui/candidates/{id}/timeline` |
 
-Both AP50 figures were checked against `docs/EVALUATION_REPORT.md` §15 (0.8454 and 0.8536) and against the stored eval JSON.
+The AP50 figures were checked against `docs/EVALUATION_REPORT.md` §15 (0.8454 and 0.8536) and against the stored eval JSON.
 
-### Things the numbers say that a mockup would not
+### Things the numbers say
 
 * **"Object Detection 53.1%" in the reference mockup is not an object-detection number.** 53.1 % is the change-detection
   *validation precision at the 0.80 threshold* (report §8.1). The card is wired to the measured AP50 instead.
 * **The DOTA-val AP50 does not transfer everywhere.** On the independent xView test half the same detector scores
   **0.531** (small-vehicle) and **0.315** (large-vehicle); on the staged Maxar tiles it finds aircraft and large objects but
-  only a few percent of visible cars. The Dashboard card prints the xView figures under the DOTA one, and the Detect screen
+  only a few percent of visible cars. Settings prints the xView figures beside the DOTA one, and the Detect screen
   shows the backend's own caveat text.
 * **All 841 change candidates are in one region** (the Ayodhya AOI): the change pipeline has only been run there, so the
   other 11 regions show `0` findings. The numbers are real; the console does not dress them up.
@@ -147,10 +208,16 @@ Four independent layers, strongest first.
    | a stray extra file left in the build directory | `test_react_pinned_file_set_equals_build_output` (and its own hash-pin test) |
    | thumbnail 404 fix reverted | 3 of the 6 tests in `test_tile_thumbnail_missing.py` |
 
-   The only URL strings in the shipped bundle are eight distinct inert ones (nine file-level occurrences), each classified:
-   five W3C XML-namespace identifiers (`createElementNS`), a React error-doc string, a three.js console-warning string, and
-   Leaflet's attribution `href` (never rendered: every map is created with `attributionControl: false`). None is ever
-   dereferenced.
+   The only URL strings in the shipped bundle are nine distinct inert ones (ten file-level occurrences), each classified:
+   five W3C XML-namespace identifiers (`createElementNS`), a React error-doc string, a three.js console-warning string, a
+   geotiff.js error-message string (the 64-bit-offset error text), and Leaflet's attribution `href` (never rendered: every map
+   is created with `attributionControl: false`). None is ever dereferenced.
+
+   **geotiff.js was vetted before it was added:** it is bundled as-is (no CDN, no runtime download); only headers are read, so no
+   decoder runs - the LERC / ZSTD decoder chunks contain WebAssembly but are lazily imported on a pixel read, which this console
+   never does, and the page CSP (no `wasm-unsafe-eval`) would refuse to instantiate it anyway. The e2e asserts none of the decoder
+   chunks is ever requested. The lockfile hash and the versions of `geotiff` and its eight dependencies are pinned in
+   `build-pins.json`.
 3. **Runtime request log** — `frontend-react/tools/verify-offline.mjs` drives headless Chrome over the DevTools protocol (no
    npm dependency), loads the console from the running backend, visits every route, and records every request. Result on
    the final build: **0 external requests** (about 300 requests across a full interaction run, 80–95 for a plain visit of every
@@ -171,7 +238,12 @@ polygons; candidate imagery is served by the backend. The Earth globe uses the v
 | `tests/test_frontend_offline.py` (extended) | the React rules in §4 layer 2, alongside the existing vendor rules |
 | `tests/test_react_console.py` | `/react/` is served and `/app/` is unchanged; timeline roles and "N of M" logic (persistent / transient / recent / none); footprints from catalog geometry; latency probe uses engine-measured times and the cache; metric values derive from their sources, and a missing source yields "unavailable", never a number |
 | `tests/test_tile_thumbnail_missing.py` | a catalogued tile whose band rasters are not staged is a **404 with a reason**, an unknown tile stays 404, a staged tile still renders a JPEG, and a present-but-corrupt raster is *not* disguised as 404 (it stays a 500). Mutation-checked: 3 of its 6 tests fail with the fix reverted |
-| `frontend-react/tools/e2e-tier1.mjs` | 21 steps in headless Chrome with **real mouse and keyboard input** (assertions poll for the expected UI state rather than sleeping; 5 consecutive full passes on the final build): stat cards and findings-by-region/type equal the API; text search, more-like-this, region box, drag-drawn box, map-point click; queue filter equals `/candidates`; slider drag and arrow keys; timeline pick and change mask; confirm → append-only audit row → reopen → reject; GeoJSON export counts; detection boxes and class toggle; discovery; fingerprint axes; briefing tour / pen / undo / spotlight / contrast / hide / Esc; all five roadmap badges; scope check; offline pill |
+| `tests/test_threat_rings.py` | ring geometry against an independent `pyproj.Geod` (distances, ring membership, zone containment, exclusion, truncation, cumulative totals, detections, watch areas, HTTP validation) |
+| `tests/test_dossier.py` | sensor provenance comes from the catalog; sun elevation / off-nadir appear **only** when catalogued (booleans and text are never mistaken for angles) |
+| `tests/test_projection.py` | the projection artifact: honest sampling (deterministic, both counts reported, rows stay aligned), exact lookups, staleness, unavailable-state |
+| `tests/test_spectral_evidence.py` | query → index relevance; colours land exactly on the legend stops; PNG pixels equal the index values at 10 m with clouds transparent; statistics equal the descriptor; unusable / unstaged tiles; **statistics equal the stored `tile_spectral` rows of real catalogued tiles** |
+| `tests/test_react_lib_selftest.py` | runs `src/lib` under Node: timelapse geometry; **UTM vs pyproj to < 1 mm** (600 random points + landmarks) and round-trip; MGRS squares vs the catalog's own Sentinel-2 tile names; **GeoTIFF header parse vs rasterio** over UTM N/S, WGS 84, Web Mercator, rotated, non-square, un-georeferenced, un-invertible CRS, tagged and garbage files, plus a real 160 MB staged band |
+| `frontend-react/tools/e2e-console.mjs` | 42 steps in headless Chrome with **real mouse and keyboard input** (assertions poll for the expected UI state rather than sleeping): operational stat cards equal the API and no model metric is on the dashboard; **no tier / roadmap chrome on any route**; Settings metrics equal the API; **timeline animation** (every sampled frame: playhead monotonic, nodes lit iff passed, bracket drawn progressively, layer opacities equal the cross-fade function, only catalog dates, pause freezes, scrub lands on the right date, reduced-motion steps without blending); **dossier** (MGRS equals the catalog's tile, UTM, chips and dates, gate / audit row counts, sensor block equals the API, no placeholder wording, print stylesheet, a real PDF from `Page.printToPDF`); **threat rings** (right-click via real events; chips, rows and distances equal `/ui/threat-rings`; centre not self-listed; radii validated / applied / cleared; detection map); **vector space** (20,000 of N points with caption, colour by cluster, search hits highlighted, click pans the map to that tile's footprint); **spectral evidence** (relevant index per query, stats equal the API, overlay pixels all on the legend ramp, toggles, opacity, 404 for unstaged); **Data** (known-ground-truth GeoTIFFs: drop and file-chooser, valid / no-CRS / junk, nothing-ingested note, no progress element, a real 160 MB band, no decoder fetched); text search, more-like-this, region box, map clicks; queue filter; slider; confirm → audit row → reopen → reject; exports; detection boxes; discovery; fingerprints; briefing; scope check; offline pill |
 
 Confirm / reject / reopen append **permanent** audit rows, so the e2e script refuses to write unless `--allow-writes` is
 given and must be pointed at a **scratch** backend:
@@ -179,7 +251,7 @@ given and must be pointed at a **scratch** backend:
 ```bash
 cp data/index/tiles.sqlite /tmp/scratch.sqlite
 DATABASE_URL=sqlite:////tmp/scratch.sqlite uvicorn geoseek.search.api:app --port 8001
-node frontend-react/tools/e2e-tier1.mjs --base http://127.0.0.1:8001/react/ --allow-writes
+node frontend-react/tools/e2e-console.mjs --base http://127.0.0.1:8001/react/ --allow-writes
 ```
 
 (`POST /export` also writes a file under `data/change_model/exports/` — that is the existing endpoint's behaviour.)
@@ -187,7 +259,7 @@ node frontend-react/tools/e2e-tier1.mjs --base http://127.0.0.1:8001/react/ --al
 ## 6. Existing frontend untouched
 
 `git diff --stat -- src/geoseek/analyst/web/` and `git status --short src/geoseek/analyst/web/` are empty. The only edits to
-existing files are: `src/geoseek/search/api.py` (a `/react` static mount, the four `/ui/*` read-only routes, and a
+existing files are: `src/geoseek/search/api.py` (a `/react` static mount, the `/ui/*` read-only routes, and a
 `react_ui` key on `GET /`), `src/geoseek/search/engine.py` (the thumbnail 404 fix, §7), the extended
 `tests/test_frontend_offline.py`, and `.gitignore` / `.gitattributes` / `.dockerignore`.
 
@@ -216,3 +288,50 @@ existing files are: `src/geoseek/search/api.py` (a `/react` static mount, the fo
   reference is unused; Vite reports it as unresolved at build time.
 * The reference dashboard image was not received with the request; the layout follows its written description. The only
   design material in the repository (`design_handoff_geoseek/`) is a different, near-black design and was not used.
+
+* **No sun elevation / off-nadir in the catalog** (see §2.2). The brief allowed them only if catalogued; they are not, so the dossier
+  omits them. Capturing them at ingest is a small change (copy the STAC `view:` properties into the scene metadata).
+* **The projection is a picture of local neighbourhoods.** 1,156 of the 105,245 tiles have no cluster label (the stored
+  `tile_clusters.json` was computed for 104,089 tiles, before the index grew); they are drawn grey as "no cluster" rather than
+  guessed. Re-running `scripts/cluster_at_scale.py` refreshes the labels; re-running `scripts/compute_projection.py` refreshes the
+  coordinates.
+* **UMAP run (this machine):** 105,245 × 512 → PCA-50 → UMAP-3D, `n_neighbors=15`, `min_dist=0.1`, cosine, seed 42: **222.4 s total**
+  (load 2.9 s, PCA 1.2 s, UMAP 210.7 s), measured **on battery power (34 %)**, so it is not an AC benchmark (the project's standing AC-power benchmark rule) —
+  the script records the power source in the artifact's metadata and warns when it is not AC. UMAP 0.5.12 / numba 0.68 installed
+  cleanly into the existing environment (no existing package changed).
+* **A canvas-renderer race in Leaflet 1.9** (a queued redraw firing after the map was removed → "clearRect of undefined") surfaced
+  once the detection map used the canvas renderer; `GeoMap` makes the renderer's redraw entry points no-ops once its context is gone.
+* **Auto-sweep vs interaction.** The first e2e run caught a real UX bug: if imagery preloading was slow, the on-load sweep could begin
+  *after* the analyst had started using the slider and yank the view away. Any interaction now cancels a pending auto-sweep.
+
+
+## Map pass: layout primitives and the local basemap
+
+**Layout primitive.** Every multi-panel grid (`.dash-pair`, `.dash-triple`, `.wb-grid`, `.changes-grid`, `.search-grid`, `.detect-grid`,
+`.disc-grid`, `.fp-grid`, `.settings-grid`, `.data-grid`) uses `align-items: stretch`, so panels in one row share a height. A column
+that stacks panels gives its leftover height to the panel marked `grow`; `stack` makes a body a flex column; `fill` + `<GeoMap fill>` makes
+a map take the rest of its panel. Lists keep their own max-height and scroll. `tools/e2e-console.mjs` asserts equal row heights, three
+equal unclipped result-card buttons (down to the grid's 196 px minimum card) and uniform fingerprint cards.
+
+**Basemap backend** (`geoseek.analyst.basemap`; routes `/ui/basemap/{z}/{x}/{y}`, `/ui/basemap/coverage`, `/ui/basemap/stats`,
+`/ui/clusters/geo`). Web-Mercator tiles assembled from imagery already in the archive; fully transparent where nothing is staged (the dark
+canvas shows through, nothing is filled in). Nothing is written to `data/` and no new dataset is introduced, so there is no provenance entry.
+
+* Sentinel-2: one acquisition per MGRS granule - the lowest mean tile cloud fraction, newest on a tie. The map caption states this rule and
+  that it is *not* the date of the overlaid features. z >= 11 is composited from the catalog's tile thumbnails; below that, from per-granule
+  overviews decoded lazily from the same band rasters and held in byte-capped LRUs (overviews 160 MB, rendered tiles 96 MB):
+  fine level 1/16 for z 8-10 (4 x 4 real pixels averaged per 16 x 16 block), coarse level 1/64 for z <= 7 (8 x 8 per 64 x 64). Only the
+  sampled rows are inflated - area-averaging forces a full inflate of every row of a ~170 MB strip-deflate file and took 116 s on a cold
+  whole-archive view. Sampling error against the full-area average of the same band, mean absolute, 6 scenes: **fine 2.1 %, coarse 1.7 %**
+  (a 4 x 4 coarse sampling would be 4.0 %, 1 x 1 is 19.7 %).
+* `?scene=<observation_id>` serves a staged Maxar scene (R/G/B bands), looked up in the catalog - never used as a path. The Detect map uses
+  it: the Sentinel-2 archive has no coverage where those scenes lie, and the scene is the imagery the detections were found on.
+* Measured (this machine; AC power verified at the end of the sweep - charging, battery 30 %, not re-checked per run; the OS file cache could not be flushed, so "cold" means cold process caches, with files read in earlier runs possibly still in the OS cache): whole-archive first view 3.4-3.9 s; z6-7 0.04-0.3 s; first z8 view of one
+  region 1.4-2.4 s; z9-10 0.1-0.6 s; z11 first view (6 tiles, thumbnail path) 3.8 s; z12-13 0.6 s; warm anywhere 20-30 ms. Resident:
+  coarse level 1.5 MB + fine level 24.0 MB for all 15 granules (cap 160 MB); server RSS +190 MB over the whole sweep.
+
+**Maps** (all through `components/GeoMap.tsx`): `basemap={{}}` adds the local layer and an honest caption (granules in view and their date range
+come from `/ui/basemap/coverage`); `pin` points are numbered / labelled markers addressed by id, with `hoverId` / `onHover` for card <-> pin
+linking; polygons can be `selected` (stronger stroke, centre mark, permanent tag); circles carry a permanent radius tag; `cells` draws tens of
+thousands of cluster cells on a canvas layer. The only tile layer in the source is the same-origin `/ui/basemap` one
+(`tests/test_frontend_offline.py` enforces exactly that).

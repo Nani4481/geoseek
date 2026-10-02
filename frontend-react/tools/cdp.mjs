@@ -47,7 +47,7 @@ export async function launch({ width = 1600, height = 1000 } = {}) {
     else if (m.method === 'Page.downloadWillBegin') downloads.push({ url: p.url, name: p.suggestedFilename, tag });
   };
   const send = (method, params = {}) => new Promise((res) => { const id = nextId++; pending.set(id, res); ws.send(JSON.stringify({ id, method, params })); });
-  for (const d of ['Page', 'Network', 'Runtime', 'Log']) await send(`${d}.enable`);
+  for (const d of ['Page', 'Network', 'Runtime', 'Log', 'DOM']) await send(`${d}.enable`);
   await send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });
   await send('Network.setCacheDisabled', { cacheDisabled: true });
   await send('Browser.setDownloadBehavior', { behavior: 'deny' }).catch(() => {});
@@ -70,6 +70,11 @@ export async function launch({ width = 1600, height = 1000 } = {}) {
   };
   const mouse = (type, x, y, extra = {}) => send('Input.dispatchMouseEvent', { type, x, y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, ...extra });
   const clickAt = async (x, y) => { await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y }); await mouse('mousePressed', x, y); await mouse('mouseReleased', x, y); };
+  const rightClickAt = async (x, y) => {
+    await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y });
+    await send('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'right', buttons: 2, clickCount: 1 });
+    await send('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'right', buttons: 0, clickCount: 1 });
+  };
   const click = async (sel, nth = 0) => { const r = await rectOf(sel, nth); await clickAt(r.x + r.w / 2, r.y + r.h / 2); };
   const drag = async (x0, y0, x1, y1, steps = 8) => {
     await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: x0, y: y0 });
@@ -82,12 +87,19 @@ export async function launch({ width = 1600, height = 1000 } = {}) {
     await evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); const set = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(e), 'value').set; set.call(e, ${JSON.stringify(text)}); e.dispatchEvent(new Event('input', {bubbles:true})); })()`);
   };
   const select = (sel, value) => evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(e, ${JSON.stringify(value)}); e.dispatchEvent(new Event('change', {bubbles:true})); })()`);
+  // put real files into an <input type=file> exactly as the browser's file chooser would
+  const setFiles = async (sel, files) => {
+    const doc = await send('DOM.getDocument', { depth: 0 });
+    const q = await send('DOM.querySelector', { nodeId: doc.result.root.nodeId, selector: sel });
+    if (!q.result?.nodeId) throw new Error(`no file input for ${sel}`);
+    await send('DOM.setFileInputFiles', { nodeId: q.result.nodeId, files });
+  };
   const key = async (k) => { await send('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code: k }); await send('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code: k }); };
   const shot = async (file) => { mkdirSync(path.dirname(file), { recursive: true }); const r = await send('Page.captureScreenshot', { format: 'png' }); writeFileSync(file, Buffer.from(r.result.data, 'base64')); };
   const nav = async (url) => { await send('Page.navigate', { url }); };
 
   return {
-    send, evaluate, waitFor, sleep, rectOf, mouse, clickAt, click, drag, type, select, key, shot, nav,
+    send, evaluate, waitFor, sleep, rectOf, mouse, clickAt, rightClickAt, click, drag, type, select, key, setFiles, shot, nav,
     requests, problems, downloads, setTag: (t) => { tag = t; },
     close: () => { try { ws.close(); } catch { /* */ } proc.kill(); },
   };

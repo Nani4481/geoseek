@@ -36,11 +36,32 @@ _REACT_DIR = Path(__file__).resolve().parents[1] / "analyst" / "web_react"
 async def lifespan(app: FastAPI):
     global _engine, _analyst, _analyst_error
     _engine = SearchEngine()  # loads RemoteCLIP + FAISS index ONCE, at startup
+    # Map support is warmed HERE, before the first request is served - never from a background thread: the catalog read behind
+    # both summaries holds the repository lock for a second or so, which would stall a search issued right after start-up.
+    # Metadata only (dates, cloud, footprints, cluster labels); no imagery is decoded.
+    import time as _t
+
+    try:
+        from geoseek.analyst.basemap import archive
+
+        t0 = _t.perf_counter()
+        archive(_engine.repo)
+        print(f"[basemap] catalog summary ready in {(_t.perf_counter() - t0) * 1000:.0f} ms")
+    except Exception as e:            # the map layer must never stop the service coming up
+        print(f"[basemap] summary warm-up skipped: {type(e).__name__}: {e}")
     try:
         from geoseek.analyst.service import AnalystService
 
         _analyst = AnalystService(engine=_engine)
         print(f"[analyst] service ready: {len(_analyst.details)} ranked candidates.")
+        try:
+            from geoseek.analyst.ui_support import cluster_geo
+
+            t0 = _t.perf_counter()
+            cluster_geo(_analyst)         # the Discovery map's per-cluster cells (catalog + stored clustering run, read-only)
+            print(f"[analyst] cluster geography ready in {(_t.perf_counter() - t0) * 1000:.0f} ms")
+        except Exception as e:
+            print(f"[analyst] cluster geography warm-up skipped: {type(e).__name__}: {e}")
     except Exception as e:  # the search API must still come up without a change report
         _analyst_error = f"{type(e).__name__}: {e}"
         print(f"[analyst] service unavailable: {_analyst_error}")
@@ -531,11 +552,154 @@ def ui_candidate_timeline(candidate_id: str):
     return tl
 
 
+@app.get("/ui/candidates/{candidate_id}/dossier")
+def ui_candidate_dossier(candidate_id: str, before: str = Query(..., description="date or year of the before image"),
+                         after: str = Query(..., description="date or year of the after image")):
+    """Catalog-sourced sensor provenance (platform, acquisition date, cloud cover, ...) for the two dates a tactical
+    dossier is printed for. Sun elevation / off-nadir appear only if the catalog holds them."""
+    from geoseek.analyst.ui_support import candidate_dossier
+
+    try:
+        d = candidate_dossier(_get_analyst(), candidate_id, before, after)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    if d is None:
+        raise HTTPException(status_code=404, detail=f"no candidate {candidate_id!r}")
+    return d
+
+
+@app.get("/ui/projection")
+def ui_projection(max_points: int = Query(20000, ge=1, le=120000), seed: int = Query(0)):
+    """The precomputed 3-D UMAP projection of the tile embeddings: a deterministic display sample plus how many points
+    exist in total (see scripts/compute_projection.py)."""
+    from geoseek.analyst.ui_support import projection_sample
+
+    return projection_sample(_get_analyst().settings.data_dir, _get_engine().count(), max_points, seed)
+
+
+@app.get("/ui/projection/lookup")
+def ui_projection_lookup(ids: str = Query(..., description="comma-separated tile_id list (max 500)")):
+    from geoseek.analyst.ui_support import projection_lookup
+
+    return projection_lookup(_get_analyst().settings.data_dir, [i.strip() for i in ids.split(",") if i.strip()])
+
+
+@app.get("/ui/tiles/{tile_id}/spectral")
+def ui_tile_spectral(tile_id: str, q: Optional[str] = Query(None, description="the search query, to flag the indices that bear on it")):
+    """Per-index statistics, legends and the query-relevant indices for one tile (see geoseek.spectral.evidence)."""
+    from geoseek.spectral.evidence import SpectralUnavailable, tile_spectral
+
+    eng = _get_engine()
+    try:
+        return tile_spectral(eng.repo, eng.settings.datasets_dir, tile_id, q)
+    except SpectralUnavailable as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except KeyError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/ui/tiles/{tile_id}/spectral/{index}.png")
+def ui_tile_spectral_png(tile_id: str, index: str):
+    """The NDVI / NDWI / NDBI overlay of one tile as a transparent RGBA PNG at the native 10 m (one pixel per 10 m)."""
+    from geoseek.spectral.evidence import SpectralUnavailable, tile_index_png
+
+    eng = _get_engine()
+    try:
+        png = tile_index_png(eng.repo, eng.settings.datasets_dir, tile_id, index)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except (SpectralUnavailable, KeyError) as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    return Response(content=png, media_type="image/png", headers={"Cache-Control": "public, max-age=86400"})
+
+
 @app.get("/ui/tiles")
 def ui_tiles(ids: str = Query(..., description="comma-separated tile_id list (max 100)")):
     from geoseek.analyst.ui_support import tile_footprints
 
     return {"tiles": tile_footprints(_get_analyst().repo, [i.strip() for i in ids.split(",") if i.strip()])}
+
+
+@app.get("/ui/basemap/coverage")
+def ui_basemap_coverage(
+    bbox: str = Query(..., description="west,south,east,north (EPSG:4326) of the map view"),
+    year: Optional[str] = Query(None, description="restrict the Sentinel-2 mosaic to acquisitions of this year"),
+    scene: Optional[str] = Query(None, description="a Maxar observation_id: describe that scene instead of the Sentinel-2 mosaic"),
+):
+    """What the local basemap covers for a view (scenes, dates, fraction of the view). Backs the honest map caption."""
+    from geoseek.analyst.basemap import BasemapError, coverage
+
+    box = _parse_bbox(bbox)
+    if box is None or not (box[0] < box[2] and box[1] < box[3]):
+        raise HTTPException(status_code=400, detail="bbox must be west,south,east,north with west<east and south<north")
+    try:
+        return coverage(_get_engine().repo, box, year=year, scene=scene)
+    except BasemapError as e:
+        raise HTTPException(status_code=404 if "not staged" in str(e) or "no observation" in str(e) else 400, detail=str(e))
+
+
+@app.get("/ui/basemap/stats")
+def ui_basemap_stats():
+    """Resident-size accounting of the basemap's two in-memory LRUs (entries, bytes, hard cap, peak, evictions)."""
+    from geoseek.analyst.basemap import cache_stats
+
+    return cache_stats()
+
+
+@app.get("/ui/basemap/{z}/{x}/{y}")
+def ui_basemap_tile(z: int, x: int, y: int, year: Optional[str] = Query(None), scene: Optional[str] = Query(None)):
+    """One Web-Mercator slippy-map tile of the local basemap, assembled from imagery already in the archive (see
+    geoseek.analyst.basemap). Fully transparent where nothing is staged, so the console's dark canvas shows through."""
+    from geoseek.analyst.basemap import BasemapError, render_tile
+
+    eng = _get_engine()
+    try:
+        body, mime, meta = render_tile(eng.repo, eng.get_tile_thumbnail_png, z, x, y, year=year, scene=scene,
+                                       datasets_dir=eng.settings.datasets_dir)
+    except BasemapError as e:
+        raise HTTPException(status_code=404 if "not staged" in str(e) or "no observation" in str(e) else 400, detail=str(e))
+    headers = {"Cache-Control": "public, max-age=3600" if meta.get("status") != "too-coarse" else "no-store",
+               "X-Basemap-Status": str(meta.get("status")), "X-Basemap-Ms": str(meta.get("ms", 0)),
+               "X-Basemap-Tiles": str(meta.get("composited", 0)), "X-Basemap-Cached": "1" if meta.get("cached") else "0"}
+    return Response(content=body, media_type=mime, headers=headers)
+
+
+@app.get("/ui/clusters/geo")
+def ui_clusters_geo():
+    """Per-cluster geography (tile counts per ~3 km cell and bounding box) of the stored clustering run - backs the Discovery map."""
+    from geoseek.analyst.ui_support import cluster_geo
+
+    return cluster_geo(_get_analyst())
+
+
+@app.get("/ui/threat-rings")
+def ui_threat_rings(
+    lon: float = Query(..., ge=-180, le=180), lat: float = Query(..., ge=-90, le=90),
+    radii_m: Optional[str] = Query(None, description="comma-separated ring radii in metres (default 500,1000,2500,5000)"),
+    exclude: Optional[str] = Query(None, description="feature id to leave out, e.g. candidate:<id> (the ring's own centre)"),
+    limit: int = Query(150, ge=1, le=1000),
+):
+    """What lies inside each of N concentric rings around a point: restricted zones, change candidates, stored object
+    detections and watch areas, with exact distances. Read-only; see geoseek.analyst.threat_rings."""
+    from geoseek.analyst.threat_rings import parse_radii, threat_rings
+
+    try:
+        radii = parse_radii(radii_m)
+        return threat_rings(_get_analyst(), lon, lat, radii, exclude=exclude, limit=limit)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+
+
+@app.get("/ui/detections/{observation_id}/points")
+def ui_detection_points(observation_id: str):
+    """Every stored detection of a scene as a lon/lat point (for the detection map and as a ring centre)."""
+    from geoseek.analyst.threat_rings import detection_points
+
+    try:
+        return {"observation_id": observation_id,
+                "points": detection_points(_get_analyst().settings.data_dir, observation_id)}
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail=f"no detections for observation {observation_id!r}")
 
 
 # the offline single-page frontend - served by this same process, no CDN.
