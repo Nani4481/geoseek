@@ -1,17 +1,3 @@
-data/models/*
-data/datasets/*
-data/tiles/*
-data/index/*
-!data/models/.gitkeep
-!data/datasets/.gitkeep
-!data/tiles/.gitkeep
-!data/index/.gitkeep
-data/provenance_manifest.json
-data/sample_tile_true_color.png
-data/sample_maxar_*.png
-data/prove_semantic/
-data/change_model/
-
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -21,55 +7,189 @@ __pycache__/
 .env.*
 !.env.example
 .secrets/
-data/cloud-release/
-data/*.zip
 build/
 dist/
-data/discovery/
-data/index/tile_clusters.json
 
-# Phase 7a retrieval eval: keep the reproducibility JSON (queries / pools /
-# judgments / rationale / report / latency / bench / tile_features), drop the
-# regenerable heavy artifacts.
-data/eval_retrieval/contact_sheets/
-data/eval_retrieval/vanilla_corpus_vectors.npy
-data/eval_retrieval/vanilla_corpus_tile_ids.json
-data/eval_retrieval/judgments_template.json
-data/eval_retrieval/pool_labels.json
-
-# Phase 7b follow-up: keep the JSON (precision_at_scale, throughput diagnosis,
-# judge_diagnosis manifest + hand annotations + summary), drop the regenerable
-# contact-sheet PNGs.
-data/eval_retrieval/judge_diagnosis/*.png
-
-# Phase 8F-2 detector: run dirs (weights/plots/logs), pre-flight renders (regenerable; JSON records are kept)
-data/runs/
-data/detect_preflight/*.png
-data/detect_preflight/*.jpg
-data/detect_preflight/gt_chips/
-data/detect_eval/
-
-# Phase 8F-2 detector on Maxar: keep the JSON / GeoJSON evidence, drop the regenerable annotated tiles and audit crops
-data/detections/samples/
-data/detections/audit/*.png
-data/detections/scale_probe/*.png
-
-# raw Natural Earth source files for scripts/build_basemap.py - re-fetched on demand,
-# only the derived src/geoseek/analyst/web/basemap.json ships with the app
-data/basemap_src/
-
-# raw fetch of scripts/stage_earth_textures.py's sources, re-fetched on demand -
-# only the resized src/geoseek/analyst/web/vendor/earth/*.jpg ships with the app
-data/earth_textures_src/
+# ---------------------------------------------------------------------------------------------------------------------
+# data/ is ignored WHOLESALE. It holds hundreds of GB of imagery, indexes, model weights and run output that must never enter
+# history, and a new sub-folder must not be sweepable by `git add -A`. Only the small curated files that are already tracked
+# (eval results, detection evidence, .gitkeep placeholders) are allowed back in, one explicit line each, below. A new file
+# in an allowed folder is ignored too: add a `!` line here, on purpose, to track it.
+# Git cannot un-ignore a file inside an ignored folder, so each folder on the way is un-ignored and its contents ignored again.
+# (Generated from `git ls-files data`; regenerate rather than hand-edit if the tracked set changes.)
+# ---------------------------------------------------------------------------------------------------------------------
+data/*
+!data/datasets/
+data/datasets/*
+!data/datasets/.gitkeep
+!data/detect_eval/
+data/detect_eval/*
+!data/detect_eval/domain_shift_proxy.json
+!data/detect_eval/eval_results.json
+!data/detect_eval/evaluator_selftest.json
+!data/detect_eval/phase8f2_tables.md
+!data/detect_eval/size_operating_point.json
+!data/detect_eval/figures/
+data/detect_eval/figures/*
+!data/detect_eval/figures/detector_loss_curves.png
+!data/detect_eval/figures/detector_map_curves.png
+!data/detect_eval/figures/detector_per_class_ap_v10.png
+!data/detect_eval/figures/detector_per_class_ap_v15.png
+!data/detect_eval/figures/detector_pr_vehicles.png
+!data/detect_preflight/
+data/detect_preflight/*
+!data/detect_preflight/bench_yolo26n_b16_cap.json
+!data/detect_preflight/bench_yolo26s_b16.json
+!data/detect_preflight/bench_yolo26s_b8.json
+!data/detect_preflight/bench_yolo26s_b8_cap.json
+!data/detect_preflight/bench_yolo26s_b8_disk.json
+!data/detect_preflight/bench_yolo26s_b8_nondet.json
+!data/detect_preflight/epoch0_monitor_baseline.json
+!data/detect_preflight/preflight_labels.json
+!data/detections/
+data/detections/*
+!data/detections/maxar_inference_report.json
+!data/detections/10300100CE8D0400_120220122202/
+data/detections/10300100CE8D0400_120220122202/*
+!data/detections/10300100CE8D0400_120220122202/detections.geojson
+!data/detections/10300100CE8D0400_120220122202/summary.json
+!data/detections/10300100E34B4D00_120220030330/
+data/detections/10300100E34B4D00_120220030330/*
+!data/detections/10300100E34B4D00_120220030330/detections.geojson
+!data/detections/10300100E34B4D00_120220030330/summary.json
+!data/detections/103001010C12B000_031311102120/
+data/detections/103001010C12B000_031311102120/*
+!data/detections/103001010C12B000_031311102120/detections.geojson
+!data/detections/103001010C12B000_031311102120/summary.json
+!data/detections/1050010036A0EC00_120220030330/
+data/detections/1050010036A0EC00_120220030330/*
+!data/detections/1050010036A0EC00_120220030330/detections.geojson
+!data/detections/1050010036A0EC00_120220030330/summary.json
+!data/detections/audit/
+data/detections/audit/*
+!data/detections/audit/audit_103001010C12B000_031311102120.json
+!data/detections/scale_probe/
+data/detections/scale_probe/*
+!data/detections/scale_probe/scale_probe_10300100CE8D0400_120220122202.json
+!data/detections/scale_probe/scale_probe_103001010C12B000_031311102120.json
+!data/eval/
+data/eval/*
+!data/eval/baseline_v1.json
+!data/eval/cand_demo_diff.json
+!data/eval/candidate_demo.json
+!data/eval/phase10_blockA.json
+!data/eval/phase10_blockA_diff.json
+!data/eval/phase10_blockA_diff.md
+!data/eval/rerun2_diff.json
+!data/eval/rerun_check.json
+!data/eval/rerun_check2.json
+!data/eval/rerun_diff_oscd.json
+!data/eval/rerun_diff_retrieval.json
+!data/eval/baseline_parts/
+data/eval/baseline_parts/*
+!data/eval/baseline_parts/change_detection.json
+!data/eval/baseline_parts/corpus.json
+!data/eval/baseline_parts/detector.json
+!data/eval/baseline_parts/env.json
+!data/eval/baseline_parts/footprint.json
+!data/eval/baseline_parts/ingestion.json
+!data/eval/baseline_parts/latency.json
+!data/eval/baseline_parts/retrieval.json
+!data/eval/baseline_parts/suite.json
+!data/eval/cand_parts/
+data/eval/cand_parts/*
+!data/eval/cand_parts/corpus.json
+!data/eval/cand_parts/env.json
+!data/eval/cand_parts/retrieval.json
+!data/eval/detector_run/
+data/eval/detector_run/*
+!data/eval/detector_run/eval_results.json
+!data/eval/detector_run/pred_finetuned_monitor.npz
+!data/eval/detector_run/pred_finetuned_val.npz
+!data/eval/detector_run/pred_pretrained_restricted_monitor.npz
+!data/eval/judge_coverage/
+data/eval/judge_coverage/*
+!data/eval/judge_coverage/catalog_fingerprint_before.json
+!data/eval/judge_coverage/grades_v1.npz
+!data/eval/judge_coverage/ledger.jsonl
+!data/eval/judge_coverage/staging_report.json
+!data/eval/logs/
+data/eval/logs/*
+!data/eval/logs/detector_eval.log
+!data/eval/logs/nir_swir_full.log
+!data/eval/logs/phase10_blockA_tables.md
+!data/eval/logs/phase9_tables.md
+!data/eval/logs/reembed_rc_kill.txt
+!data/eval/logs/reembed_rc_part1.err
+!data/eval/logs/reembed_rc_part1.log
+!data/eval/logs/reembed_rc_part2.err
+!data/eval/logs/reembed_rc_part2.log
+!data/eval/logs/reembed_rc_resume_report.json
+!data/eval/logs/reembed_rc_uninterrupted.log
+!data/eval/logs/reembed_rc_uninterrupted_report.json
+!data/eval/logs/reembed_vanilla.err
+!data/eval/logs/reembed_vanilla.log
+!data/eval/logs/reembed_vanilla_report.json
+!data/eval/logs/snapshot_cand_demo.log
+!data/eval/logs/snapshot_group1.log
+!data/eval/logs/snapshot_group2.log
+!data/eval/logs/snapshot_group3_detector.log
+!data/eval/logs/snapshot_group4_suite.log
+!data/eval/logs/snapshot_rerun.log
+!data/eval/logs/snapshot_rerun2.log
+!data/eval/rerun_parts/
+data/eval/rerun_parts/*
+!data/eval/rerun_parts/change_detection.json
+!data/eval/rerun_parts/corpus.json
+!data/eval/rerun_parts/env.json
+!data/eval/rerun_parts/retrieval.json
+!data/eval/rerun_parts2/
+data/eval/rerun_parts2/*
+!data/eval/rerun_parts2/corpus.json
+!data/eval/rerun_parts2/env.json
+!data/eval/rerun_parts2/retrieval.json
+!data/eval_retrieval/
+data/eval_retrieval/*
+!data/eval_retrieval/diverse_ingest_ledger.json
+!data/eval_retrieval/judgments.json
+!data/eval_retrieval/judgments_rationale.json
+!data/eval_retrieval/latency.json
+!data/eval_retrieval/plot_latency_vs_scale.png
+!data/eval_retrieval/plot_storage_vs_scale.png
+!data/eval_retrieval/pools.json
+!data/eval_retrieval/precision_at_scale.json
+!data/eval_retrieval/queries.json
+!data/eval_retrieval/report.json
+!data/eval_retrieval/retrieval_at_scale_tier3.json
+!data/eval_retrieval/scale_report_tier1.json
+!data/eval_retrieval/scale_report_tier2.json
+!data/eval_retrieval/scale_report_tier3.json
+!data/eval_retrieval/spatial_index_bench_after.json
+!data/eval_retrieval/spatial_index_bench_before.json
+!data/eval_retrieval/tile_features.json
+!data/eval_retrieval/judge_diagnosis/
+data/eval_retrieval/judge_diagnosis/*
+!data/eval_retrieval/judge_diagnosis/ANNOTATIONS.json
+!data/eval_retrieval/judge_diagnosis/ANNOTATIONS_TEMPLATE.json
+!data/eval_retrieval/judge_diagnosis/diagnosis_summary.json
+!data/eval_retrieval/judge_diagnosis/manifest.json
+!data/eval_retrieval/throughput_diag/
+data/eval_retrieval/throughput_diag/*
+!data/eval_retrieval/throughput_diag/ingestion_throughput_diagnosis.json
+!data/index/
+data/index/*
+!data/index/.gitkeep
+!data/models/
+data/models/*
+!data/models/.gitkeep
+!data/tiles/
+data/tiles/*
+!data/tiles/.gitkeep
 
 # React console (frontend-react/): dependencies are re-installed from package-lock.json; the BUILD OUTPUT
 # (src/geoseek/analyst/web_react/) is committed so an air-gapped machine needs no Node at all.
 frontend-react/node_modules/
 frontend-react/.vite/
-
-# tests/test_phase6.py POSTs /export (csv + geojson) on every full pytest run; those artifacts must never be committable.
-# (Already covered by data/change_model/ above; listed explicitly so removing that broader rule cannot expose them.)
-data/change_model/exports/
 
 # Report screenshots (15 MB of PNGs) are kept on disk, not in history.
 docs/screenshots/
