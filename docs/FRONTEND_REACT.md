@@ -41,7 +41,7 @@ and breaks the hashes; `node_modules/` is git- and docker-ignored.
 
 ## 2. What the console does
 
-Rail: **Dashboard · Search · Changes · Detect · Discover · Similar · Brief · Data · Settings**. Every panel has the same
+Rail: **Dashboard · Search · Changes · Pipeline · Detect · Discover · Similar · Brief · Data · Settings**. Every panel has the same
 treatment (title + optional actions); a feature is either wired to the backend or it is not in the product.
 
 | Feature | Screen | Backend (all read-only unless noted) |
@@ -49,6 +49,7 @@ treatment (title + optional actions); a feature is either wired to the backend o
 | Situation dashboard: tiles / scenes / regions / sensors / change candidates / analyst decisions / search latency, findings by region and by change type, globe, alert feed | Dashboard | `GET /ui/metrics`, `/ui/latency`, `/notifications`, `/restricted-zones`, `/candidates` |
 | **Animated temporal evidence** (§2.1) | Changes, Dashboard | `GET /ui/candidates/{id}/timeline`, `/candidates/{id}/imagery` |
 | Candidate workbench: filterable queue, before/after slider, change mask, spectral type, confidence ring and five evidence gates, SAR status, bookmark, review (confirm / reject / reopen, append-only audit trail), GeoJSON export | Changes | `GET /candidates`, `/candidates/{id}`; `POST /candidates/{id}/decision`, `POST /export` (the existing write paths) |
+| **Why this was flagged**, per-candidate **pipeline trace**, and the **suppression funnel** (see the last section) | Changes (full-width row below the workbench), Pipeline | `GET /ui/candidates/{id}/explain`, `/ui/pipeline/funnel` |
 | **Tactical dossier export** (§2.2) | Changes → *Dossier* | `GET /ui/candidates/{id}/dossier` + the candidate record |
 | **Threat buffer rings** (§2.3) | Changes (candidate map), Detect (detection map) | `GET /ui/threat-rings`, `/ui/detections/{obs}/points` |
 | Semantic search with date / cloud / box filters, more-like-this, click-the-map search | Search | `GET /search/text`, `POST /search/image`, `GET /discovery/similar` |
@@ -123,8 +124,8 @@ bare / dry / sand → NDVI + NDBI), with the matched terms and reason shown. A t
 
 ### 2.6 Ad-hoc raster header check
 
-On *Data*, drop (or choose) up to six GeoTIFFs. `geotiff.js` (bundled) reads **only the header** in the browser (for a 160 MB staged
-band: ~0.2 s, no pixel decoder is even fetched): size, bands, sample type, CRS/EPSG, the affine transform, native bounds, lon/lat
+On *Data*, drop (or choose) up to six GeoTIFFs. `geotiff.js` (bundled) first reads **the header** in the browser (for a 160 MB staged
+band: under a second; the pixel preview described at the end of this file follows separately): size, bands, sample type, CRS/EPSG, the affine transform, native bounds, lon/lat
 bounds (WGS 84, Web Mercator and WGS 84 UTM invert offline; other CRSs are reported as "not bundled", never guessed), pixel size,
 nodata, layout, and an acquisition timestamp **only if the header carries one** (a GDAL metadata item such as `ACQUISITION_DATE`; the
 TIFF `DateTime` tag is shown separately as "when the file was written"). The validation badge is the real result: CRS present,
@@ -213,10 +214,11 @@ Four independent layers, strongest first.
    geotiff.js error-message string (the 64-bit-offset error text), and Leaflet's attribution `href` (never rendered: every map
    is created with `attributionControl: false`). None is ever dereferenced.
 
-   **geotiff.js was vetted before it was added:** it is bundled as-is (no CDN, no runtime download); only headers are read, so no
-   decoder runs - the LERC / ZSTD decoder chunks contain WebAssembly but are lazily imported on a pixel read, which this console
-   never does, and the page CSP (no `wasm-unsafe-eval`) would refuse to instantiate it anyway. The e2e asserts none of the decoder
-   chunks is ever requested. The lockfile hash and the versions of `geotiff` and its eight dependencies are pinned in
+   **geotiff.js was vetted before it was added:** it is bundled as-is (no CDN, no runtime download). Since the pixel preview shipped
+   (see the last section) the pure-JS decoders (raw, DEFLATE, LZW, PackBits, JPEG) do run and are served as local chunks; the LERC /
+   ZSTD chunks contain WebAssembly, which the page CSP (no `wasm-unsafe-eval`, `connect-src 'self'`) refuses to instantiate, so a
+   ZSTD / LERC file gets its header and footprint but no preview, and says why and how to fix it (re-save as DEFLATE / LZW). The CSP was
+   deliberately not loosened for this. (The earlier "no decoder is ever requested" e2e assertion no longer holds and was replaced.) The lockfile hash and the versions of `geotiff` and its eight dependencies are pinned in
    `build-pins.json`.
 3. **Runtime request log** — `frontend-react/tools/verify-offline.mjs` drives headless Chrome over the DevTools protocol (no
    npm dependency), loads the console from the running backend, visits every route, and records every request. Result on
@@ -345,3 +347,170 @@ come from `/ui/basemap/coverage`); `pin` points are numbered / labelled markers 
 linking; polygons can be `selected` (stronger stroke, centre mark, permanent tag); circles carry a permanent radius tag; `cells` draws tens of
 thousands of cluster cells on a canvas layer. The only tile layer in the source is the same-origin `/ui/basemap` one
 (`tests/test_frontend_offline.py` enforces exactly that).
+
+## Explainability and false-alarm suppression
+
+Two features on top of the existing change pipeline. **No model changes and no new claims**: both are read-only views of what the
+pipeline already stored, in `src/geoseek/analyst/explain.py`, behind `GET /ui/candidates/{id}/explain` and `GET /ui/pipeline/funnel`.
+
+### Why this was flagged (Changes → the full-width row under the workbench)
+
+The pieces already existed but were scattered (rule, spectral deltas, gates, confidence lines, SAR, terrain, the spectral overlay) and
+read as debug output. They are now one panel, with the older panels reduced to what they own (the Confidence panel keeps the ring, band
+and SAR status; Change details keeps the facts and the rule; both link down to the explanation).
+
+- **Lead sentence**, generated server-side from the rule that fired and the stored anomalies, e.g. *"Built-up index rose sharply (+0.38 vs.
+  season) while vegetation fell (−0.09 vs. season) — consistent with new construction. Present on 4 of 5 acquisition dates since
+  2021-03-04."* The words ("sharply" / "clearly" / "only just past the 0.05 threshold") come from where the value sits relative to the
+  classifier's own thresholds and the confidence engine's own ramp widths; every number is a stored value. An unclassified candidate
+  says that no rule matched. A demoted one quotes the pipeline's own trajectory note and the penalty factor.
+- **Evidence in order of influence.** The six confidence terms, largest realised effect on *this* candidate first, each with its weight
+  share, its 0–1 strength, its cost in confidence points and a supports / weak chip; then the three multipliers (gate down-weights,
+  temporal-support penalty, SAR). Confidence is a weighted geometric mean, so the decomposition is exact: `confidence = Π term^(w/Σw) ×
+  down-weights × penalty × SAR`, and a term's cost is the change in the final number if that term alone were neutral.
+- **Not stored, so recomputed and checked.** The pipeline stores only text lines for the confidence terms. The terms are re-derived by calling
+  `compute_confidence` on the inputs the sidecar did keep, and the panel shows *"recomputed from the stored inputs: 91.4% ✓"*. If that ever
+  stopped matching the stored value it would say so in red. A test asserts it for **all 841 stored candidates (max error 0.0004)**.
+- **Spectral change against thresholds**: per index the change, the scene's seasonal change and the anomaly, and every test of the
+  assigned type with its threshold, the candidate's value and met / not met.
+- **Where the evidence is thin or missing** gets its own amber block, as plain as the strong evidence: *"No Sentinel-1 coverage for this
+  candidate"* first, then weak terms, then "no rule matched" / "no terrain sampled" where they apply. Terrain is labelled as context, not
+  evidence (it does not enter the confidence).
+- **On the pixels**: *Show NDBI · NDVI on the pixels* opens the existing NDVI / NDBI / NDWI maps for the after-date tile covering the
+  candidate with its footprint outlined and the indices that decided the type starred. They show the end state; the change is the
+  difference between dates, and the panel says so.
+- **Raw decomposition** (the engine's own text lines, factors to four places, reproduction error) is behind a toggle.
+- There is **no attention map or saliency** over the embedding: its patches are ~366 m across (§2.5).
+
+### Pipeline trace (beside it) and the suppression funnel (rail: **Pipeline**)
+
+*Per candidate*: eight stages in the order the pipeline applied them (shape & size, image quality, alignment, brightness match,
+seasonal check, spectral typing, temporal persistence, SAR), each with verdict and effect on confidence. A demoted candidate gets a note
+saying why and that it was demoted, not dropped.
+
+*Pipeline level*: raw model components → after each gate → candidates, per acquisition pair, read from
+`ayodhya_change_report.json#pairs[*].suppression`; below it what happens to the survivors (typing, persistence classes with their
+penalties, SAR, confidence bands, counted from the retained candidates), the per-gate cards (what it checks, thresholds, what it removed
+on this pair, and its measured effect on the labelled OSCD benchmark from `ablation_study.json`), and a sample of demoted candidates
+with their reasons.
+
+Things the panel is explicit about, because they are true of the artifacts:
+
+- **Counts are for the current 5-date run**, not the 3-date run described in `EVALUATION_REPORT.md` §9.3 (13,563 → 1,104). On the span
+  pair 2019-03-30 → 2026-03-08 the area floor removes 87.9% of raw components (the 91% in §9.3 is the older pair); the other five pairs
+  range 85.6% – 94.9%. Do not compare the two sets of figures.
+- **First-rejecting-gate attribution.** The report counts each rejected component against the first gate that rejected it. The area floor
+  is applied during component extraction (before the other four checks, which sub-floor components never receive), and the report stores it
+  merged with any later morphology rejection as one number. They cannot be separated without the pipeline emitting them separately.
+- **Registration and radiometric never reject** (they down-weight); the funnel shows them as "removes none", with the down-weighted
+  count taken from the retained candidates' traces.
+- **Gates are Ayodhya-calibrated.** A scope note says so wherever an effect is stated. The labelled benchmark table shows why: on OSCD the
+  phenology gate costs ≈ −0.19 F1 (it is tuned to Ayodhya's seasonal signal) and the card flags it. The panel also warns if the ablation
+  was run with different thresholds from the pipeline's current ones.
+- **Rejected components are not retained.** The pipeline writes only counts per gate; sub-floor components never had a trace and the others
+  were dropped from memory once counted. The panel says that and names what would have to be emitted (per suppressed component: id,
+  bounding box, area, first rejecting gate and its trace values, and the area-floor drops counted separately). No storage was added, and no
+  control suggests rejected components can be browsed. What *is* inspectable are the demoted candidates: all of them are in the queue.
+- **SAR**: the current run staged no Sentinel-1, so the corroboration term is neutral for every candidate; both screens say so.
+
+Tests: `tests/test_explain.py` (29: sentences follow the stored values, decomposition reproduces the confidence for synthetic cases and
+for every stored candidate, ordering, down-weights, SAR present / absent, funnel counts sequential and flagged when they do not add up,
+labelled-benchmark deltas and config mismatch, rejected-not-retained) and 12 new e2e steps (every figure in the Why panel, trace and funnel
+is compared with the API response; selecting another pair changes every figure, which is the proof they are read rather than typed).
+
+## Discovery explains itself, Data aligns, brand mark (Oct 2026)
+
+No model or data changes. Two read-only additions to the backend, the rest is the React console.
+
+**Discovery.** The screen now answers "why am I looking at this".
+- *Interpretation line* (`lib/clusterInsight.ts`, node-tested in `tools/selftest-lib.mjs`): counted from `/discovery/clusters`, never templated.
+  Line 1: clusters, tiles, how many are *concentrated* (one region holds ≥ 80 % of the cluster) vs spread. Line 2: the most notable fact - the
+  closest-concept label shared by the most clusters that each sit in a *different* region (live run: 7 of 9 "bare dry open ground" clusters, in 5
+  regions); if no label does that it falls back to the most widely spread cluster. The two thresholds (80 %, and 5 % for "a region is spanned")
+  are printed under the line.
+- *Per-cluster summary*: hover = preview, click = selected (zoom + dim the others, Esc or "Show all clusters" clears). Tiles, share, closest concept
+  (+ similarity), regions spanned (≥ 5 % each) and touched, extent (overall bbox **and** the middle-95 % core, because a few stray tiles stretch
+  a cluster's bbox across the archive; the map zooms to the core), region mix, and 4 example tiles. Hover and select also work from the map
+  (cell hit-test in `GeoMap`) and from the matrix. The summary has a fixed height so hovering never resizes the grid row.
+- *Region x cluster matrix*: share of each cluster's tiles per region (rows sum to 100 %), rows grouped by closest concept.
+- *Examples* are chosen by a fixed rule (`ui_support._pick_examples`): the lowest-cloud tiles, taken in turn from the regions holding ≥ 5 % of the
+  cluster, tie-broken by a hash of the tile id. They are examples, not the most typical members, and the panel says so.
+- Backend: `/discovery/clusters` now also returns the stored `region_purity` (per-cluster, per-region tile counts already in `tile_clusters.json`);
+  `/ui/clusters/geo` gained `examples` per cluster (built in the same single catalog pass as the cells).
+- The basemap caption (one representative acquisition per granule, unstaged areas dark) is unchanged.
+
+**Data.** Archive-inventory tables use fixed layouts with `colgroup` widths sized to the longest real value, headers never wrap, GSD is rounded
+(`0.31 m`, exact `0.30517578 m` in the tooltip), long sensor / region strings are cut with an ellipsis and a tooltip; the acquisition dates are a
+chip row of their own.
+
+**Shell.** Inline-SVG India flag by the IST clock (3:2, #FF9933 / #FFFFFF / #138808, 24-spoke Ashoka Chakra in #000080). New original logo mark
+(`components/Brand.tsx`: a globe crossed by a satellite's track) drawn in `currentColor` only, so it reads in one ink; `public/favicon.svg` uses it.
+The GEOSEEK wordmark carries a saffron -> white -> green gradient via `background-clip: text`, drifting once per 32 s (~4 px/s, white and green
+softened to sit near the page ink); with `prefers-reduced-motion` it is the same gradient, static.
+
+Tests: `tests/test_map_support.py` (+3: examples spread over regions, repeatable, clearest-first; `/discovery/clusters` region counts),
+`tools/selftest-lib.mjs` (+cluster insight, core box, GSD), e2e +4 steps (interpretation = API counts, summary fields = API and hover / select /
+dim / Esc, matrix cells = API and map-cell click, inventory layout, shell flag/logo/wordmark incl. reduced motion). Screenshots (ignored by git):
+`docs/screenshots/ui4/{before,after}`.
+
+## Raster preview, Temporal tab, logo orbit, intro (Oct 2026)
+
+No model, gate or pipeline change; no new claim about the pipeline. New runtime dependency: none (`geotiff` was already bundled; its
+pure-JS decoder chunks are now actually fetched, still same-origin). Offline pins regenerated (`build-pins.json`), `test_frontend_offline`
+green.
+
+**1. Data: the file is visible.** `lib/rasterPixels.ts` decodes the dropped file in the browser as a *preview*: native resolution when the
+longest side is <= 1536 px, else the file's own largest overview that fits, else a nearest-neighbour decimation; the caption states which
+(and that nothing is uploaded). `lib/rasterMath.ts` (pure, node-run) does the arithmetic: per-band percentile stretch (default 2nd-98th,
+also 1-99, 5-95, min-max; the percentiles and the per-band values are printed), 3-band = RGB, 4-band = B04/B03/B02 true colour (assumed
+Sentinel-2 order B02,B03,B04,B08, stated; band DESCRIPTIONs in the file win), any band selectable, single-band grey. The footprint is drawn
+(as its four ground corners) on the `/ui/basemap` layer zoomed to the file's bounds. *Comparison* (`components/RasterCompare.tsx`): the
+nearest archive acquisition in time (from `coverage.acquisitions`, new) is pre-selected; the file and that year's basemap tiles are put on
+one Web-Mercator grid (file resampled nearest-neighbour from its own CRS, never blended); each is converted to brightness and scaled to its
+own 2nd-98th percentile over the pixels both cover; the result is file - archive on a blue-white-red scale. It is labelled **indicative
+visual difference - not pipeline output**, lists the four ways an ad-hoc upload differs from the archive (CRS / pixel size, radiometric
+scaling, registration, date / season / clouds), names the archive date actually served (the archive serves one acquisition per granule per
+year), and reuses none of the pipeline's wording, scores or gate chrome. No coverage -> it says so and offers nothing.
+Limits: the preview's statistics are computed on the preview, not the full-resolution file; ZSTD / LERC files cannot be previewed (above);
+the archive side is an 8-bit display rendering, and the 2024 and 2026 renderings carry strong colour casts (mean RGB 51/52/75 and
+137/163/165 vs 77/78/89 for 2019 on the same tile), which a brightness-only comparison does not remove.
+
+**2. Temporal tab** (rail "Temporal", `#/temporal` and `#/temporal/upload`; two modes, never in one chart).
+*Archive mode*: new `GET /ui/temporal/archive[?bbox]` (`analyst/temporal.py`) derives everything from the stored ranked candidates and the
+report: per acquisition interval the candidate count by type, area by type, persistence class, held vs demoted, SAR corroboration; a
+cumulative area per type at each acquisition date; the report's own per-interval pair-run survivor counts as a **separate** basis. All
+stored candidates come from the single 2019-2026 span run, so they are placed in the interval in which the pipeline *first supported* them
+(`earliest_supported`); 337 are visible only across the whole span and 35 in no interval, and are shown apart, never folded into one.
+Live finding: all 337 span-only candidates are transient (demoted). Persistence of last-interval candidates cannot be tested yet (stated).
+SAR: no Sentinel-1 is staged in this run, so coverage is 0 of N in every interval and the API's note says so. The x axis is a real
+calendar (`lib/calendarAxis.ts`, pixels proportional to days): bars span the interval between two acquisitions, hatching marks the gap, the
+cumulative and SAR marks are points that are not joined. Clicking a mark opens Changes with exactly that filter
+(`/candidates?first_detected=FROM_TO[,...]|none` is new; the chip says where the queue came from and clears it).
+*Upload mode* (`lib/rasterProfile.ts`): needs >= 2 dropped files with a placeable footprint, a date (file header, or entered by the analyst
+and labelled so), overlap, and >= 2 distinct dates - otherwise it states what is missing and draws nothing. Per-band (matched across files by
+band *role*, not position) and NDVI / NDWI / NDBI (where the bands allow) mean, std, p10 / p50 / p90 over the ground the files share,
+sampled on one Web-Mercator grid. Labelled **SPECTRAL PROFILE - not change detection**; it states that the model, gates, persistence and
+confidence engine are not run on uploads, that files are not co-registered, and that index values are not comparable across sensors. It
+emits no candidates or scores.
+
+**3. Logo.** The rail logo's satellite flies one 48 s lap of its orbit (SMIL `animateMotion` in the inline SVG; in front of the globe on
+the near half, hidden behind it on the far half; no asset). Not animated at all under `prefers-reduced-motion`.
+
+**4. Intro.** `components/Intro.tsx`: dark field, the mark drawn stroke-first, GEOSEEK typed in with a saffron / white / green sweep, one
+tagline, dissolve into the Dashboard (3.4 s; 1.4 s and still under reduced motion). The app is mounted and live beneath it; the skip control
+and "Don't show this again" (localStorage) are on screen from the first frame; click or any key skips (Tab is left alone so the checkbox is
+reachable). Shown once per session (sessionStorage) and never on a deep link. The vendored three.js globe was **not** reused: it pulls in
+the Earth textures and the three chunk, which is not cheap; the mark already contains a globe.
+
+**Verification against a server-side computation** (`tests/test_react_raster_pixels.py`, fixtures cut from the archive's own staged Ayodhya
+Sentinel-2 scenes by `tests/raster_fixtures.py`; the TypeScript runs under Node and every number is compared with numpy / rasterio / pyproj):
+band statistics of the whole file equal numpy to 2.4e-13 relative; NDVI / NDWI statistics within 3e-8 relative (browser holds an index as
+float32); stretched composite pixels equal exactly; the Mercator resample equals an exact pyproj nearest-pixel reference on > 99.99 % of
+pixels (GDAL's warper, which uses a 0.125 px approximate transformer, agrees on ~94.5 % - that is GDAL's tolerance, not an error here); the
+spectral profile over the shared ground has the same grid (zoom 14, 511,225 cells), identical valid-pixel counts and identical statistics;
+the preview modes (native / overview / decimated) return the file's own pixels. The e2e repeats the composite and profile checks on the DOM.
+
+Tests: `tests/test_temporal_archive.py` (6), `tests/test_react_raster_pixels.py` (9), basemap coverage `acquisitions`, `selftest-lib` calendar
+axis, e2e +26 steps (intro x6, logo, dropzone caption, preview, bands, footprint on basemap, comparison labelling + a real difference, no
+coverage, ZSTD, archive-mode data = API, click-through, pair-run basis / region, upload mode x4). `tools/shots-temporal.mjs` makes the
+screenshots.

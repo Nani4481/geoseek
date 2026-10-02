@@ -1,8 +1,10 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { api } from '@/api/client';
 import type { LonLat, PresentationSummary } from '@/api/types';
 
 export interface Bookmark { id: string; label: string; lonlat: LonLat }
+/** A one-shot filter handed to the Changes queue (from the Temporal screen): applied once when Changes opens, then consumed. */
+export interface ChangesFilter { firstDetected?: string; changeType?: string; persistence?: string; sensor?: string; region?: string; label: string }
 
 interface Store {
   selectedId: string | null;
@@ -14,6 +16,9 @@ interface Store {
   setAnalyst: (s: string) => void;
   /** change-type labels + acquisition dates, fetched once from /presentation/summary */
   summary: PresentationSummary | null;
+  /** set before navigating to #/changes; Changes reads it on mount and clears it */
+  openInChanges: (f: ChangesFilter) => void;
+  takeChangesFilter: () => ChangesFilter | null;
   label: (changeType: string | null | undefined) => string;
 }
 
@@ -33,6 +38,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [bookmarks, setBookmarks] = useState<Bookmark[]>(() => readLS<Bookmark[]>('geoseek.bookmarks', []));
   const [analyst, setAnalystState] = useState<string>(() => readLS<string>('geoseek.analyst', 'analyst'));
   const [summary, setSummary] = useState<PresentationSummary | null>(null);
+  const pending = useRef<ChangesFilter | null>(null);
 
   useEffect(() => {
     const ac = new AbortController();
@@ -47,14 +53,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       return next;
     });
   }, []);
+  const openInChanges = useCallback((f: ChangesFilter) => { pending.current = f; location.hash = '#/changes'; }, []);
+  const takeChangesFilter = useCallback(() => { const f = pending.current; pending.current = null; return f; }, []);
   const setAnalyst = useCallback((s: string) => { setAnalystState(s); writeLS('geoseek.analyst', s); }, []);
 
   const value = useMemo<Store>(() => ({
     selectedId, select: setSelectedId, bookmarks, toggleBookmark,
     isBookmarked: (id) => bookmarks.some((b) => b.id === id),
-    analyst, setAnalyst, summary,
+    analyst, setAnalyst, summary, openInChanges, takeChangesFilter,
     label: (t) => (t && summary?.change_type_labels[t]) || t || '—',
-  }), [selectedId, bookmarks, toggleBookmark, analyst, setAnalyst, summary]);
+  }), [selectedId, bookmarks, toggleBookmark, analyst, setAnalyst, summary, openInChanges, takeChangesFilter]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

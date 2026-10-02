@@ -1,0 +1,41 @@
+/* Opening sequence + the rail logo's slow orbit. Pure CSS / inline SVG: no asset, no library. */
+
+.intro { position: fixed; inset: 0; z-index: 9000; background: radial-gradient(ellipse at 50% 42%, #0a1738 0%, #050a17 62%, #02050d 100%); display: grid; place-items: center; cursor: pointer; opacity: 1; transition: opacity 0.5s ease; }
+.intro.leaving { opacity: 0; pointer-events: none; transition-duration: 0.22s; }
+.intro:not(.leaving) { animation: intro-hold var(--intro-ms, 3400ms) linear both; }
+@keyframes intro-hold { 0%, 84% { opacity: 1; } 100% { opacity: 0; } }          /* the dissolve, in the last 16 % of the sequence */
+.intro.leaving { animation: none; }
+.intro-stage { display: grid; justify-items: center; gap: 18px; padding: 0 24px; text-align: center; }
+.intro-mark { color: #fff; filter: drop-shadow(0 0 18px rgba(76, 140, 255, 0.45)); overflow: visible; }
+
+/* the mark is drawn stroke-first: each stroke un-hides along its length, then the satellite appears */
+.im-draw { stroke-dasharray: 1; stroke-dashoffset: 1; animation: im-draw 1.05s cubic-bezier(0.6, 0, 0.2, 1) forwards; }
+.im-draw.d1 { animation-delay: 0.15s; } .im-draw.d2 { animation-delay: 0.5s; animation-duration: 0.8s; } .im-draw.d3 { animation-delay: 0.8s; animation-duration: 0.9s; }
+@keyframes im-draw { to { stroke-dashoffset: 0; } }
+.im-sat { opacity: 0; transform-box: fill-box; transform-origin: center; animation: im-sat 0.4s ease-out 1.5s forwards; }
+@keyframes im-sat { from { opacity: 0; } to { opacity: 1; } }
+
+/* the wordmark types in, letter by letter, carrying a saffron / white / green sweep */
+.intro-word { display: flex; gap: 0.06em; font-family: var(--sans); font-weight: 800; font-size: clamp(34px, 6vw, 58px); letter-spacing: 0.18em; padding-left: 0.18em;
+  background: linear-gradient(100deg, #ff9933 0%, #ff9933 28%, #ffffff 50%, #138808 72%, #138808 100%); background-size: 260% 100%; background-position: 100% 0;
+  -webkit-background-clip: text; background-clip: text; color: transparent; animation: iw-sweep 1.5s cubic-bezier(0.4, 0, 0.2, 1) 1.25s forwards; }
+.intro-word span { opacity: 0; transform: translateY(6px); animation: iw-type 0.32s ease-out forwards; animation-delay: calc(1.25s + var(--i) * 0.09s); }
+@keyframes iw-type { to { opacity: 1; transform: none; } }
+@keyframes iw-sweep { to { background-position: 0 0; } }
+.intro-tag { font-size: clamp(12px, 1.6vw, 15px); color: var(--ink-3); letter-spacing: 0.04em; opacity: 0; animation: im-sat 0.6s ease-out 2.15s forwards; }
+
+.intro-controls { position: absolute; left: 0; right: 0; bottom: 22px; display: flex; justify-content: center; align-items: center; gap: 18px; font-size: 12px; color: var(--ink-3); cursor: default; }
+.intro-never { display: inline-flex; align-items: center; gap: 7px; cursor: pointer; user-select: none; }
+.intro-never input { accent-color: var(--cyan); width: 14px; height: 14px; }
+
+/* prefers-reduced-motion: no drawing, typing or sweep - a held frame that fades */
+.intro.reduced .im-draw { animation: none; stroke-dashoffset: 0; }
+.intro.reduced .im-sat, .intro.reduced .intro-tag { animation: none; opacity: 1; }
+.intro.reduced .intro-word { animation: none; background-position: 0 0; }
+.intro.reduced .intro-word span { animation: none; opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) { .intro { transition-duration: 0.2s; } }
+
+/* the rail logo: the satellite flies a slow lap (SMIL inside the inline SVG); the ring of light behind it breathes very slowly */
+.rail .logo { animation: logo-glow 9s ease-in-out infinite; }
+@keyframes logo-glow { 0%, 100% { box-shadow: 0 0 20px rgba(76, 140, 255, 0.3); } 50% { box-shadow: 0 0 26px rgba(76, 140, 255, 0.46); } }
+@media (prefers-reduced-motion: reduce) { .rail .logo { animation: none; } }

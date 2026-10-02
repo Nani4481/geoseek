@@ -30,6 +30,7 @@ def _node(script: str, stdin: str | None = None) -> str:
 def test_timelapse_geometry_selftest():
     res = json.loads(_node("tools/selftest-lib.mjs"))
     assert res["timelapse"] == "ok" and res["mapfit"] == "ok"
+    assert res["cluster_insight"] == "ok" and res["gsd"] == "ok" and res["calendar_axis"] == "ok"
 
 
 def _utm_epsg(zone: int, north: bool) -> int:

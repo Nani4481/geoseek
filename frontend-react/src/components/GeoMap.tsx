@@ -26,6 +26,9 @@ interface Props {
   cells?: MapCells[];
   cellDeg?: number;
   activeCell?: string | null;
+  /** pointer over / away from a cluster's cells, and a click on them (cluster id) */
+  onCellHover?: (id: string | null) => void;
+  onCellClick?: (id: string) => void;
   bbox?: BBox | null;
   drawMode?: boolean;
   fit?: BBox | null;
@@ -72,7 +75,7 @@ function graticuleStep(zoom: number) {
   return 5;
 }
 
-type CellLayerT = L.Layer & { setData: (g: MapCells[], d: number, a: string | null) => void };
+type CellLayerT = L.Layer & { setData: (g: MapCells[], d: number, a: string | null) => void; pick: (lon: number, lat: number, tolDeg: number) => string | null };
 
 /** A canvas layer for very many small squares (one colour per group). Sits under the vector overlay pane. */
 const CellLayer = (L.Layer as unknown as { extend: (o: object) => new (o: object) => CellLayerT }).extend({
@@ -97,7 +100,7 @@ const CellLayer = (L.Layer as unknown as { extend: (o: object) => new (o: object
       c.dataset.active = act ?? ''; c.dataset.drawn = '0';
       let drawn = 0;
       for (const grp of groups) {
-        g.globalAlpha = act === null ? 0.78 : grp.id === act ? 0.97 : 0.1;
+        g.globalAlpha = act === null ? 0.78 : grp.id === act ? 0.97 : 0.16;   // a selected cluster is lit, the rest dimmed (not hidden)
         g.fillStyle = grp.color;
         for (const [lon, lat] of grp.cells) {
           const p = map.latLngToContainerPoint([lat, lon]);
@@ -109,6 +112,14 @@ const CellLayer = (L.Layer as unknown as { extend: (o: object) => new (o: object
     };
     map.on('move zoom moveend zoomend resize viewreset', this._draw, this);
     this._draw();
+  },
+  /** the cluster whose cell lies under a lon/lat (within `tolDeg`); later-drawn groups are on top, so they win */
+  pick(this: Record<string, any>, lon: number, lat: number, tolDeg: number): string | null { // eslint-disable-line @typescript-eslint/no-explicit-any
+    const groups: MapCells[] = this._groups ?? [], tol = Math.max(tolDeg, (this._cellDeg ?? 0.03) / 2);
+    for (let i = groups.length - 1; i >= 0; i--) {
+      for (const [x, y] of groups[i].cells) if (Math.abs(x - lon) <= tol && Math.abs(y - lat) <= tol) return groups[i].id;
+    }
+    return null;
   },
   onRemove(this: Record<string, any>, map: L.Map) { // eslint-disable-line @typescript-eslint/no-explicit-any
     map.off('move zoom moveend zoomend resize viewreset', this._draw, this);
@@ -136,7 +147,7 @@ function captionFor(cov: BasemapCoverage | null, zoom: number, spec: BasemapSpec
 /** Offline Leaflet map. The basemap is the archive's own imagery served by /ui/basemap (no external tiles); where nothing is
  *  staged the dark canvas shows through. */
 export function GeoMap({
-  regions, points, polygons, circles, cells, cellDeg = 0.03, activeCell = null, bbox, drawMode, fit, fitMaxZoom = 16, height = 360, fill, basemap,
+  regions, points, polygons, circles, cells, cellDeg = 0.03, activeCell = null, onCellHover, onCellClick, bbox, drawMode, fit, fitMaxZoom = 16, height = 360, fill, basemap,
   hoverId = null, onHover, onBBox, onCancelDraw, onMapClick, onPointClick, onPolygonClick, onPointContext, onPolygonContext, ariaLabel,
 }: Props) {
   const el = useRef<HTMLDivElement>(null);
@@ -144,8 +155,8 @@ export function GeoMap({
   const map = useRef<L.Map | null>(null);
   const layers = useRef<{ grat: L.LayerGroup; regions: L.LayerGroup; shapes: L.LayerGroup; box: L.LayerGroup; base: L.TileLayer | null; cells: CellLayerT } | null>(null);
   const pins = useRef(new Map<string, { layer: L.Layer; kind: 'pin' | 'dot'; base: { radius: number; opacity: number; weight: number } }>());
-  const cb = useRef({ onBBox, onMapClick, onPointClick, onPolygonClick, onPointContext, onPolygonContext, onHover, onCancelDraw, drawMode });
-  cb.current = { onBBox, onMapClick, onPointClick, onPolygonClick, onPointContext, onPolygonContext, onHover, onCancelDraw, drawMode };
+  const cb = useRef({ onBBox, onMapClick, onPointClick, onPolygonClick, onPointContext, onPolygonContext, onHover, onCancelDraw, drawMode, onCellHover, onCellClick });
+  cb.current = { onBBox, onMapClick, onPointClick, onPolygonClick, onPointContext, onPolygonContext, onHover, onCancelDraw, drawMode, onCellHover, onCellClick };
   const [cov, setCov] = useState<BasemapCoverage | null>(null);
   const [zoom, setZoom] = useState(4);
   const spec = useMemo<BasemapSpec | null>(() => (basemap === undefined || basemap === false ? null : basemap), [basemap]);
@@ -194,6 +205,27 @@ export function GeoMap({
     };
     m.on('mouseup', finish);
     m.on('click', (e: L.LeafletMouseEvent) => { if (!cb.current.drawMode && Date.now() > suppressClickUntil) cb.current.onMapClick?.(e.latlng.lng, e.latlng.lat); });
+
+    // cluster cells: report the cluster under the pointer (one lookup per animation frame) and a click on it
+    const cellAt = (ll: L.LatLng) => {
+      if (!cb.current.onCellHover && !cb.current.onCellClick) return null;
+      const b = m.getBounds(), perPx = (b.getEast() - b.getWest()) / Math.max(1, m.getSize().x);
+      return cellLayer.pick(ll.lng, ll.lat, perPx * 1.5);
+    };
+    let lastCell: string | null = null, raf = 0, pending: L.LatLng | null = null;
+    m.on('mousemove', (e: L.LeafletMouseEvent) => {
+      if (!cb.current.onCellHover || cb.current.drawMode) return;
+      pending = e.latlng;
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const id = pending ? cellAt(pending) : null;
+        m.getContainer().style.cursor = id ? 'pointer' : '';
+        if (id !== lastCell) { lastCell = id; cb.current.onCellHover?.(id); }
+      });
+    });
+    m.on('mouseout', () => { if (lastCell !== null) { lastCell = null; m.getContainer().style.cursor = ''; cb.current.onCellHover?.(null); } });
+    m.on('click', (e: L.LeafletMouseEvent) => { if (cb.current.drawMode || !cb.current.onCellClick) return; const id = cellAt(e.latlng); if (id) cb.current.onCellClick(id); });
 
     const ro = new ResizeObserver(() => m.invalidateSize());
     ro.observe(el.current);

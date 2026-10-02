@@ -9,6 +9,8 @@
 import path from 'node:path';
 import { externalRequests, launch, sleep } from './cdp.mjs';
 import * as geo from '../src/lib/geo.ts';
+import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) => {
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
@@ -40,8 +42,89 @@ const REST = `!document.querySelector('.lapse-stage') && !!document.querySelecto
 const count = (sel) => b.evaluate(`document.querySelectorAll(${JSON.stringify(sel)}).length`);
 
 try {
+  // ---- opening sequence: it must be tested first, on a fresh profile, before the rest of the run switches it off ----
+  const INTRO = `!!document.querySelector('[data-testid=intro]')`;
+  const NO_INTRO = `!document.querySelector('[data-testid=intro]')`;
+  const resetFlags = () => b.evaluate(`(() => { try { sessionStorage.clear(); localStorage.removeItem('geoseek.intro.off'); } catch (e) {} return true; })()`);
+  await b.nav(BASE);
+  await step('intro: plays on first load, skip control visible from the first frame, app already live underneath, ends itself in 2-4 s', async () => {
+    await b.waitFor(INTRO, 30000, 'intro');
+    const t0 = Date.now();
+    const first = await b.evaluate(`(() => { const r = document.querySelector('[data-testid=intro-skip]').getBoundingClientRect(); const cs = getComputedStyle(document.querySelector('[data-testid=intro]')); return { skipVisible: r.width > 0 && r.top >= 0 && r.bottom <= innerHeight, never: !!document.querySelector('[data-testid=intro-never]'), opacity: Number(cs.opacity), app: !!document.querySelector('.app .rail'), word: document.querySelector('[data-testid=intro-word]').innerText.split('\\n').join(''), tag: document.querySelector('[data-testid=intro-tagline]').innerText }; })()`);
+    ok(first.skipVisible && first.never, 'skip / never-again controls are not visible on the first observed frame');
+    ok(first.app, 'the app is not mounted under the intro (it would be blocked, not overlaid)');
+    ok(first.word === 'GEOSEEK' && /offline/i.test(first.tag) && !/\n/.test(first.tag), `word "${first.word}" tag "${first.tag}"`);
+    await b.waitFor(NO_INTRO, 9000, 'intro to end by itself');
+    const ms = Date.now() - t0;
+    ok(ms >= 1800 && ms <= 4300, `intro ran ${ms} ms`);
+    return `ran ${ms} ms (spec 2-4 s), wordmark ${first.word}, tagline one line`;
+  });
+  await step('intro: not repeated on reload in the same session', async () => {
+    await b.nav(BASE); await b.waitFor(`!!document.querySelector('.app .rail')`, 30000, 'app'); await sleep(900);
+    ok(await b.evaluate(NO_INTRO), 'the intro came back within the same session');
+    return 'session flag respected';
+  });
+  await step('intro: a click skips it', async () => {
+    await resetFlags(); await b.nav(BASE); await b.waitFor(INTRO, 30000, 'intro');
+    await b.clickAt(150, 150);
+    await b.waitFor(NO_INTRO, 1500, 'dissolve after a click');
+    return 'clicked away';
+  });
+  await step('intro: any key skips it', async () => {
+    await resetFlags(); await b.nav(BASE); await b.waitFor(INTRO, 30000, 'intro');
+    await b.key('x');
+    await b.waitFor(NO_INTRO, 1500, 'dissolve after a key');
+    return 'key skip';
+  });
+  await step('intro: "don\'t show again" is saved to localStorage and honoured; the checkbox itself does not skip', async () => {
+    await resetFlags(); await b.nav(BASE); await b.waitFor(INTRO, 30000, 'intro');
+    await b.click('[data-testid=intro-never]'); await sleep(300);
+    ok(await b.evaluate(INTRO), 'ticking the box skipped the intro');
+    ok(await b.evaluate(`localStorage.getItem('geoseek.intro.off') === '1'`), 'preference not persisted');
+    await b.click('[data-testid=intro-skip]');
+    await b.waitFor(NO_INTRO, 1500, 'skip');
+    await b.evaluate(`sessionStorage.clear(); true`);                      // a NEW session: only the stored preference can keep it away
+    await b.nav(BASE); await b.waitFor(`!!document.querySelector('.app .rail')`, 30000, 'app'); await sleep(900);
+    ok(await b.evaluate(NO_INTRO), 'intro shown despite the stored preference');
+    return 'persisted in localStorage, suppressed in a new session';
+  });
+  await step('intro: never shown on a deep link', async () => {
+    await resetFlags(); await b.nav('about:blank'); await sleep(200);
+    await b.nav(BASE + '#/data'); await b.waitFor(`!!document.querySelector('.app .rail')`, 30000, 'app'); await sleep(900);
+    ok(await b.evaluate(NO_INTRO), 'intro played over a deep link to #/data');
+    await b.nav('about:blank'); await sleep(200);
+    await b.nav(BASE + '#/changes/2019_2026_004510'); await b.waitFor(`!!document.querySelector('.app .rail')`, 30000, 'app'); await sleep(900);
+    ok(await b.evaluate(NO_INTRO), 'intro played over a deep link to a candidate');
+    return '#/data and #/changes/<id> go straight to the route';
+  });
+  await step('intro + logo: prefers-reduced-motion gives a short still intro and a still logo', async () => {
+    await b.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+    await resetFlags(); await b.nav('about:blank'); await sleep(200); await b.nav(BASE);
+    await b.waitFor(INTRO, 30000, 'intro');
+    const t0 = Date.now();
+    ok(await b.evaluate(`document.querySelector('[data-testid=intro]').classList.contains('reduced')`), 'reduced class');
+    await b.waitFor(NO_INTRO, 5000, 'reduced intro to end');
+    const ms = Date.now() - t0;
+    ok(ms <= 2300, `reduced-motion intro ran ${ms} ms`);
+    const logo = await b.evaluate(`(() => { const s = document.querySelector('.rail .logo svg'); return { orbit: s.dataset.orbit, anim: s.querySelectorAll('animateMotion').length }; })()`);
+    ok(logo.orbit === 'still' && logo.anim === 0, JSON.stringify(logo));
+    await b.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+    return `reduced intro ${ms} ms; logo not animated`;
+  });
+  await b.evaluate(`(() => { try { localStorage.setItem('geoseek.intro.off', '1'); } catch (e) {} return true; })()`);   // the rest of the run is about the console
+  await b.nav('about:blank'); await sleep(200);
   await b.nav(BASE);
   await b.waitFor(`document.querySelectorAll('.stat').length >= 7 && !document.querySelector('.stats .skeleton')`, 30000, 'stat cards');
+
+  await step('logo: the rail logo is animated slowly and continuously (the satellite flies its orbit), no new asset', async () => {
+    const q = `(() => { const s = document.querySelector('.rail .logo svg'); const g = s.querySelector('[data-testid=logo-sat-back]').getBoundingClientRect(); return { orbit: s.dataset.orbit, anim: s.querySelectorAll('animateMotion').length, t: s.getCurrentTime(), x: g.left + g.width / 2, y: g.top + g.height / 2, imgs: document.querySelectorAll('.rail .logo img').length }; })()`;
+    const a = await b.evaluate(q); await sleep(4000); const c = await b.evaluate(q);
+    ok(a.orbit === 'running' && a.anim === 2 && a.imgs === 0, JSON.stringify(a));
+    ok(c.t - a.t > 3.2, `animation clock advanced ${(c.t - a.t).toFixed(2)} s in 4 s`);
+    const d = Math.hypot(c.x - a.x, c.y - a.y);
+    ok(d > 0.8 && d < 14, `satellite moved ${d.toFixed(2)} px in 4 s (expected a slow drift: >0.8 px, <14 px)`);
+    return `satellite moved ${d.toFixed(1)} px in 4 s of a 48 s lap`;
+  });
 
   await step('dashboard: operational stat cards equal the API; no model-evaluation metrics on the home screen', async () => {
     const m = await api('/ui/metrics'), lat = await api('/ui/latency');
@@ -188,7 +271,9 @@ try {
     const read = () => b.evaluate(`+document.querySelector('.compare').getAttribute('aria-valuenow')`);
     await b.drag(r.x + r.w * 0.5, r.y + r.h * 0.5, r.x + r.w * 0.85, r.y + r.h * 0.5);
     await b.waitFor(`+document.querySelector('.compare').getAttribute('aria-valuenow') >= 78`, 5000, 'slider follows the drag');
-    const v1 = await read();
+    // the page may still be working through the queued pointer events (the logo animates continuously): read the value only once it has stopped moving
+    let v1 = await read();
+    for (let i = 0; i < 20; i++) { await sleep(250); const v = await read(); if (v === v1) break; v1 = v; }
     ok(v1 >= 78 && v1 <= 92, `drag -> ${v1}`);
     await b.key('ArrowLeft');
     await b.waitFor(`+document.querySelector('.compare').getAttribute('aria-valuenow') < ${v1}`, 5000, 'ArrowLeft moves the slider');
@@ -208,6 +293,225 @@ try {
     await b.waitFor(`document.querySelector('.compare .tag.r')?.innerText.includes('mask')`);
     await b.waitFor(imgsLoaded('.compare img'));
     return `after = ${lbl}, mask on`;
+  });
+
+  // ---------------------------------------------------------------- explainability + suppression pipeline
+  const ID0 = (await b.evaluate('location.hash')).split('/').pop();   // later steps expect this candidate to be open
+  const FMT_PTS = (x) => (x == null || Math.abs(x) < 0.05 ? 'no reduction' : `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)} pts`);
+
+  await step('explain: "Why this was flagged" lead sentence, evidence order, weights and costs equal /ui/candidates/{id}/explain', async () => {
+    const id = (await b.evaluate('location.hash')).split('/').pop();
+    const ex = await api(`/ui/candidates/${id}/explain`);
+    await b.waitFor(`!!document.querySelector('[data-testid="why-lead"]') && document.querySelectorAll('.ev-row[data-term]').length === ${ex.evidence.terms.length}`, 20000, 'why panel');
+    ok((await text('[data-testid="why-lead"]')).trim() === ex.lead.headline, `lead sentence differs: ${await text('[data-testid="why-lead"]')}`);
+    ok((await text('[data-testid="why-persistence"]')).trim() === ex.lead.persistence, 'persistence sentence');
+    const rows = await b.evaluate(`[...document.querySelectorAll('.ev-row[data-term]')].map(r => ({ term: r.dataset.term, eff: r.querySelector('[data-effect]').innerText, weak: r.classList.contains('weak'), share: r.querySelectorAll('.meter .mono')[0].innerText }))`);
+    ok(JSON.stringify(rows.map((r) => r.term)) === JSON.stringify(ex.evidence.terms.map((t) => t.name)), 'evidence order = API order');
+    ex.evidence.terms.forEach((t, i) => {
+      ok(rows[i].eff === FMT_PTS(t.effect_points), `${t.name} cost: ${rows[i].eff} vs ${FMT_PTS(t.effect_points)}`);
+      ok(rows[i].weak === (t.strength === 'weak'), `${t.name} weak flag`);
+      ok(rows[i].share === `${(t.weight_share * 100).toFixed(0)}%`, `${t.name} weight share ${rows[i].share}`);
+    });
+    const f = ex.evidence.terms.map((t) => t.factor);
+    ok(f.every((v, i) => i === 0 || f[i - 1] <= v), 'terms are ordered by realised effect, largest first');
+    const sum = await text('[data-testid="why-sum"]');
+    ok(sum.includes(`${(ex.evidence.stored_confidence * 100).toFixed(1)}%`) && sum.includes(`${(ex.evidence.recomputed_confidence * 100).toFixed(1)}%`), `confidence sum line: ${sum}`);
+    ok(ex.evidence.reproduces && /✓/.test(sum), 'recomputed value reproduces the stored confidence');
+    for (const m of ex.evidence.multipliers) ok((await b.evaluate(`document.querySelector('[data-mult="${m.name}"]')?.innerText || ''`)).includes(`×${m.factor.toFixed(2)}`), `multiplier ${m.name}`);
+    await shot('10-explain-why');
+    return `${ex.evidence.terms.length} terms; largest effect: ${ex.evidence.terms[0].name} ${FMT_PTS(ex.evidence.terms[0].effect_points)}`;
+  });
+
+  await step('explain: spectral deltas vs thresholds, and absent / weak evidence is as plain as strong (SAR missing stays prominent)', async () => {
+    const id = (await b.evaluate('location.hash')).split('/').pop();
+    const ex = await api(`/ui/candidates/${id}/explain`);
+    const rows = await b.evaluate(`[...document.querySelectorAll('.why-spec tbody tr[data-index]')].map(r => ({ i: r.dataset.index, cells: [...r.querySelectorAll('td')].map(c => c.innerText.replace(/\\s+/g, ' ')) }))`);
+    ok(rows.length === 3, 'one row per index');
+    for (const a of ex.spectral.anomalies) {
+      const r = rows.find((x) => x.i === a.index);
+      const sg = (v) => `${v >= 0 ? '+' : '−'}${Math.abs(v).toFixed(2)}`;
+      ok(r.cells[1] === sg(a.delta) && r.cells[2] === sg(a.seasonal) && r.cells[3] === sg(a.anomaly), `${a.index}: ${r.cells.slice(1, 4)} vs ${sg(a.delta)},${sg(a.seasonal)},${sg(a.anomaly)}`);
+    }
+    for (const t of ex.spectral.tests.filter((x) => x.decisive)) ok((await b.evaluate('document.querySelector(".why-spec").innerText')).replace(/\s+/g, ' ').includes(t.text), `threshold shown: ${t.text}`);
+    const gaps = await text('[data-testid="why-gaps"]');
+    ok(ex.weak_or_absent.length > 0 && ex.weak_or_absent.every((w) => gaps.replace(/\s+/g, ' ').includes(w.text.slice(0, 40))), 'every weak / missing item from the API is listed');
+    if (!ex.sar.available) {
+      ok(/No Sentinel-1 coverage for this candidate/.test(gaps), 'SAR absence stated in the panel');
+      ok((await b.evaluate(`document.querySelector('[data-gap="sar"]')?.className`)) === 'sar', 'SAR absence is styled as the prominent item');
+    }
+    ok(/context only/.test(gaps) || !ex.terrain, 'terrain is labelled as context, not evidence');
+    return `${ex.weak_or_absent.length} weak / missing items; SAR ${ex.sar.available ? 'present' : 'absent'}`;
+  });
+
+  await step('explain: the raw decomposition sits behind a toggle and shows the engine\'s own numbers', async () => {
+    const id = (await b.evaluate('location.hash')).split('/').pop();
+    const ex = await api(`/ui/candidates/${id}/explain`);
+    ok((await count('[data-testid="why-raw"]')) === 0, 'raw decomposition is hidden by default');
+    await b.click('[data-testid="why-raw-toggle"]');
+    await b.waitFor(`!!document.querySelector('[data-testid="why-raw"]')`, 5000, 'raw panel');
+    ok((await count('[data-testid="why-raw"] .why-lines li')) === ex.evidence.breakdown_lines.length, 'every breakdown line shown');
+    const raw = await text('[data-testid="why-raw"]');
+    for (const t of ex.evidence.terms) ok(raw.includes(t.factor.toFixed(4)) && raw.includes(t.value.toFixed(4)), `raw numbers for ${t.name}`);
+    await b.click('[data-testid="why-raw-toggle"]');
+    await b.waitFor(`!document.querySelector('[data-testid="why-raw"]')`, 5000, 'raw panel closes');
+    return 'toggle opens and closes';
+  });
+
+  await step('explain: "Show … on the pixels" opens the index maps for the after-date tile with the candidate footprint outlined', async () => {
+    const id = (await b.evaluate('location.hash')).split('/').pop();
+    const ex = await api(`/ui/candidates/${id}/explain`);
+    ok(!!ex.overlay, 'candidate has an overlay tile');
+    await b.click('[data-testid="why-pixels"]');
+    await b.waitFor(`document.querySelectorAll('.spec-fig').length === ${Math.max(1, ex.overlay.focus_indices.length || 3)} && !!document.querySelector('[data-testid="footprint-outline"]')`, 30000, 'index maps with outline');
+    const shown = await b.evaluate(`[...document.querySelectorAll('.spec-fig')].map(f => f.dataset.index)`);
+    ok(ex.overlay.focus_indices.length === 0 || JSON.stringify(shown.sort()) === JSON.stringify([...ex.overlay.focus_indices].sort()), `decisive indices shown first: ${shown}`);
+    const pts = await b.evaluate(`document.querySelector('[data-testid="footprint-outline"] polygon').getAttribute('points').trim().split(/\\s+/).length`);
+    ok(pts === ex.overlay.geometry.coordinates[0].length, `outline has ${pts} vertices, geometry has ${ex.overlay.geometry.coordinates[0].length}`);
+    ok((await text('.spec-panel')).length > 0 && /decisive for this change type/.test(await b.evaluate('document.body.innerText')) === (ex.overlay.focus_indices.length > 0), 'decisive tag matches the API focus');
+    await b.waitFor(imgsLoaded('.spec-img img.pix'), 30000, 'overlay image');
+    ok((await b.evaluate(`document.querySelector('.spec-panel').getAttribute('data-tile')`)) === ex.overlay.tile_id, 'tile id equals API overlay tile');
+    await shot('11-explain-pixels');
+    await b.click('[data-testid="why-pixels"]');
+    await b.waitFor(`!document.querySelector('.spec-panel')`, 5000, 'maps close');
+    return `${ex.overlay.tile_id} ${ex.overlay.focus_indices.join('+') || 'all indices'}`;
+  });
+
+  await step('trace: every stage the candidate went through, in order, with verdict and effect from the API', async () => {
+    const id = (await b.evaluate('location.hash')).split('/').pop();
+    const ex = await api(`/ui/candidates/${id}/explain`);
+    const rows = await b.evaluate(`[...document.querySelectorAll('[data-testid="trace-list"] .tr-row')].map(r => ({ id: r.dataset.stage, verdict: r.dataset.verdict, eff: r.querySelector('.eff').innerText }))`);
+    ok(JSON.stringify(rows.map((r) => r.id)) === JSON.stringify(ex.trace.map((s) => s.id)), `stage order ${rows.map((r) => r.id)}`);
+    ok(JSON.stringify(rows.map((r) => r.verdict)) === JSON.stringify(ex.trace.map((s) => s.verdict)), 'verdicts equal the API');
+    ex.trace.forEach((s, i) => {
+      const f = s.effect?.factor;
+      if (f != null && Math.abs(f - 1) >= 5e-4) ok(rows[i].eff.includes(`×${f.toFixed(2)}`), `${s.id} effect ${rows[i].eff} vs ×${f.toFixed(2)}`);
+      else if (s.effect == null || f == null) ok(/no effect/.test(rows[i].eff), `${s.id}: ${rows[i].eff}`);
+    });
+    ok(rows.length === 8 && rows[0].id === 'morphology' && rows[7].id === 'sar', 'eight stages, morphology first, SAR last');
+    return rows.map((r) => `${r.id}:${r.verdict}`).join(' ');
+  });
+
+  await step('trace: a demoted candidate explains why, and says it was demoted rather than dropped', async () => {
+    const list = await api('/candidates?persistence=transient&sort=confidence&limit=1');
+    ok(list.total > 0, 'there is a transient candidate');
+    const id = list.candidates[0].candidate_id;
+    await go(`changes/${id}`);
+    const ex = await api(`/ui/candidates/${id}/explain`);
+    await b.waitFor(`!!document.querySelector('[data-testid="trace-demoted"]')`, 20000, 'demotion note');
+    const note = await text('[data-testid="trace-demoted"]');
+    const pers = ex.trace.find((s) => s.id === 'persistence');
+    ok(/Demoted, not dropped/.test(note) && note.includes(pers.detail.slice(0, 30)), `note: ${note}`);
+    ok(note.includes(`${Math.round(ex.evidence.stored_confidence * 100)}%`), 'confidence in the note equals the API');
+    ok(pers.verdict === 'demoted' && pers.effect.points < 0, 'API marks the stage demoted with a negative effect');
+    const lead = await text('[data-testid="why-persistence"]');
+    ok(/Time is against it/.test(lead) && lead.includes(`×${(ex.evidence.multipliers.find((m) => m.name === 'persistence_penalty').factor).toFixed(2)}`), `lead: ${lead}`);
+    await shot('12-explain-demoted');
+    return `${id}: ${pers.verdict}, ${pers.effect.points} pts`;
+  });
+
+  await step('explain: an unclassified candidate says no rule matched and starts no index as "decisive"', async () => {
+    const list = await api('/candidates?change_type=other&limit=1');
+    ok(list.total > 0, 'an unclassified candidate exists');
+    const id = list.candidates[0].candidate_id;
+    await go(`changes/${id}`);
+    await b.waitFor(`document.querySelector('[data-testid="why-lead"]')?.innerText.includes('no spectral rule matched')`, 20000, 'unclassified lead');
+    ok(/no rule matched/.test(await text('.why-spec')), 'table says no rule matched');
+    await b.click('[data-testid="why-pixels"]');
+    await b.waitFor(`document.querySelectorAll('.spec-fig').length === 3`, 30000, 'all three index maps');
+    ok(!/decisive for this change type/.test(await b.evaluate('document.body.innerText')), 'nothing is starred as decisive');
+    await b.click('[data-testid="why-pixels"]');
+    return id;
+  });
+
+  await step('pipeline: funnel counts, per-gate removals and shares equal /ui/pipeline/funnel; nothing typed in', async () => {
+    const f = await api('/ui/pipeline/funnel');
+    await go('pipeline');
+    await b.waitFor(`document.querySelectorAll('[data-testid="funnel"] .fn-row').length === ${f.pairs.find((p) => p.name === f.span_pair).stages.length + 2}`, 20000, 'funnel rows');
+    const span = f.pairs.find((p) => p.name === f.span_pair);
+    const rows = await b.evaluate(`[...document.querySelectorAll('[data-testid="funnel"] .fn-row')].map(r => ({ s: r.dataset.stage, removed: +r.dataset.removed, remaining: +r.dataset.remaining, input: +r.dataset.input, text: r.querySelector('.cnt').innerText }))`);
+    ok(rows[0].s === 'raw' && rows[0].remaining === span.raw, `raw ${rows[0].remaining} vs ${span.raw}`);
+    span.stages.forEach((s, i) => {
+      ok(rows[i + 1].s === s.rule && rows[i + 1].removed === s.removed && rows[i + 1].remaining === s.remaining, `${s.rule}: ${JSON.stringify(rows[i + 1])}`);
+      if (s.removed > 0) ok(rows[i + 1].text.includes(s.removed.toLocaleString('en-US')) && rows[i + 1].text.includes(`${(s.share_of_raw * 100).toFixed(1)}%`), `${s.rule} text ${rows[i + 1].text}`);
+    });
+    const last = rows[rows.length - 1];
+    ok(last.s === 'survivors' && last.remaining === span.survivors, 'survivors row');
+    // the funnel's end is the queue the analyst actually sees
+    const q = await api('/candidates?limit=1');
+    ok(span.survivors === q.total, `funnel survivors ${span.survivors} = queue total ${q.total}`);
+    ok(span.raw - span.suppressed === span.survivors && span.consistent, 'API says gate counts add up');
+    const cards = await b.evaluate(`[...document.querySelectorAll('.stat .value')].map(v => v.innerText)`);
+    ok(cards.includes(span.raw.toLocaleString('en-US')) && cards.includes(span.survivors.toLocaleString('en-US')) && cards.includes(span.suppressed.toLocaleString('en-US')), `stat cards ${cards}`);
+    await shot('13-pipeline');
+    return `${span.raw} → ${span.survivors}; ${span.stages.map((s) => `${s.rule} −${s.removed}`).join(', ')}`;
+  });
+
+  await step('pipeline: choosing another pair changes every figure (proof they are read, not typed); zoom rescales to the size floor', async () => {
+    const f = await api('/ui/pipeline/funnel');
+    const other = f.pairs.find((p) => p.name !== f.span_pair);
+    await b.evaluate(`(() => { const e = document.querySelector('[data-testid="pair-select"]'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(e, ${JSON.stringify(other.name)}); e.dispatchEvent(new Event('change', {bubbles:true})); })()`);
+    await b.waitFor(`document.querySelector('[data-testid="funnel"] .fn-row[data-stage="raw"]')?.dataset.remaining === '${other.raw}'`, 8000, 'other pair raw');
+    const rows = await b.evaluate(`[...document.querySelectorAll('[data-testid="funnel"] .fn-row')].map(r => ({ s: r.dataset.stage, removed: +r.dataset.removed }))`);
+    other.stages.forEach((s, i) => ok(rows[i + 1].removed === s.removed, `${other.name} ${s.rule}: ${rows[i + 1].removed} vs ${s.removed}`));
+    ok(/computed for the span pair/.test(await b.evaluate('document.body.innerText')), 'persistence / SAR sections say they are span-only');
+    await b.click('[data-testid="funnel-zoom"]');
+    await b.waitFor(`document.querySelector('[data-testid="funnel"] .fn-row[data-stage="raw"]')?.innerText.includes('reached the checks')`, 5000, 'zoom');
+    const w = await b.evaluate(`(() => { const r = document.querySelector('[data-testid="funnel"] .fn-row[data-stage="survivors"] .keep').getBoundingClientRect(); const t = document.querySelector('[data-testid="funnel"] .fn-row[data-stage="survivors"] .fn-track').getBoundingClientRect(); return r.width / t.width; })()`);
+    ok(Math.abs(w - other.survivors / other.stages[0].remaining) < 0.02, `zoomed survivors bar ${w.toFixed(3)} vs ${(other.survivors / other.stages[0].remaining).toFixed(3)}`);
+    await b.click('[data-testid="funnel-zoom"]');
+    await b.evaluate(`(() => { const e = document.querySelector('[data-testid="pair-select"]'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(e, ${JSON.stringify(f.span_pair)}); e.dispatchEvent(new Event('change', {bubbles:true})); })()`);
+    return `${other.name}: ${other.raw} → ${other.survivors}`;
+  });
+
+  await step('pipeline: post-gate stages (typing, persistence, SAR, bands), labelled-benchmark table and the Ayodhya-calibration caveat come from the API', async () => {
+    const f = await api('/ui/pipeline/funnel');
+    await b.waitFor(`!!document.querySelector('[data-testid="post-gate"] [data-class]')`, 8000, 'post-gate');
+    const pe = f.post_gate.persistence;
+    for (const [k, n] of Object.entries(pe.by_class)) {
+      const cells = await b.evaluate(`(() => { const r = document.querySelector('[data-testid="post-gate"] tr[data-class="${k}"]'); return r ? [...r.querySelectorAll('td')].map(c => c.innerText) : null; })()`);
+      ok(cells && cells[1] === n.toLocaleString('en-US'), `class ${k}: ${cells}`);
+    }
+    const body = await text('[data-testid="post-gate"]');
+    ok(body.includes(pe.contradicted.toLocaleString('en-US')) && body.includes(f.post_gate.survivors.toLocaleString('en-US')), 'demoted / survivor counts');
+    if (!f.post_gate.sar.available) ok(/No Sentinel-1 corroboration in this run/.test(body), 'SAR absence stated on the funnel screen');
+    for (const [k, n] of Object.entries(f.post_gate.confidence_bands)) ok(body.includes(`${k} ${n.toLocaleString('en-US')}`.replace(/\s+/g, ' ')) || body.replace(/\s+/g, ' ').includes(`${k} ${n.toLocaleString('en-US')}`), `band ${k} ${n}`);
+    const lab = f.labelled_benchmark;
+    const t = await text('[data-testid="labelled"]');
+    ok(lab.available && lab.stages.every((s) => t.includes(s.f1.toFixed(3))), 'labelled-benchmark F1 values equal the API');
+    ok(t.includes(lab.caveat.slice(0, 40)), 'labelled benchmark carries its own caveat');
+    ok(/calibrated on the Ayodhya AOI/.test(await text('[data-testid="funnel-scope"]')), 'gate effects are scoped to Ayodhya');
+    const gc = await text('.gate-cards');
+    for (const g of f.gates) ok(gc.includes(g.what.slice(0, 40)), `gate card for ${g.rule}`);
+    ok(/costs F1 off-region/.test(gc) === lab.stages.some((s) => s.stage === 'phenology' && s.delta_f1 <= -0.005), 'the F1-cost warning appears exactly where the benchmark shows a cost');
+    return `${Object.keys(pe.by_class).length} persistence classes; benchmark ΔF1 ${lab.stages.map((s) => s.delta_f1).filter((x) => x != null).join(', ')}`;
+  });
+
+  await step('pipeline: rejected components are stated as not retained, what would be needed is named, demoted sample is inspectable', async () => {
+    const f = await api('/ui/pipeline/funnel');
+    ok(f.rejected.retained === false, 'API says rejected components are not retained');
+    const rej = await text('[data-testid="rejected"]');
+    ok(/Not retained\./.test(rej) && rej.includes(f.rejected.to_emit.slice(0, 40)), `rejected panel: ${rej.slice(0, 120)}`);
+    ok(!/browse rejected|download rejected/i.test(rej) && (await count('[data-testid="rejected"] a, [data-testid="rejected"] button')) === 0, 'no control implies rejected components can be recovered');
+    const n = await count('[data-testid="demoted-sample"] tbody tr');
+    ok(n === f.demoted_sample.length && n > 0, `${n} demoted sample rows`);
+    const first = f.demoted_sample[0];
+    ok((await text('[data-testid="demoted-sample"] tbody tr')).includes(first.candidate_id) && (await text('[data-testid="demoted-sample"] tbody tr')).includes(first.reason.slice(0, 20)), 'sample row shows id and reason');
+    await b.click('[data-testid="demoted-sample"] tbody tr');
+    await b.waitFor(`location.hash === '#/changes/${first.candidate_id}'`, 8000, 'opens the candidate');
+    await b.waitFor(`!!document.querySelector('[data-testid="trace-demoted"]')`, 20000, 'its trace says demoted');
+    return `${first.candidate_id}: ${first.reason}`;
+  });
+
+  await step('explain: back on the original candidate the workbench is intact (compare slider, timeline, panels)', async () => {
+    await go(`changes/${ID0}`);
+    // leaving the screen reset the queue filter; later steps (filtered export) expect the construction filter, as before
+    await b.waitFor(`document.querySelectorAll('.tbl tbody tr').length > 0`, 20000, 'queue');
+    await b.evaluate(`(() => { const s = document.querySelector('.filters select'); const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set; set.call(s, 'construction'); s.dispatchEvent(new Event('change', {bubbles:true})); })()`);
+    const nConstruction = (await api('/candidates?change_type=construction&limit=1')).total;
+    await b.waitFor(`document.body.innerText.includes('of ${nConstruction}')`, 10000, 'filtered total');
+    await b.waitFor(`document.querySelector('.compare') && ${imgsLoaded('.compare img').replace(/\n/g, ' ')}`, 30000, 'compare images');
+    await b.waitFor(`!!document.querySelector('[data-testid="why-lead"]')`, 20000, 'why panel');
+    return ID0;
   });
 
   if (WRITES) {
@@ -702,6 +1006,41 @@ try {
     return `${m.sensors.length} collections, ${regs.length} regions`;
   });
 
+  await step('data: inventory tables keep one line per row on fixed columns, GSD rounded with the exact value on hover, dates as chips', async () => {
+    await go('data');
+    const m = await api('/ui/metrics'), regs = (await api('/regions')).regions;
+    await b.waitFor(`document.querySelectorAll('table[aria-label=Collections] tbody tr').length === ${m.sensors.length} && document.querySelectorAll('table[aria-label=Regions] tbody tr').length === ${regs.length}`, 15000, 'tables');
+    const lay = await b.evaluate(`(() => {
+      const tbl = (n) => document.querySelector('table[aria-label=' + n + ']');
+      const info = (t) => ({
+        fixed: getComputedStyle(t).tableLayout,
+        heads: [...t.querySelectorAll('th')].map((h) => ({ t: h.innerText, h: h.getBoundingClientRect().height, clipped: h.scrollWidth > h.clientWidth + 1 })),
+        rows: [...t.querySelectorAll('tbody tr')].map((r) => ({ h: r.getBoundingClientRect().height, cells: [...r.children].map((c) => ({ x: Math.round(c.getBoundingClientRect().left), txt: c.innerText, title: c.title, cut: c.scrollWidth > c.clientWidth + 1 })) })),
+      });
+      const d = document.querySelector('[data-testid=inventory-dates]');
+      return { c: info(tbl('Collections')), r: info(tbl('Regions')), dates: { h: d.getBoundingClientRect().height, chips: [...d.querySelectorAll('.chip')].map((x) => x.innerText), w: d.getBoundingClientRect().width, panelW: d.closest('.body').clientWidth } };
+    })()`);
+    for (const [name, t] of [['collections', lay.c], ['regions', lay.r]]) {
+      ok(t.fixed === 'fixed', `${name}: table-layout ${t.fixed}`);
+      ok(t.heads.every((h) => h.h < 34 && !h.clipped), `${name}: a header wraps or is clipped: ${JSON.stringify(t.heads)}`);
+      const hs = t.rows.map((r) => r.h); ok(Math.max(...hs) - Math.min(...hs) < 3 && Math.max(...hs) < 40, `${name}: rows differ in height (a cell wrapped): ${hs}`);
+      for (let k = 0; k < t.rows[0].cells.length; k++) ok(new Set(t.rows.map((r) => r.cells[k].x)).size === 1, `${name}: column ${k} is not aligned`);
+    }
+    const r1 = (v) => (v >= 1 ? +v.toFixed(1) : +v.toFixed(2));
+    m.sensors.forEach((s, i) => {
+      const cells = lay.c.rows[i].cells, gsd = cells[2], sensor = cells[1];
+      ok(cells[0].txt === s.collection_id && !cells[0].cut, `collection id "${cells[0].txt}" wraps or is cut`);
+      ok(gsd.txt === `${r1(s.native_gsd_m)} m` && gsd.title === `${s.native_gsd_m} m`, `GSD ${gsd.txt} / title ${gsd.title} for ${s.native_gsd_m}`);
+      ok(sensor.title === `${s.platform} · ${s.sensor}`, `sensor tooltip ${sensor.title}`);
+    });
+    ok(!lay.c.rows.some((r) => /\d\.\d{3,}/.test(r.cells[2].txt)), 'a GSD is shown at full float precision');
+    ok(lay.dates.chips.length === m.observation_dates.length && m.observation_dates.every((d, i) => lay.dates.chips[i] === d), `date chips ${lay.dates.chips}`);
+    ok(lay.dates.h < 70 && lay.dates.w > lay.dates.panelW * 0.9, `dates block is ${lay.dates.h}px tall, ${lay.dates.w}px wide of ${lay.dates.panelW}`);
+    ok(lay.r.rows.every((r, i) => r.cells[2].title.includes(regs[i].bbox[0].toFixed(3))), 'region bbox tooltips');
+    await shot('24-data-inventory');
+    return `${m.sensors.length} collection rows + ${regs.length} region rows, one line each, columns aligned; GSD ${lay.c.rows.map((r) => r.cells[2].txt).join(' / ')}; ${lay.dates.chips.length} date chips in ${Math.round(lay.dates.h)}px`;
+  });
+
   await step('data: dropping a GeoTIFF parses its real header; the badge shows what the file actually contains', async () => {
     const cx = (ayo.bbox[0] + ayo.bbox[2]) / 2, cy = (ayo.bbox[1] + ayo.bbox[3]) / 2;
     const u = geo.toUTM(cx, cy);
@@ -756,7 +1095,7 @@ try {
     return 'plain.tif amber (no CRS), junk.tif red';
   });
 
-  await step('data: a 168 MB staged Sentinel-2 band parses from its header alone (no full read), matching the catalog', async () => {
+  await step('data: a 168 MB staged Sentinel-2 band: header parsed at once, then a decimated pixel preview, matching the catalog', async () => {
     const p = 'C:/Users/Prash/Downloads/SIH 2026/geoseek/data/datasets/S2A_42QXM_20240110_0_L2A/B08.tif';
     if (!fsx.existsSync(p)) return 'skipped: staged band not on this machine';
     const t0 = Date.now();
@@ -767,10 +1106,301 @@ try {
     ok(c.crs.startsWith('EPSG:32642') && c.size === '10,913 × 10,903 px', `${c.crs} | ${c.size}`);
     ok(/Kutch/.test(c.contains) && /matches the .*10 m/.test(c.contains), c.contains);
     ok(/MB|GB/.test(c.bytes), c.bytes);
-    ok(ms < 8000, `took ${ms} ms (a whole-file read would be slower)`);
-    const decoders = b.requests.filter((r) => /lerc|zstd|jpeg|lzw|packbits|pako|webimage/.test(r.url));
-    ok(decoders.length === 0, 'pixel decoders were fetched: ' + decoders.map((d) => d.url).join(', '));
-    return `${c.size} ${c.bytes} parsed in ${ms} ms; no pixel decoder loaded`;
+    ok(ms < 8000, `header took ${ms} ms (a whole-file read would be slower)`);
+    // the pixels are decoded afterwards as a decimated preview, and the caption says so
+    await b.waitFor(`document.querySelector('[data-testid=preview-canvas]')?.dataset.drawn`, 90000, 'decimated preview of the 168 MB band');
+    const cap = await text('[data-testid=preview-caption]');
+    ok(/decimation/.test(cap) && /10913 × 10903/.test(cap), cap.slice(0, 260));
+    return `${c.size} ${c.bytes}: header in ${ms} ms, then a decimated preview (${await b.evaluate(`document.querySelector('[data-testid=preview-canvas]').dataset.w + 'x' + document.querySelector('[data-testid=preview-canvas]').dataset.h`)})`;
+  });
+
+  // ============================== raster preview, upload-vs-archive comparison, Temporal tab ==============================
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const PY = process.env.GEOSEEK_PY || 'C:/AnacondaPython/anaconda3/envs/geoseek/python.exe';
+  let fx = null;
+  try {
+    const dir = fsx.mkdtempSync(path.join(tmp, 'geoseek-fx-')), envRoot = path.dirname(PY);
+    execFileSync(PY, [path.join(here, '..', '..', 'tests', 'raster_fixtures.py'), dir], { stdio: 'pipe', env: { ...process.env, GDAL_DATA: `${envRoot}/Library/share/gdal`, PROJ_LIB: `${envRoot}/Library/share/proj`, PYTHONIOENCODING: 'utf-8' } });
+    fx = { dir, ref: JSON.parse(fsx.readFileSync(path.join(dir, 'reference.json'), 'utf8')) };
+  } catch (e) { fx = null; }
+  const F = (k) => fx.ref.files[k].path;
+  const drop = async (paths, ready = 1) => { await go('data'); await b.setFiles('[data-testid=raster-input]', paths); await b.waitFor(`document.querySelectorAll('[data-testid=preview-canvas][data-drawn]:not([data-drawn=""])').length >= ${ready}`, 40000, 'preview canvas'); };
+  const pixelAt = (r, c, nth = 0) => b.evaluate(`Array.from(document.querySelectorAll('[data-testid=preview-canvas]')[${nth}].getContext('2d').getImageData(${c}, ${r}, 1, 1).data)`);
+  const f4 = (v) => (Number.isFinite(v) ? (Math.abs(v) >= 100 ? v.toFixed(1) : v.toFixed(4)) : '—');
+
+  await step('data: the dropzone caption is accurate - pixels ARE read here now, nothing leaves the machine', async () => {
+    await go('data');
+    const cap = await text('[data-testid=dropzone-caption]');
+    ok(!/pixel data is not read/i.test(cap), cap);
+    ok(/pixels are read in this browser/i.test(cap) && /nothing leaves this machine/i.test(cap) && /nothing is added to the archive/i.test(cap), cap);
+    return cap.slice(0, 150);
+  });
+
+  await step('data: a real 4-band GeoTIFF previews as true colour (B04/B03/B02); every canvas pixel equals the numpy-stretched value; the percentiles are stated', async () => {
+    if (!fx) return 'skipped: fixtures could not be generated (needs the geoseek python env and the staged scenes)';
+    await drop([F('2019-03-30')]);
+    const sel = await b.evaluate(`({ r: document.querySelector('select[aria-label="Band shown as red"]').value, g: document.querySelector('select[aria-label="Band shown as green"]').value, bl: document.querySelector('select[aria-label="Band shown as blue"]').value, mode: document.querySelector('[data-testid=preview-canvas]').dataset.mode })`);
+    ok(sel.mode === 'rgb' && sel.r === '2' && sel.g === '1' && sel.bl === '0', JSON.stringify(sel));
+    const samples = fx.ref.files['2019-03-30'].composite_samples;
+    ok(samples.length >= 3, 'fixture samples');
+    for (const sm of samples) { const px = await pixelAt(sm.row, sm.col); ok(px[0] === sm.rgb[0] && px[1] === sm.rgb[1] && px[2] === sm.rgb[2] && px[3] === 255, `pixel (${sm.row},${sm.col}) = ${px} but numpy says ${sm.rgb}`); }
+    const cap = await text('[data-testid=preview-caption]');
+    ok(/2nd and 98th percentile/.test(cap) && /nothing is uploaded/i.test(cap) && /native resolution, 800 × 800 px/.test(cap) && /NoData value \(0\)/.test(cap), cap.slice(0, 420));
+    const st = fx.ref.files['2019-03-30'].bands;
+    ok(cap.includes(`R ${(+st.B04.p2.toPrecision(4)) >= 100 ? st.B04.p2.toFixed(0) : st.B04.p2.toPrecision(4)}`), `stated red stretch low ${st.B04.p2}: ${cap.slice(0, 300)}`);
+    await shot('30-data-preview');
+    return `${samples.length} canvas pixels equal numpy exactly; caption states 2nd–98th percentile and the per-band values`;
+  });
+
+  await step('data: band selector - single band grey view and other stretches re-render the canvas', async () => {
+    if (!fx) return 'skipped';
+    const before = await b.evaluate(`document.querySelector('[data-testid=preview-canvas]').dataset.drawn`);
+    await b.select('[data-testid=preview-mode]', 'grey');
+    await b.waitFor(`document.querySelector('[data-testid=preview-canvas]').dataset.mode === 'grey' && document.querySelector('[data-testid=preview-canvas]').dataset.drawn !== ${JSON.stringify(before)}`, 8000, 'grey');
+    const g = await pixelAt(400, 400); ok(g[0] === g[1] && g[1] === g[2] && g[3] === 255, `not grey: ${g}`);
+    await b.select('[data-testid=preview-stretch]', '0-100');
+    await b.waitFor(`/0th and 100th percentile/.test(document.querySelector('[data-testid=preview-caption]').innerText)`, 8000, 'min-max caption');
+    const px = await pixelAt(400, 400);
+    await b.select('[data-testid=preview-mode]', 'rgb'); await b.select('[data-testid=preview-stretch]', '2-98');
+    await b.waitFor(`document.querySelector('[data-testid=preview-canvas]').dataset.mode === 'rgb' && /2nd and 98th/.test(document.querySelector('[data-testid=preview-caption]').innerText)`, 8000, 'back to rgb');
+    return `grey (r=g=b) and 0–100 stretch re-render; sample ${px.slice(0, 3)}`;
+  });
+
+  await step('data: the footprint is drawn on the archive basemap, zoomed to the file bounds (not an empty graticule)', async () => {
+    if (!fx) return 'skipped';
+    await b.waitFor(`document.querySelector('.raster-map .geomap')?.dataset.basemap === 'sentinel-2'`, 10000, 'basemap');
+    await b.waitFor(`[...document.querySelectorAll('.raster-map .gm-basemap img')].filter(i => i.complete && i.naturalWidth > 0).length >= 1`, 30000, 'basemap tiles');
+    const m = await b.evaluate(`(() => { const el = document.querySelector('.raster-map [role=application]'); const mp = el.__leaflet; const v = mp.getBounds(); const ll = document.querySelector('[data-field=lonlat]').innerText.split(',').map(Number);
+      return { z: mp.getZoom(), view: [v.getWest(), v.getSouth(), v.getEast(), v.getNorth()], ll, paths: (() => { let n = 0; mp.eachLayer((l) => { if (l.options && l.options.color === '#f5a524' && l.getBounds) n++; }); return n; })(), cap: document.querySelector('.raster-map [data-testid=map-caption]')?.innerText || '', note: document.querySelector('[data-testid=footprint-note]')?.innerText || '' }; })()`);
+    ok(m.ll[0] >= m.view[0] && m.ll[2] <= m.view[2] && m.ll[1] >= m.view[1] && m.ll[3] <= m.view[3], `footprint ${m.ll} outside view ${m.view}`);
+    ok((m.view[2] - m.view[0]) / (m.ll[2] - m.ll[0]) < 6, 'map is not zoomed to the file');
+    ok(m.z >= 11, `zoom ${m.z}`); ok(m.paths >= 1, 'no footprint outline'); ok(/Local archive imagery/.test(m.cap) && /Amber outline/.test(m.note), m.cap.slice(0, 120));
+    await shot('31-data-footprint-basemap');
+    return `zoom ${m.z}, view ${(m.view[2] - m.view[0]).toFixed(3)}° wide around a ${(m.ll[2] - m.ll[0]).toFixed(3)}° footprint, tiles loaded`;
+  });
+
+  await step('data: upload vs archive comparison is labelled an indicative visual difference, names the archive date, and is a real image difference', async () => {
+    if (!fx) return 'skipped';
+    ok(await b.evaluate(`!!document.querySelector('[data-testid=compare-banner]')`), 'banner');
+    await b.waitFor(`document.querySelector('[data-testid=compare-acq-select]') && document.querySelector('[data-testid=compare-acq-select]').options.length > 0`, 20000, 'archive acquisitions');
+    ok((await b.evaluate(`document.querySelector('[data-testid=compare-acq-select]').value`)) === '2019-03-30', 'nearest acquisition to a 2019-03-30 file is not 2019-03-30');
+    await b.click('[data-testid=compare-run]');
+    await b.waitFor(`!!document.querySelector('[data-testid=compare-grid]')`, 90000, 'comparison');
+    await sleep(500);
+    const r = await b.evaluate(`(() => { const root = document.querySelector('[data-testid=raster-compare]'); const alpha = (id) => { const c = document.querySelector('[data-testid=' + id + ']'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0, nonWhite = 0; for (let i = 3; i < d.length; i += 4) if (d[i] > 0) { n++; if (d[i - 3] < 240 || d[i - 1] < 240) nonWhite++; } return { n, nonWhite, w: c.width }; };
+      return { text: root.innerText, banner: document.querySelector('[data-testid=compare-banner]').innerText, caveats: [...document.querySelectorAll('[data-testid=compare-caveats] li')].map(l => l.innerText), acq: document.querySelector('[data-testid=compare-acq]').innerText, nums: document.querySelector('[data-testid=compare-numbers]').innerText, method: document.querySelector('[data-testid=compare-method]').innerText,
+        file: alpha('compare-canvas-file'), arch: alpha('compare-canvas-archive'), diff: alpha('compare-canvas-diff'), order: !!(document.querySelector('[data-testid=compare-banner]').compareDocumentPosition(document.querySelector('[data-testid=compare-grid]')) & Node.DOCUMENT_POSITION_FOLLOWING) }; })()`);
+    ok(/Indicative visual difference — not pipeline output/.test(r.banner), r.banner.slice(0, 120));
+    for (const w of ['coordinate system', 'pixel size', 'radiometric scaling', 'registration']) ok(r.banner.includes(w) || r.caveats.join(' ').toLowerCase().includes(w), `caveat for ${w} missing`);
+    ok(r.caveats.length === 4 && r.order, 'four caveats, banner above the images');
+    ok(/acquisition used: 2019-03-30/.test(r.acq), r.acq);
+    ok(/Web-Mercator grid/.test(r.method) && /nearest-neighbour/.test(r.method) && /Rec\. 601/.test(r.method) && /2nd–98th percentile/.test(r.method), 'method not stated');
+    ok(!/confidence|candidate|gate|persisten|suppress|detected|first detected/i.test(r.text), 'pipeline wording leaked into the comparison panel: ' + (r.text.match(/confidence|candidate|gate|persisten|suppress|detected/i) || [])[0]);
+    ok(r.file.n > 20000 && r.arch.n > 20000 && r.diff.n > 20000 && r.diff.nonWhite > 500, `canvases look empty: ${JSON.stringify([r.file, r.arch, r.diff])}`);
+    const corr = Number(r.nums.match(/correlation\s+(-?\d+\.\d+)/)[1]);
+    ok(corr > 0.8, `same-date archive imagery should correlate strongly with the file, got ${corr}`);
+    // choosing the 2024 acquisition must give a visibly worse match for this 2019 file: the difference is measuring something
+    await b.select('[data-testid=compare-acq-select]', '2024-03-08');
+    await b.waitFor(`!document.querySelector('[data-testid=compare-grid]')`, 5000, 'result cleared on a new choice');
+    await b.click('[data-testid=compare-run]'); await b.waitFor(`!!document.querySelector('[data-testid=compare-grid]')`, 90000, 'second comparison');
+    const r2 = await b.evaluate(`({ acq: document.querySelector('[data-testid=compare-acq]').innerText, nums: document.querySelector('[data-testid=compare-numbers]').innerText })`);
+    const corr2 = Number(r2.nums.match(/correlation\s+(-?\d+\.\d+)/)[1]);
+    ok(/acquisition used: 2024-03-08/.test(r2.acq) && corr2 < corr - 0.15, `2024 archive vs 2019 file: ${corr2} vs ${corr}`);
+    await shot('32-data-compare');
+    return `labelled indicative / not pipeline output; archive date named; correlation ${corr} against 2019 imagery vs ${corr2} against 2024 imagery`;
+  });
+
+  await step('data: a footprint with no archive coverage says so plainly (no images, no numbers)', async () => {
+    const file = path.join(tmp, 'geoseek-e2e-uk.tif');
+    fsx.writeFileSync(file, makeGeoTiff({ width: 64, height: 48, epsg: 32630, originX: 500000, originY: 5700000, resX: 10, resY: 10, acquisition: '2024-03-08T05:21:00Z' }));
+    await go('data'); await b.setFiles('[data-testid=raster-input]', [file]);
+    await b.waitFor(`!!document.querySelector('[data-testid=compare-none]')`, 30000, 'no-coverage statement');
+    const t = await text('[data-testid=compare-none]');
+    ok(/no imagery over this footprint/i.test(t) && /nothing to compare/i.test(t), t);
+    ok(await b.evaluate(`!document.querySelector('[data-testid=compare-run]') && !document.querySelector('[data-testid=compare-grid]')`), 'a comparison control is offered with no coverage');
+    return t.slice(0, 120);
+  });
+
+  await step('data: a ZSTD-compressed file (WebAssembly decoder, refused by the page CSP) is explained, not left as "Failed to fetch"; header and footprint still work', async () => {
+    if (!fx) return 'skipped';
+    await go('data'); await b.setFiles('[data-testid=raster-input]', [F('zstd')]);
+    await b.waitFor(`/WebAssembly/.test(document.querySelector('.raster-card .err')?.innerText || '')`, 20000, 'explanation');
+    const err = await text('.raster-card .err');
+    ok(/ZSTD-compressed/.test(err) && /DEFLATE or LZW/.test(err) && !/Failed to fetch/.test(err), err);
+    ok(await b.evaluate(`document.querySelector('.raster-card').dataset.verdict === 'green' && !document.querySelector('[data-testid=preview-canvas]')`), 'header verdict or preview state');
+    // the CSP refusing the wasm is the behaviour under test here, so those console lines are not a regression for the offline check at the end
+    for (let i = b.problems.length - 1; i >= 0; i--) if (/application\/wasm/.test(b.problems[i].text)) b.problems.splice(i, 1);
+    return 'explains the ZSTD limit and the fix; header verdict still green';
+  });
+
+  // ---------------- Temporal: archive mode ----------------
+  await step('temporal: archive mode - every chart mark equals /ui/temporal/archive; calendar axis; observations are marks, never joined', async () => {
+    await go('temporal');
+    const t = await api('/ui/temporal/archive');
+    await b.waitFor(`document.querySelectorAll('[data-testid=chart-counts] [data-testid=seg]').length > 0 && document.querySelectorAll('[data-testid=cum-point]').length > 0 && document.querySelectorAll('[data-testid=sar-point]').length > 0`, 30000, 'charts');
+    ok(await b.evaluate(`document.querySelector('.rail a[href="#/temporal"]')?.getAttribute('aria-current') === 'page'`), 'rail entry not active');
+    ok(await b.evaluate(`document.body.innerText.includes('ARCHIVE MODE') && !document.querySelector('[data-testid=profile-chart]') && !document.querySelector('[data-testid=temporal-upload]')`), 'modes are mixed on one screen');
+    const dates = await b.evaluate(`[...document.querySelectorAll('[data-testid=chart-counts] [data-testid=acq-point]')].map(e => e.dataset.date)`);
+    ok(JSON.stringify(dates) === JSON.stringify(t.dates) && dates.length === 5, `dates ${dates}`);
+    // counts per interval and type
+    const segs = await b.evaluate(`[...document.querySelectorAll('[data-testid=chart-counts] [data-testid=seg]')].map(e => [e.dataset.interval, e.dataset.type, Number(e.dataset.n)])`);
+    let marks = 0;
+    for (const iv of t.intervals) for (const [ty, n] of Object.entries(iv.stored.by_type)) { if (!n) continue; marks++; const g = segs.find((x) => x[0] === iv.id && x[1] === ty); ok(g && g[2] === n, `${iv.id} ${ty}: chart ${g?.[2]} vs API ${n}`); }
+    ok(segs.length === marks, `${segs.length} segments for ${marks} non-zero API cells`);
+    const totals = await b.evaluate(`[...document.querySelectorAll('[data-testid=chart-counts] [data-testid=interval-bar]')].map(e => [e.dataset.interval, Number(e.dataset.total)])`);
+    t.intervals.forEach((iv, i) => ok(totals[i][0] === iv.id && totals[i][1] === iv.stored.n, `total ${iv.id}`));
+    // cumulative area
+    const cum = await b.evaluate(`[...document.querySelectorAll('[data-testid=cum-point]')].map(e => [e.dataset.type, e.dataset.date, Number(e.dataset.areaM2), Number(e.dataset.n)])`);
+    ok(cum.length === t.types.length * t.cumulative.length, `${cum.length} cumulative marks`);
+    for (const [ty, dt, a, n] of cum) { const c = t.cumulative.find((x) => x.date === dt); ok(Math.abs((c.area_m2_by_type[ty] ?? 0) - a) < 0.5 && (c.n_by_type[ty] ?? 0) === n, `cumulative ${ty} ${dt}: ${a} vs ${c.area_m2_by_type[ty]}`); }
+    // persistence + SAR
+    const ps = await b.evaluate(`[...document.querySelectorAll('[data-testid=pseg]')].map(e => [e.dataset.interval, e.dataset.class, Number(e.dataset.n)])`);
+    for (const iv of t.intervals) for (const [k, n] of Object.entries(iv.stored.persistence)) { if (k === 'none') continue; const g = ps.find((x) => x[0] === iv.id && x[1] === k); ok(g && g[2] === n, `persistence ${iv.id} ${k}`); }
+    const held = await b.evaluate(`[...document.querySelectorAll('[data-testid=pers-bar]')].map(e => [Number(e.dataset.held), Number(e.dataset.demoted)])`);
+    t.intervals.forEach((iv, i) => ok(held[i][0] === iv.stored.held && held[i][1] === iv.stored.demoted, `held/demoted ${iv.id}`));
+    const sar = await b.evaluate(`[...document.querySelectorAll('[data-testid=sar-point]')].map(e => [e.dataset.interval, Number(e.dataset.n), e.dataset.covered])`);
+    t.intervals.forEach((iv, i) => ok(sar[i][1] === iv.stored.n && Number(sar[i][2]) === iv.stored.sar_available, `sar ${iv.id}`));
+    ok((await text('[data-testid=sar-note]')).includes(t.sar.note), 'SAR note from the API not shown');
+    // real calendar axis: acquisition circle x positions are proportional to elapsed days
+    const xs = await b.evaluate(`[...document.querySelectorAll('[data-testid=chart-counts] [data-testid=acq-point] circle')].map(c => Number(c.getAttribute('cx')))`);
+    const day = (a, c) => (Date.parse(c) - Date.parse(a)) / 86400000;
+    const gx = xs.slice(1).map((x, i) => x - xs[i]), gd = t.dates.slice(1).map((d, i) => day(t.dates[i], d));
+    gx.forEach((g, i) => ok(Math.abs(g / gx[0] - gd[i] / gd[0]) < 0.01, `axis gap ${i}: ${g / gx[0]} vs ${gd[i] / gd[0]}`));
+    ok(Math.abs(gx[1] / gx[2] - gd[1] / gd[2]) < 0.02 && gx[1] > gx[2] * 2.5, 'the 2021→2024 gap is not ~3x the 2024→2025 gap');
+    const joined = await b.evaluate(`document.querySelectorAll('[data-testid=chart-counts] polyline, [data-testid=chart-counts] path, [data-testid=chart-cumulative] polyline, [data-testid=chart-cumulative] path, [data-testid=chart-sar] polyline, [data-testid=chart-sar] path').length`);
+    ok(joined === 0, `${joined} line/path elements draw a series between observations`);
+    ok((await text('[data-testid=cum-note]')).includes('not joined'), 'cumulative note');
+    // not-localised rows
+    const un = await b.evaluate(`[...document.querySelectorAll('[data-testid=unplaced-row]')].map(e => [e.dataset.id, Number(e.dataset.n)])`);
+    for (const m of t.multi_interval) ok(un.some((u) => u[0] === m.id && u[1] === m.n), `unplaced ${m.id}`);
+    ok(un.some((u) => u[0] === 'none' && u[1] === t.no_interval.n), 'unplaced none');
+    await shot('33-temporal-archive');
+    return `${marks} count segments, ${cum.length} cumulative marks, ${ps.length} persistence segments, ${sar.length} SAR marks all equal the API; axis gaps ∝ days; 0 joining lines`;
+  });
+
+  await step('temporal: clicking a mark opens exactly those candidates in Changes (count equals the API for the same filter)', async () => {
+    const t = await api('/ui/temporal/archive');
+    const iv = t.intervals[0], want = (await api(`/candidates?first_detected=${iv.id}&change_type=water_gain&limit=1`)).total;
+    ok(want === iv.stored.by_type.water_gain && want > 0, `api ${want} vs stored ${iv.stored.by_type.water_gain}`);
+    await b.click(`[data-testid=chart-counts] [data-testid=seg][data-interval="${iv.id}"][data-type=water_gain]`);
+    await b.waitFor(`location.hash === '#/changes' && !!document.querySelector('[data-testid=changes-origin]')`, 10000, 'Changes with the filter chip');
+    await b.waitFor(`document.querySelector('.queue-col')?.innerText.includes(' of ${want}')`, 10000, `queue total ${want}`);
+    const chip = await text('[data-testid=changes-origin]');
+    ok(chip.includes(iv.from) && chip.includes(iv.to), chip);
+    const ids = await b.evaluate(`[...document.querySelectorAll('.queue-col tbody tr')].length`);
+    ok(ids === Math.min(40, want), `${ids} rows`);
+    // a cumulative mark opens the union of the intervals up to that date
+    await go('temporal');
+    await b.waitFor(`document.querySelectorAll('[data-testid=cum-point]').length > 0`, 15000, 'charts');
+    const upTo = t.intervals.slice(0, 3).map((x) => x.id).join(','), want2 = (await api(`/candidates?first_detected=${upTo}&change_type=water_gain&limit=1`)).total;
+    await b.click(`[data-testid=cum-point][data-type=water_gain][data-date="${t.intervals[2].to}"]`);
+    await b.waitFor(`location.hash === '#/changes' && document.querySelector('.queue-col')?.innerText.includes(' of ${want2}')`, 10000, `cumulative queue ${want2}`);
+    // the Clear button drops the Temporal filter
+    await b.click('[data-testid=changes-origin] button');
+    await b.waitFor(`!document.querySelector('[data-testid=changes-origin]')`, 5000, 'chip cleared');
+    return `${want} candidates (first-detected ${iv.from} → ${iv.to}, water gain); cumulative mark → ${want2}`;
+  });
+
+  await step('temporal: pair-run basis is a separate, unclickable series; a sub-region shows its own counts and withholds the whole-area ones', async () => {
+    await go('temporal');
+    await b.waitFor(`document.querySelectorAll('[data-testid=chart-counts] [data-testid=seg]').length > 0`, 15000, 'charts');
+    const t = await api('/ui/temporal/archive');
+    await b.select('[data-testid=temporal-basis]', 'pair_run');
+    await b.waitFor(`document.querySelector('[data-testid=chart-counts]').dataset.basis === 'pair_run'`, 8000, 'pair-run basis');
+    const tot = await b.evaluate(`[...document.querySelectorAll('[data-testid=chart-counts] [data-testid=interval-bar]')].map(e => Number(e.dataset.total))`);
+    t.intervals.forEach((iv, i) => ok(tot[i] === Object.values(iv.pair_run.by_type).reduce((a, c) => a + c, 0), `pair-run total ${iv.id}: ${tot[i]}`));
+    ok(await b.evaluate(`document.querySelectorAll('[data-testid=chart-counts] [data-testid=seg][role=button]').length === 0 && document.querySelectorAll('[data-testid=unplaced]').length === 0`), 'pair-run bars are clickable or the stored-only strip is shown');
+    ok(/cannot be opened in Changes/.test(await text('[data-testid=basis-note]')), 'basis note');
+    await b.select('[data-testid=temporal-basis]', 'stored');
+    await b.select('[data-testid=temporal-region]', 'kutch');
+    await b.waitFor(`/0 stored candidates in scope/.test(document.querySelector('[data-testid=temporal-scope]')?.innerText || '')`, 10000, 'kutch scope');
+    const k = await api(`/ui/temporal/archive?bbox=${(await api('/regions')).regions.find((r) => r.name === 'kutch').bbox.join(',')}`);
+    ok(k.totals.stored_in_scope === 0 && k.intervals.every((iv) => iv.pair_run === null), 'API for kutch');
+    ok(await b.evaluate(`document.querySelector('[data-testid=temporal-basis] option[value=pair_run]').disabled`), 'pair-run option should be disabled for a region');
+    await b.select('[data-testid=temporal-region]', 'ayodhya');
+    await b.waitFor(`document.querySelectorAll('[data-testid=chart-counts] [data-testid=seg]').length > 0`, 10000, 'ayodhya');
+    return 'pair-run totals equal the report; Kutch → 0 stored, pair runs withheld';
+  });
+
+  // ---------------- Temporal: upload mode ----------------
+  const uploadClean = `!document.querySelector('[data-testid=profile-chart]') && !document.querySelector('[data-testid=seg]') && !document.querySelector('[data-testid=chart-counts]')`;
+  await step('temporal upload mode: with no file it refuses to render and says one date cannot produce a series', async () => {
+    await b.nav('about:blank'); await sleep(200); await b.nav(BASE + '#/temporal/upload');
+    await b.waitFor(`!!document.querySelector('[data-testid=upload-unavailable]')`, 30000, 'unavailable panel');
+    const t = await text('[data-testid=upload-unavailable]');
+    ok(/One date cannot produce a temporal series/.test(t) && /missing/.test(t), t.slice(0, 200));
+    ok(await b.evaluate(uploadClean), 'a chart was drawn without data');
+    return 'no chart, requirements listed';
+  });
+
+  await step('temporal upload mode: ONE file is refused (nothing is drawn), with the missing requirements named', async () => {
+    if (!fx) return 'skipped';
+    await drop([F('2019-03-30')]);
+    await go('temporal/upload');
+    await b.waitFor(`!!document.querySelector('[data-testid=upload-unavailable]')`, 15000, 'unavailable panel');
+    const t = await text('[data-testid=upload-unavailable]');
+    ok(/1 loaded/.test(t) && /Two or more GeoTIFFs/.test(t) && /different acquisition dates/.test(t), t.slice(0, 400));
+    ok(await b.evaluate(uploadClean), 'a profile was drawn from a single file');
+    const banner = await text('[data-testid=upload-banner]');
+    for (const w of ['SPECTRAL PROFILE', 'not change detection', 'not run', 'not co-registered', 'not comparable across sensors']) ok(banner.toLowerCase().includes(w.toLowerCase()), `banner lacks "${w}"`);
+    return 'single file: refused, banner states what this is not';
+  });
+
+  await step('temporal upload mode: a second file with the SAME date is refused; entering a different date for it enables the profile', async () => {
+    if (!fx) return 'skipped';
+    await drop([F('2019-03-30'), F('3band')], 2);
+    await go('temporal/upload');
+    await b.waitFor(`!!document.querySelector('[data-testid=upload-unavailable]')`, 15000, 'unavailable');
+    ok(/dated|date/i.test(await text('[data-testid=upload-unavailable]')), 'no date requirement');
+    const dateInput = `[data-testid=upload-files] input[type=date]`;
+    await b.type(dateInput, '2019-03-30');
+    await b.waitFor(`/1 distinct/.test(document.querySelector('[data-testid=upload-unavailable]')?.innerText || '')`, 8000, 'one distinct date');
+    ok(await b.evaluate(uploadClean), 'profile drawn from two files with the same date');
+    await b.type(dateInput, '2024-03-08');
+    await b.waitFor(`!!document.querySelector('[data-testid=profile-chart]')`, 30000, 'profile after a second date');
+    const note = await text('[data-testid=upload-files]');
+    ok(/entered by you/.test(note), 'the analyst-entered date is not labelled as such');
+    // bands are matched by role across a 4-band (B02,B03,B04,B08) and a 3-band (B04,B03,B02) file
+    await b.select('[data-testid=profile-metric]', 'red');
+    await b.waitFor(`document.querySelectorAll('[data-testid=profile-point]').length === 2`, 15000, 'two red points');
+    return 'same date refused; analyst-entered date accepted and labelled; red band matched across 4-band and 3-band files';
+  });
+
+  await step('temporal upload mode: two dated overlapping files → a SPECTRAL PROFILE whose numbers equal the numpy/pyproj reference; no candidates, scores or pipeline output', async () => {
+    if (!fx) return 'skipped';
+    await drop([F('2019-03-30'), F('2024-03-08')], 2);
+    await go('temporal/upload');
+    await b.waitFor(`!!document.querySelector('[data-testid=profile-chart]')`, 40000, 'profile chart');
+    await b.waitFor(`document.querySelectorAll('[data-testid=profile-table] tbody tr').length >= 12`, 20000, 'profile table');
+    const opts = await b.evaluate(`[...document.querySelectorAll('[data-testid=profile-metric] option')].map(o => o.value)`);
+    ok(['blue', 'green', 'red', 'nir', 'ndvi', 'ndwi'].every((k) => opts.includes(k)) && !opts.includes('ndbi'), `metrics ${opts}`);
+    const prof = fx.ref.profile;
+    const note = await text('[data-testid=profile-note]');
+    ok(note.includes(`zoom ${prof.z}`) && note.includes(prof.cells.toLocaleString('en-US')), `grid / cell count in note: ${note.slice(0, 260)}`);
+    let n = 0, worst = 0;
+    for (const date of ['2019-03-30', '2024-03-08']) {
+      const file = path.basename(fx.ref.files[date].path);
+      for (const [metric, w] of Object.entries(prof.files[date])) {
+        const cells = await b.evaluate(`(() => { const r = document.querySelector('[data-testid=profile-table] tr[data-metric="${metric}"][data-file="${file}"]'); return r ? [...r.children].map(c => c.innerText) : null; })()`);
+        ok(cells, `no table row for ${file} ${metric}`);
+        const [, , , nvalid, mean, std, p10, p50, p90] = cells;
+        ok(nvalid === w.n.toLocaleString('en-US'), `${file} ${metric}: n ${nvalid} vs ${w.n}`);
+        for (const [got, want, nm] of [[mean, w.mean, 'mean'], [std, w.std, 'std'], [p10, w.p10, 'p10'], [p50, w.p50, 'p50'], [p90, w.p90, 'p90']]) { ok(got === f4(want), `${file} ${metric} ${nm}: shows ${got}, numpy ${f4(want)}`); n++; }
+      }
+    }
+    // the chart marks carry the same means; marks are not joined
+    await b.select('[data-testid=profile-metric]', 'ndvi');
+    await b.waitFor(`document.querySelector('[data-testid=profile-chart]').dataset.metric === 'ndvi'`, 5000, 'ndvi');
+    const pts = await b.evaluate(`[...document.querySelectorAll('[data-testid=profile-point]')].map(e => [e.dataset.date, Number(e.dataset.mean), Number(e.dataset.n)])`);
+    ok(pts.length === 2, `${pts.length} marks`);
+    for (const [dt, mean] of pts) ok(Math.abs(mean - prof.files[dt].ndvi.mean) < 2e-6, `ndvi mark ${dt}: ${mean} vs ${prof.files[dt].ndvi.mean}`);
+    ok(await b.evaluate(`document.querySelectorAll('[data-testid=profile-chart] polyline, [data-testid=profile-chart] path').length === 0`), 'the profile joins observations with a line');
+    // everything except the banner (which says, in so many words, what is NOT done here)
+    const all = await b.evaluate(`(() => { const c = document.querySelector('[data-testid=temporal-upload]').cloneNode(true); c.querySelector('[data-testid=upload-banner]').remove(); return c.innerText; })()`);
+    ok(!/confiden|candidate|first detected|\bpersistent\b|\bprogressive\b|\bgate/i.test(all), 'pipeline-like output appears in upload mode: ' + (all.match(/confiden|candidate|first detected|persistent|progressive|gate/i) || [])[0]);
+    ok(await b.evaluate(`!document.querySelector('[data-testid=seg]') && !document.querySelector('[data-testid=cum-point]')`), 'archive-mode marks present in upload mode');
+    await shot('34-temporal-upload');
+    return `${n} table statistics (n, mean, std, p10, p50, p90 × 6 metrics × 2 files) equal numpy/pyproj exactly as displayed; ndvi marks within 2e-6; no joining line`;
   });
 
   await step('discovery: clusters table equals the API, no static image or duplicated legend block, seed explorer', async () => {
@@ -1115,9 +1745,15 @@ try {
     ok(rest.length === cards.length, `match pins ${rest.length} vs gallery cards ${cards.length}`);
     for (const c of cards) { ok(c.cap.startsWith(`#${c.n} ·`), `card caption "${c.cap}"`); ok(rest.find((p) => p.id === c.tile)?.text === String(c.n), `pin for card #${c.n}`); }
     // everything is inside the view (seed + matches)
-    const st = await mapState(scope);
     const tiles = (await api(`/ui/tiles?ids=${cards.map((c) => c.tile).join(',')}`)).tiles;
-    const inside = tiles.filter((t) => { const cx = (t.bbox[0] + t.bbox[2]) / 2, cy = (t.bbox[1] + t.bbox[3]) / 2; return cx >= st.bounds[0] && cx <= st.bounds[2] && cy >= st.bounds[1] && cy <= st.bounds[3]; }).length;
+    // the map refits after its data arrives: let that settle (poll up to 6 s) instead of reading the bounds in the middle of it
+    let inside = 0;
+    for (let i = 0; i < 24; i++) {
+      const st = await mapState(scope);
+      inside = tiles.filter((t) => { const cx = (t.bbox[0] + t.bbox[2]) / 2, cy = (t.bbox[1] + t.bbox[3]) / 2; return cx >= st.bounds[0] && cx <= st.bounds[2] && cy >= st.bounds[1] && cy <= st.bounds[3]; }).length;
+      if (inside === tiles.length) break;
+      await sleep(250);
+    }
     ok(inside === tiles.length, `${inside}/${tiles.length} matches inside the fitted view`);
     // hover both ways
     await b.evaluate(`document.querySelector('.fp-tile[data-n="2"]').scrollIntoView({ block: 'center' })`);
@@ -1183,11 +1819,184 @@ try {
     await b.click(`.tbl tbody tr[data-cluster="${target}"]`);
     await sleep(900);
     const st = await mapState(scope);
-    const cx = (bb[0] + bb[2]) / 2, cy = (bb[1] + bb[3]) / 2, clusterSpan = bb[2] - bb[0], viewSpan = st.bounds[2] - st.bounds[0];
+    // the zoom frames the middle 95% of the cluster's tiles (stray tiles far away do not stretch it): the tile-weighted median must be in view
+    const wmed = (axis) => { const cs = [...geo.clusters[target].cells].sort((p, q) => p[axis] - q[axis]), tot = cs.reduce((a, c) => a + c[2], 0); let acc = 0; for (const c of cs) { acc += c[2]; if (acc >= tot / 2) return c[axis]; } };
+    const cx = wmed(0), cy = wmed(1), clusterSpan = bb[2] - bb[0], viewSpan = st.bounds[2] - st.bounds[0];
     ok(st.bounds[0] <= cx && cx <= st.bounds[2] && st.bounds[1] <= cy && cy <= st.bounds[3], 'cluster centre not in view after click');
     ok(st.zoom > z0 && viewSpan <= Math.max(3 * clusterSpan, 0.7), `zoom ${z0} -> ${st.zoom}; view ${viewSpan.toFixed(2)} deg for a cluster ${clusterSpan.toFixed(2)} deg wide`);
     await shot('19-discovery-map');
     return `${msg}; ${checked} clusters: highlighted pixel colour = list swatch, others dimmed; click zooms (z${z0.toFixed(1)} -> z${st.zoom.toFixed(1)})`;
+  });
+
+  // ---- Discovery: the screen explains the clustering (computed reading, per-cluster summary, region x cluster matrix) ----
+  await step('discovery: the interpretation line is counted from /discovery/clusters, not templated', async () => {
+    await go('dashboard');
+    await go('discovery');
+    const cl = await api('/discovery/clusters');
+    await b.waitFor(`!!document.querySelector('[data-testid=insight-counts]')`, 20000, 'interpretation');
+    const share = (id) => { const r = cl.region_purity[id]; return Math.max(...Object.values(r.regions)) / cl.sizes[id]; };
+    const ids = Object.keys(cl.sizes), conc = ids.filter((i) => share(i) >= 0.8).length;
+    const line = await text('[data-testid=insight-counts]');
+    ok(line.includes(`${cl.n_clusters} clusters over ${cl.n_tiles.toLocaleString('en-US')} tiles`), `counts line: ${line}`);
+    ok(line.includes(`${conc} sit 80% or more inside a single region`) && line.includes(`${ids.length - conc} are spread across several regions`), `concentrated/spread vs API (${conc}/${ids.length - conc}): ${line}`);
+    const fact = await text('[data-testid=insight-fact]'), kind = await b.evaluate(`document.querySelector('[data-testid=insight-fact]').dataset.kind`);
+    const m = fact.match(/^(\d+) of (\d+) clusters whose closest concept is “(.+?)” each sit/);
+    ok(m, `fact line: ${fact}`);
+    const same = ids.filter((i) => cl.cluster_concepts[i][0][0] === m[3]), sameConc = same.filter((i) => share(i) >= 0.8);
+    ok(+m[2] === same.length && +m[1] === sameConc.length, `"${m[3]}": text says ${m[1]} of ${m[2]}, API says ${sameConc.length} of ${same.length}`);
+    const regs = new Set(sameConc.map((i) => cl.region_purity[i].dominant_region));
+    ok(regs.size >= 2 && kind === 'concept-splits-by-region', `fact kind ${kind}, regions ${[...regs]}`);
+    const chips = await b.evaluate(`[...document.querySelectorAll('[data-insight-cluster]')].map((c) => c.dataset.insightCluster)`);
+    ok(chips.length === sameConc.length && chips.every((c) => sameConc.includes(c)), `chips ${chips} vs ${sameConc}`);
+    await shot('20-discovery-insight');
+    return `${cl.n_clusters} clusters, ${conc} concentrated / ${ids.length - conc} spread; fact: ${m[1]} of ${m[2]} "${m[3]}" clusters in ${regs.size} regions`;
+  });
+
+  await step('discovery: hover previews a cluster, click selects it, others dim (not hide), Esc clears; summary equals the API', async () => {
+    await go('dashboard');
+    await hoverAt(5, 5);
+    await go('discovery');
+    const cl = await api('/discovery/clusters'), geo = await api('/ui/clusters/geo');
+    await b.waitFor(`document.querySelectorAll('tr[data-cluster]').length === ${cl.n_clusters} && +(document.querySelector('canvas.gm-cells')?.dataset.drawn || 0) > 0`, 40000, 'clusters drawn');
+    const scope = 'section[aria-label="Cluster map"]';
+    ok(await b.evaluate(`document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ''`), 'summary is not empty by default');
+    ok((await b.evaluate(`document.querySelector('${scope} .geomap').dataset.activeCluster`)) === '', 'default state dims something');
+    // default: every cluster is legible in the list (a swatch per row), all drawn at the same strength
+    ok((await count('tr[data-cluster] i[data-swatch]')) === cl.n_clusters, 'a cluster has no legend swatch');
+    const id = Object.keys(cl.sizes).sort((x, y) => cl.sizes[y] - cl.sizes[x])[3], other = Object.keys(cl.sizes).find((o) => o !== id);
+    const row = center(await rect(`tr[data-cluster="${id}"]`));
+    await hoverAt(row.x, row.y);
+    await b.waitFor(`document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ${JSON.stringify(id)}`, 5000, 'hover -> summary');
+    ok((await b.evaluate(`document.querySelector('[data-testid=cluster-summary]').dataset.pinned`)) === '0', 'a hover preview is marked as selected');
+    const f = (n) => b.evaluate(`document.querySelector('[data-testid=cluster-summary] [data-field=${n}]')?.innerText || ''`);
+    const rp = cl.region_purity[id], total = Object.values(cl.sizes).reduce((a, c) => a + c, 0);
+    ok((await f('tiles')) === cl.sizes[id].toLocaleString('en-US'), `tiles ${await f('tiles')} vs ${cl.sizes[id]}`);
+    ok((await f('share')) === `${((cl.sizes[id] / total) * 100).toFixed(1)}%`, `share ${await f('share')}`);
+    ok((await f('concept')).startsWith(cl.cluster_concepts[id][0][0]), `concept ${await f('concept')}`);
+    const spans = Object.values(rp.regions).filter((n) => n / cl.sizes[id] >= 0.05).length, touched = Object.keys(rp.regions).length;
+    ok((await f('spans')).startsWith(`${spans} of `) && (await f('spans')).includes(`${touched} touched`), `regions spanned: ${await f('spans')} vs ${spans}/${touched}`);
+    ok(/km/.test(await f('extent')), `extent ${await f('extent')}`);
+    const mixTop = await b.evaluate(`document.querySelector('[data-testid=cluster-summary] .mixrow').dataset.region`);
+    ok(mixTop === rp.dominant_region, `top region ${mixTop} vs ${rp.dominant_region}`);
+    await b.waitFor(`(() => { const t = [...document.querySelectorAll('[data-testid=cluster-examples] img')]; return t.length > 0 && t.every((i) => i.complete && i.naturalWidth > 0); })()`, 20000, 'example thumbnails');
+    const ex = await b.evaluate(`[...document.querySelectorAll('[data-testid=cluster-examples] figure')].map((e) => e.dataset.tile)`);
+    const ge = geo.clusters[id].examples;
+    ok(ex.length >= 3 && ex.length <= 4 && JSON.stringify(ex) === JSON.stringify(ge.map((e) => e.tile_id)), `examples ${ex.length} vs API ${ge.length}`);
+    ok(ge.every((e) => rp.regions[e.region] > 0), 'an example comes from a region the cluster has no tiles in');
+    await shot('21-discovery-hover');
+    // moving away from the row clears the preview
+    await hoverAt(5, 5);
+    await b.waitFor(`document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ''`, 5000, 'leaving clears the preview');
+    // click -> selected: map zoomed to it, summary pinned, the rest dimmed
+    const z0 = (await mapState(scope)).zoom;
+    await b.clickAt(row.x, row.y); await sleep(900);
+    ok((await b.evaluate(`document.querySelector('[data-testid=cluster-summary]').dataset.pinned`)) === '1', 'a click did not pin the summary');
+    ok((await b.evaluate(`document.querySelector('${scope} .geomap').dataset.activeCluster`)) === id, 'map not on the selected cluster');
+    ok((await mapState(scope)).zoom > z0, 'map did not zoom to the selected cluster');
+    // dim, do not hide: a cell of another cluster is still drawn, at low alpha; the selected one is lit
+    const owner = new Map(); for (const [c, g] of Object.entries(geo.clusters)) for (const [x, y] of g.cells) { const k = x + ',' + y; owner.set(k, owner.has(k) ? null : c); }
+    const pixel = (lon, lat) => b.evaluate(`(() => { const g = document.querySelector('${scope} .geomap'), m = g.querySelector('.leaflet-container').__leaflet, c = g.querySelector('canvas.gm-cells'); const p = m.latLngToContainerPoint([${lat}, ${lon}]); const dpr = c.width / m.getSize().x; return [...c.getContext('2d').getImageData(Math.round(p.x * dpr), Math.round(p.y * dpr), 1, 1).data]; })()`);
+    const mine = geo.clusters[id].cells.find(([x, y]) => owner.get(x + ',' + y) === id), theirs = geo.clusters[other].cells.find(([x, y]) => owner.get(x + ',' + y) === other);
+    ok(mine && theirs, 'no cell owned by exactly one cluster');
+    await centreOnMapIn(scope, mine[0], mine[1], 13); await sleep(500);
+    const lit = await pixel(mine[0], mine[1]);
+    await centreOnMapIn(scope, theirs[0], theirs[1], 13); await sleep(500);
+    const dim = await pixel(theirs[0], theirs[1]);
+    ok(lit[3] > 200, `selected cluster alpha ${lit[3]}`);
+    ok(dim[3] > 5 && dim[3] < 80, `another cluster should be dimmed but present: alpha ${dim[3]}`);
+    // hovering a different row previews it; leaving returns to the selection
+    const orow = center(await rect(`tr[data-cluster="${other}"]`));
+    await hoverAt(orow.x, orow.y);
+    await b.waitFor(`document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ${JSON.stringify(other)}`, 5000, 'preview another cluster');
+    await hoverAt(5, 5);
+    await b.waitFor(`document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ${JSON.stringify(id)}`, 5000, 'back to the selection');
+    await shot('22-discovery-selected');
+    await b.key('Escape');
+    await b.waitFor(`document.querySelector('${scope} .geomap').dataset.activeCluster === '' && document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ''`, 5000, 'Esc clears');
+    return `cluster ${id}: summary = API (tiles, share, concept, ${spans}/${touched} regions, ${ex.length} examples); hover previews, click pins+zooms (z${z0.toFixed(1)}->), others dimmed not hidden (alpha ${dim[3]}), Esc clears`;
+  });
+
+  await step('discovery: the region matrix agrees with the API and is linked; clicking a map cell selects its cluster', async () => {
+    await go('dashboard');
+    await hoverAt(5, 5);
+    await go('discovery');
+    const cl = await api('/discovery/clusters'), geo = await api('/ui/clusters/geo');
+    await b.waitFor(`document.querySelectorAll('tr[data-cluster]').length === ${cl.n_clusters} && +(document.querySelector('canvas.gm-cells')?.dataset.drawn || 0) > 0`, 40000, 'clusters drawn');
+    const scope = 'section[aria-label="Cluster map"]';
+    ok((await count('tr[data-mx-cluster]')) === cl.n_clusters, 'matrix rows');
+    const regs = [...new Set(Object.values(cl.region_purity).flatMap((r) => Object.keys(r.regions)))];
+    ok((await count('th.mx-col')) === regs.length, `matrix columns ${await count('th.mx-col')} vs ${regs.length}`);
+    const cells = await b.evaluate(`[...document.querySelectorAll('tr[data-mx-cluster]')].flatMap((r) => [...r.querySelectorAll('td')].map((t) => ({ c: r.dataset.mxCluster, g: t.dataset.region, n: +t.dataset.n, s: +t.dataset.share })))`);
+    for (const c of cells) {
+      const want = cl.region_purity[c.c].regions[c.g] ?? 0;
+      ok(c.n === want && Math.abs(c.s - want / cl.sizes[c.c]) < 1e-3, `matrix ${c.c}/${c.g}: ${c.n} vs ${want}`);
+    }
+    for (const c of Object.keys(cl.sizes)) ok(Math.abs(cells.filter((x) => x.c === c).reduce((a, x) => a + x.s, 0) - 1) < 0.01, `row ${c} does not sum to 100%`);
+    const groups = await b.evaluate(`[...document.querySelectorAll('.mx-group th')].map((t) => t.innerText.split(' ·')[0].trim())`);
+    ok(new Set(groups).size === groups.length && groups.length === new Set(Object.values(cl.cluster_concepts).map((c) => c[0][0])).size, `concept groups ${groups.length}`);
+    // hover a matrix row -> the map lights the cluster and the list row highlights
+    const mid = Object.keys(cl.sizes)[2], mrow = center(await rect(`tr[data-mx-cluster="${mid}"]`));
+    await hoverAt(mrow.x, mrow.y);
+    await b.waitFor(`document.querySelector('${scope} .geomap').dataset.activeCluster === ${JSON.stringify(mid)} && !!document.querySelector('tr[data-cluster="${mid}"].hl')`, 5000, 'matrix hover -> map + list');
+    await hoverAt(5, 5);
+    // a map cell that only one cluster owns: hover previews, click selects that cluster
+    const owner = new Map(); for (const [c, g] of Object.entries(geo.clusters)) for (const [x, y] of g.cells) { const k = x + ',' + y; owner.set(k, owner.has(k) ? null : c); }
+    const pick = Object.keys(geo.clusters).find((c) => c !== mid && geo.clusters[c].cells.some(([x, y]) => owner.get(x + ',' + y) === c));
+    const cell = geo.clusters[pick].cells.find(([x, y]) => owner.get(x + ',' + y) === pick);
+    await b.evaluate(`document.querySelector('${scope}').scrollIntoView({ block: 'center' })`);
+    await centreOnMapIn(scope, cell[0], cell[1], 13); await sleep(700);
+    const pt = await b.evaluate(`(() => { const e = document.querySelector('${scope} .leaflet-container'), m = e.__leaflet, r = e.getBoundingClientRect(), p = m.latLngToContainerPoint([${cell[1]}, ${cell[0]}]); return { x: r.left + p.x, y: r.top + p.y }; })()`);
+    await hoverAt(pt.x, pt.y);
+    await b.waitFor(`document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ${JSON.stringify(pick)}`, 5000, 'hovering a map cell previews its cluster');
+    await b.clickAt(pt.x, pt.y);
+    await b.waitFor(`document.querySelector('[data-testid=cluster-summary]').dataset.pinned === '1' && document.querySelector('[data-testid=cluster-summary]').dataset.cluster === ${JSON.stringify(pick)}`, 5000, 'map click selects');
+    ok(await b.evaluate(`!!document.querySelector('tr[data-cluster="${pick}"].sel') && !!document.querySelector('tr[data-mx-cluster="${pick}"].sel')`), 'list and matrix rows do not show the selection');
+    await b.click('[data-testid=show-all]'); await sleep(400);
+    ok((await b.evaluate(`document.querySelector('${scope} .geomap').dataset.activeCluster`)) === '', 'Show all clusters did not clear');
+    // the honest caption is still there
+    const cap = await text(`${scope} [data-testid=map-caption]`);
+    ok(/one representative acquisition per granule/.test(cap) && /unstaged areas shown dark/.test(cap), `caption: ${cap}`);
+    await shot('23-discovery-matrix');
+    return `matrix ${cl.n_clusters} x ${regs.length} cells = API counts, rows sum to 100%, ${groups.length} concept groups; map cell click selects ${pick}; caption intact`;
+  });
+
+  await step('shell: India flag by the clock (inline SVG, 3 bands, 24-spoke chakra), logo mark, wordmark animation + reduced motion', async () => {
+    await go('dashboard');
+    const sh = await b.evaluate(`(() => {
+      const f = document.querySelector('[data-testid=india-flag]'), clock = document.querySelector('.clock'), fr = f.getBoundingClientRect(), cr = clock.getBoundingClientRect();
+      const rects = [...f.querySelectorAll(':scope > rect')].map((r) => r.getAttribute('fill'));
+      const g = f.querySelector('g'), spokes = g.querySelectorAll('line').length;
+      const lg = document.querySelector('[data-testid=logo]'), svg = lg.querySelector('svg');
+      const w = document.querySelector('[data-testid=wordmark]'), cs = getComputedStyle(w);
+      const fixed = [...svg.querySelectorAll('[fill],[stroke]')].map((e) => e.getAttribute('fill') || e.getAttribute('stroke')).filter((v) => v && /^#/.test(v) && !/^#(fff|000)/i.test(v)).length;
+      return { flag: { w: fr.width, h: fr.height, right: fr.right, clockLeft: cr.left, midY: fr.top + fr.height / 2, clockMidY: cr.top + cr.height / 2, viewBox: f.getAttribute('viewBox'), tag: f.tagName, rects, spokes, chakra: g.getAttribute('stroke'), imgs: document.querySelectorAll('header.topbar img').length },
+        logo: { w: svg.getBoundingClientRect().width, h: svg.getBoundingClientRect().height, text: lg.innerText.trim(), fixed, role: svg.getAttribute('role') },
+        word: { clip: cs.backgroundClip || cs.webkitBackgroundClip, anim: cs.animationName, dur: cs.animationDuration, iter: cs.animationIterationCount, img: cs.backgroundImage, text: w.textContent } };
+    })()`);
+    ok(sh.flag.tag === 'svg' && sh.flag.imgs === 0, 'the flag is not an inline SVG');
+    ok(Math.abs(sh.flag.w / sh.flag.h - 1.5) < 0.02 && sh.flag.viewBox === '0 0 36 24', `flag proportions ${sh.flag.w}x${sh.flag.h}`);
+    ok(sh.flag.rects.join() === '#FF9933,#FFFFFF,#138808', `bands ${sh.flag.rects}`);
+    ok(sh.flag.spokes === 24 && sh.flag.chakra === '#000080', `chakra: ${sh.flag.spokes} spokes, ${sh.flag.chakra}`);
+    ok(sh.flag.right <= sh.flag.clockLeft && sh.flag.clockLeft - sh.flag.right < 24 && Math.abs(sh.flag.midY - sh.flag.clockMidY) < 6, `flag is not beside the clock: gap ${sh.flag.clockLeft - sh.flag.right}`);
+    ok(sh.flag.h >= 20 && sh.flag.h <= 32, `flag height ${sh.flag.h}`);
+    ok(sh.logo.w >= 28 && sh.logo.h >= 28 && sh.logo.text === '' && sh.logo.role === 'img', `logo ${sh.logo.w}x${sh.logo.h} text "${sh.logo.text}"`);
+    ok(sh.logo.fixed === 0, 'the logo uses a fixed colour: it must be one-ink (currentColor)');
+    ok(/text/.test(sh.word.clip) && sh.word.anim === 'wordmark-drift' && sh.word.iter === 'infinite' && /rgb\(245, 154, 59\)/.test(sh.word.img), `wordmark ${JSON.stringify(sh.word)}`);
+    const secs = parseFloat(sh.word.dur); ok(secs >= 20, `wordmark loop is ${secs}s - too fast for a permanent bar`);
+    ok(sh.word.text === 'GeoSeek', 'wordmark text');
+    // it really moves, slowly: the gradient offset advances over a few seconds
+    const pos = () => b.evaluate(`getComputedStyle(document.querySelector('[data-testid=wordmark]')).backgroundPositionX`);
+    const p0 = await pos(); await sleep(2500); const p1 = await pos();
+    ok(p0 !== p1, `wordmark gradient does not move (${p0} -> ${p1})`);
+    // reduced motion: the same gradient, not moving
+    await b.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] }); await sleep(400);
+    const rm = await b.evaluate(`(() => { const cs = getComputedStyle(document.querySelector('[data-testid=wordmark]')); return { anim: cs.animationName, pos: cs.backgroundPositionX, img: cs.backgroundImage }; })()`);
+    await sleep(1200); const rm2 = await pos();
+    await b.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+    ok(rm.anim === 'none' && rm.pos === rm2 && /gradient/.test(rm.img), `reduced motion: ${JSON.stringify(rm)} / ${rm2}`);
+    const ext = externalRequests(b.requests, origin);
+    ok(ext.length === 0, 'external requests: ' + ext.map((r) => r.url).join(', '));
+    return `flag ${Math.round(sh.flag.w)}x${Math.round(sh.flag.h)} inline SVG, bands ${sh.flag.rects.join('/')}, ${sh.flag.spokes} spokes; logo ${Math.round(sh.logo.w)}px one-ink; wordmark ${secs}s loop moves (${p0} -> ${p1}), still under reduced motion`;
   });
 
   await step('briefing: tour controls, annotation canvas, spotlight, contrast, hide panels, Esc', async () => {
@@ -1227,7 +2036,7 @@ try {
 
   await step('chrome: no tier badges, roadmap entry, dashed frames, hatching or rail legend on any screen', async () => {
     const bad = [];
-    for (const r of ['dashboard', 'search', 'changes', 'detect', 'discovery', 'fingerprints', 'settings', 'roadmap']) {
+    for (const r of ['dashboard', 'search', 'changes', 'pipeline', 'detect', 'discovery', 'fingerprints', 'settings', 'roadmap']) {
       await go(r); await sleep(1000);
       const info = await b.evaluate(`(() => ({
         badges: document.querySelectorAll('.tier-badge, [data-tier], .tier-dot, .roadmap-note, .legend').length,
@@ -1242,7 +2051,7 @@ try {
     }
     ok(bad.length === 0, bad.join('; '));
     ok((await b.evaluate('location.hash')) === '#/roadmap' ? (await count('.panel')) > 0 : true, 'unknown route renders a screen');
-    return '8 routes clean; /roadmap no longer exists (falls back to the dashboard)';
+    return '9 routes clean; /roadmap no longer exists (falls back to the dashboard)';
   });
 
   await step('settings: System / Model performance is API-driven and holds the metrics removed from the dashboard', async () => {
@@ -1261,13 +2070,13 @@ try {
 
   await step('scope: no InSAR / velocity / completion-rate / thermal UI on any route', async () => {
     const bad = [];
-    for (const r of ['dashboard', 'search', 'changes', 'detect', 'discovery', 'fingerprints', 'settings']) {
+    for (const r of ['dashboard', 'search', 'changes', 'pipeline', 'temporal', 'detect', 'discovery', 'fingerprints', 'settings']) {
       await go(r); await sleep(900);
       const t = await b.evaluate('document.body.innerText');
       for (const re of [/insar/i, /interferom/i, /fringe/i, /velocity/i, /completion/i, /thermal/i, /rate of change/i]) if (re.test(t)) bad.push(`${r}: ${re}`);
     }
     ok(bad.length === 0, bad.join('; '));
-    return '7 routes clean';
+    return '9 routes clean';
   });
 
   await step('offline: indicator reflects reality and zero external requests were made', async () => {

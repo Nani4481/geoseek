@@ -177,8 +177,11 @@ export interface ClusterInfo {
   available: boolean; n_clusters?: number; noise_count?: number; n_tiles?: number;
   sizes?: Record<string, number>; display_labels?: Record<string, string>;
   cluster_concepts?: Record<string, [string, number][]>;
+  /** per cluster: size, dominant region, its share, and the tile count in every region (measured when the clustering ran) */
+  region_purity?: Record<string, ClusterRegions>;
   params?: Record<string, unknown>;
 }
+export interface ClusterRegions { size: number; dominant_region: string; purity: number; regions: Record<string, number> }
 export interface RegionListItem { name: string; bbox: BBox; n_observations: number }
 export interface HealthInfo { status: string; vectors: number; analyst: string; candidates?: number }
 
@@ -203,8 +206,11 @@ export interface BasemapScene { observation_id: string; date: string; platform: 
 export interface BasemapCoverage {
   layer: string; available: boolean; fraction: number; scenes: BasemapScene[]; dates: string[]; native_max_zoom: number; gsd_m: number;
   source: string; selection_rule?: string; year?: string | null; overview_max_zoom?: number; coarse_max_zoom?: number;
+  /** every archive acquisition whose granule touches the view, regardless of the year filter (Sentinel-2 layer only) */
+  acquisitions?: { date: string; observation_id: string; platform: string; sensor: string; mean_cloud: number }[];
 }
-export interface ClusterGeoEntry { n_tiles: number; n_cells: number; bbox: BBox; cells: number[][] }
+export interface ClusterExample { tile_id: string; region: string; acq_date: string; cloud_fraction: number; centroid_lonlat: [number, number] }
+export interface ClusterGeoEntry { n_tiles: number; n_cells: number; bbox: BBox; cells: number[][]; examples?: ClusterExample[] }
 export interface ClusterGeo { available: boolean; cell_deg: number; n_clustered_tiles: number; n_unplaced: number; clusters: Record<string, ClusterGeoEntry>; source: string }
 
 export interface DossierObservation {
@@ -244,4 +250,86 @@ export interface TileSpectral {
   class_rules: Record<'water_frac' | 'veg_frac' | 'dense_veg_frac' | 'bare_frac' | 'built_frac', string>;
   relevance: { query: string | null; matches: { index: 'ndvi' | 'ndwi' | 'ndbi'; terms: string[]; why: string }[]; note: string | null };
   embedding_patch_m: number | null; source: string; caveat: string;
+}
+
+// ---- explainability + suppression pipeline (geoseek.analyst.explain) ----
+export interface ExplainTerm {
+  name: string; label: string; plain: string; value: number; weight: number; weight_share: number; factor: number;
+  effect_points: number | null; strength: 'supports' | 'weak'; raw: string;
+}
+export interface ExplainMultiplier { name: string; label: string; factor: number; effect_points: number | null; plain: string }
+export interface SpectralTest { index: string; type: string; test: string; op: string; threshold: number; value: number; met: boolean; decisive: boolean; text: string }
+export interface SpectralAnomaly { index: 'ndvi' | 'ndbi' | 'ndwi'; label: string; delta: number | null; seasonal: number | null; anomaly: number | null; season_band: number; outside_season_band: boolean }
+export interface TraceStage {
+  id: string; kind: 'gate' | 'typing' | 'score'; verdict: string; detail: string; values?: Record<string, unknown>;
+  gate_weight?: number | null; rule?: string; change_type?: string; persistence?: string;
+  effect: { factor: number | null; term: string | null; text: string; points: number | null } | null;
+}
+export interface CandidateExplain {
+  available: boolean; candidate_id: string; change_type: string;
+  lead: { headline: string; persistence: string; text: string; rule: string; source: string };
+  evidence: {
+    terms: ExplainTerm[]; multipliers: ExplainMultiplier[]; method: string; stored_confidence: number; recomputed_confidence: number;
+    max_abs_error: number; reproduces: boolean; breakdown_lines: string[]; significance: number; queue_score: number;
+  };
+  spectral: { rule: string; rule_detail: string; anomalies: SpectralAnomaly[]; tests: SpectralTest[]; note: string };
+  weak_or_absent: { key: string; level: 'weak' | 'absent'; text: string }[];
+  sar: { available: boolean; verdict: string | null; factor: number | null; vv_median_db: number | null; run_note: string | null };
+  terrain: { plain_language: string; used_in_confidence: boolean } | null;
+  trace: TraceStage[];
+  ranking: { queue_score: string | null; significance: string | null };
+  overlay: { tile_id: string; observation_id: string; acquired_at: string | null; focus_indices: string[]; geometry: Polygon | null; note: string } | null;
+  scope: string;
+}
+
+export interface FunnelStage { rule: string; removed: number; remaining: number; input: number; share_of_raw: number | null; share_of_input: number | null }
+export interface FunnelPair {
+  name: string; earlier: string; later: string; comparable: boolean | null; raw: number; survivors: number; suppressed: number; consistent: boolean;
+  stages: FunnelStage[]; downweighted_survivors: number | null; class_distribution: Record<string, number> | null;
+  context: Record<string, number> | null;
+}
+export interface FunnelGate { rule: string; kind: 'reject' | 'downweight'; thresholds: Record<string, number>; what: string }
+export interface LabelledStage { stage: string; precision: number; recall: number; f1: number; delta_f1: number | null; delta_precision: number | null; delta_recall: number | null }
+export interface SuppressionFunnel {
+  available: boolean; aoi: string | null; span_pair: string; scope: string; model_threshold: number | null;
+  source: { report: string; candidates: string; report_generated_at: string };
+  attribution_note: string; morphology_note: string; gates: FunnelGate[]; pairs: FunnelPair[];
+  post_gate: {
+    pair: string; survivors: number; matches_report: boolean;
+    typing: { by_type: Record<string, number>; unclassified: number };
+    persistence: { by_class: Record<string, number>; supported: number; contradicted: number; no_support: number; penalty: Record<string, number> };
+    downweighted_by_gate: Record<string, number>;
+    confidence_bands: Record<string, number>;
+    sar: { available: boolean; note: string | null; moved_up: number; moved_down: number; neutral: number };
+  };
+  demoted_sample: { candidate_id: string; change_type: string | null; persistence: string; mean_model_prob: number | null; confidence: number | null; penalty: number; confidence_without_penalty: number | null; reason: string }[];
+  rejected: { retained: boolean; text: string; demoted_instead: string; to_emit: string };
+  labelled_benchmark: {
+    available: boolean; reason?: string; threshold?: number; stages?: LabelledStage[]; generated_at?: string; dataset?: string;
+    config_matches_current?: boolean; order_note?: string; caveat?: string; source?: string;
+  };
+  generated_at: string;
+}
+
+// ---- temporal view of the pipeline's own output (geoseek.analyst.temporal) ----
+export interface TemporalBucket {
+  n: number; area_m2: number; by_type: Record<string, number>; area_m2_by_type: Record<string, number>; persistence: Record<string, number>;
+  held: number; demoted: number; sar_available: number; sar_coverage: number | null;
+}
+export interface TemporalInterval {
+  id: string; from: string; to: string; days: number; stored: TemporalBucket;
+  pair_run: { name: string; raw: number; survivors: number; comparable: boolean | null; by_type: Record<string, number> } | null;
+}
+export interface TemporalArchive {
+  available: boolean; aoi: string | null; bbox: BBox | null; dates: string[]; types: string[];
+  intervals: TemporalInterval[];
+  multi_interval: (TemporalBucket & { id: string; from: string; to: string; days: number })[];
+  no_interval: TemporalBucket;
+  span_run: { name: string; from: string; to: string; raw: number; survivors: number } | null;
+  cumulative: { date: string | null; n_by_type: Record<string, number>; area_m2_by_type: Record<string, number>; n: number; area_m2: number }[];
+  totals: { stored_in_scope: number };
+  sar: { available_candidates: number; note: string | null };
+  held_classes: string[]; demoted_classes: string[];
+  pair_run_note: string; scope: string;
+  source: { report: string; candidates: string; report_generated_at: string };
 }

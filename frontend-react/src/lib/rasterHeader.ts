@@ -1,6 +1,6 @@
-// In-browser GeoTIFF *header* parse (geotiff.js, bundled - nothing is fetched). Only the file directory and GeoKeys are read:
-// no pixel data is decoded, nothing is uploaded, nothing is ingested. The result describes the file as written; the
-// console never claims more than that. tests/test_react_lib_selftest.py cross-checks every field against rasterio.
+// In-browser GeoTIFF *header* parse (geotiff.js, bundled - nothing is fetched). Only the file directory and GeoKeys are read here;
+// pixels are decoded separately, on request, by rasterPixels.ts. Nothing is uploaded, nothing is ingested. The result describes the
+// file as written; the console never claims more than that. tests/test_react_lib_selftest.py cross-checks every field against rasterio.
 import { fromArrayBuffer, fromBlob } from 'geotiff';
 import { fromUTM, utmFromEpsg } from './geo.ts';
 
@@ -19,6 +19,10 @@ export interface RasterHeader {
   bounds: [number, number, number, number] | null;
   resolution: [number, number] | null;            // |pixel width|, |pixel height| in CRS units
   lonlatBounds: [number, number, number, number] | null;
+  /** the four footprint corners as lon/lat, in order NW, NE, SE, SW of the file grid (so a rotated or projected footprint is drawn as it lies) */
+  lonlatCorners: [number, number][] | null;
+  /** per-band DESCRIPTION from the GDAL metadata (e.g. B04), null where the file has none */
+  bandNames: (string | null)[];
   lonlatNote: string | null;                      // why lon/lat bounds are absent, when they are
   nodata: number | null;
   tiled: boolean; overviews: number; compression: string | null;
@@ -102,6 +106,7 @@ export async function parseRasterHeader(src: Blob | ArrayBuffer, fileName = 'fil
     resolution = [Math.hypot(a, d), Math.hypot(b, e)];
   }
   const ll = corners.length ? toLonLat(epsg, corners) : { ll: null, note: 'no geotransform in the file' };
+  const lonlatCorners = ll.ll ?? null;
   const lonlatBounds: RasterHeader['lonlatBounds'] = ll.ll ? [Math.min(...ll.ll.map((p) => p[0])), Math.min(...ll.ll.map((p) => p[1])), Math.max(...ll.ll.map((p) => p[0])), Math.max(...ll.ll.map((p) => p[1]))] : null;
 
   // --- sample type
@@ -123,6 +128,11 @@ export async function parseRasterHeader(src: Blob | ArrayBuffer, fileName = 'fil
   const dt = typeof fd.DateTime === 'string' ? fd.DateTime : md[key('TIFFTAG_DATETIME') ?? ''] ?? null;
   const fileTimestamp: AcquisitionHint | null = dt ? { source: 'TIFF DateTime tag', raw: dt, iso: toIso(dt) } : null;
 
+  const bandNames: (string | null)[] = [];
+  for (let i = 0; i < bands; i++) {
+    try { const g = (await img.getGDALMetadata(i)) as Record<string, unknown> | null; const d = g?.DESCRIPTION; bandNames.push(typeof d === 'string' && d.trim() ? d.trim() : null); } catch { bandNames.push(null); }
+  }
+
   let nodata: number | null = null;
   try { const n = img.getGDALNoData(); nodata = typeof n === 'number' && Number.isFinite(n) ? n : null; } catch { /* absent */ }
   const comp = Number(fd.Compression);
@@ -137,7 +147,7 @@ export async function parseRasterHeader(src: Blob | ArrayBuffer, fileName = 'fil
     { id: 'lonlat', ok: !!lonlatBounds, label: 'Footprint placeable on the globe', detail: lonlatBounds ? lonlatBounds.map((v) => v.toFixed(4)).join(', ') : ll.note ?? 'unknown' },
   ];
   return {
-    fileName, sizeBytes, width, height, bands, dtype, bitsPerSample, crs, affine, rotated, bounds, resolution, lonlatBounds, lonlatNote: ll.note,
+    fileName, sizeBytes, width, height, bands, dtype, bitsPerSample, crs, affine, rotated, bounds, resolution, lonlatBounds, lonlatCorners, bandNames, lonlatNote: ll.note,
     nodata, tiled: !!fd.TileWidth, overviews: Math.max(0, (await tiff.getImageCount()) - 1), compression: COMPRESSION[comp] ?? (Number.isFinite(comp) ? `code ${comp}` : null),
     acquisition, fileTimestamp, metadata: md, checks,
   };
