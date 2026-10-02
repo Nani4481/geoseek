@@ -73,3 +73,22 @@ def test_cluster_geo_without_a_clustering_run_says_so(tmp_path):
     ui_support._geo_cache.update(key=None, value=None)
     svc = SimpleNamespace(settings=SimpleNamespace(index_dir=tmp_path), repo=None)
     assert ui_support.cluster_geo(svc)["available"] is False
+
+
+def test_cluster_geo_is_built_once_when_two_first_requests_arrive_together(tmp_path):
+    import threading
+
+    ui_support._geo_cache.update(key=None, value=None)
+    (tmp_path / "tile_clusters.json").write_text(json.dumps({"tile_cluster": {"o1_r000_c000": 0}}), encoding="utf-8")
+    reads = []
+
+    def records():
+        reads.append(1)
+        return iter([_rec("o1_r000_c000", 82.2, 26.6)])
+
+    svc = SimpleNamespace(settings=SimpleNamespace(index_dir=tmp_path), repo=SimpleNamespace(iter_tile_records=records))
+    out = []
+    ts = [threading.Thread(target=lambda: out.append(ui_support.cluster_geo(svc))) for _ in range(6)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(reads) == 1 and all(o is out[0] for o in out)

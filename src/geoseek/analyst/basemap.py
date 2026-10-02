@@ -6,9 +6,10 @@ Nothing is fetched and nothing is invented. A slippy-map tile (z/x/y, Web-Mercat
     so a map is a mosaic of real imagery and not a patchwork of dates. At z >= OVERVIEW_MAX_ZOOM + 1 it is assembled from
     the catalog's own true-colour tile thumbnails (the images the search cards show). At lower zooms (a view spanning
     hundreds of kilometres) that would mean thousands of thumbnails, so each granule is read once from the same band
-    rasters at a reduced size and held in a byte-capped in-memory LRU; the tile is warped from that. Two reduced levels:
-    "fine" 1/16 (z 8-10; a 4 x 4 grid of real pixels averaged per 16 x 16 block) and "coarse" 1/64 (z <= 7, whole-archive
-    views; an 8 x 8 grid averaged per 64 x 64 block). Only the sampled rows are inflated, so a first view stays quick.
+    rasters at a reduced size and held in a byte-capped in-memory LRU; the tile is warped from that. Three reduced levels,
+    each about as coarse as the map pixel it serves: "mid" 1/8 (z 11; a 4 x 4 grid of real pixels averaged per 8 x 8 block),
+    "fine" 1/16 (z 8-10; 4 x 4 per 16 x 16) and "coarse" 1/64 (z <= 7, whole-archive views; 8 x 8 per 64 x 64). Only the
+    sampled rows are inflated, so a first view stays quick.
     Same real pixels, only reduced; nothing is written to disk;
   * ``scene=<observation id>``: a staged Maxar scene (R/G/B COG bands), for the Detect map - the Sentinel-2 archive has no
     coverage where those scenes lie, and the scene itself is the imagery the detections were found on.
@@ -38,11 +39,13 @@ S2_COLLECTION = "sentinel-2-l2a"
 MAXAR_COLLECTION = "maxar-opendata"
 S2_NATIVE_MAX_ZOOM = 14              # 10 m/px; deeper zooms are an honest upscale of the same pixels
 MAXAR_NATIVE_MAX_ZOOM = 19
-OVERVIEW_MAX_ZOOM = 10               # z <= this is warped from the per-granule overviews; above it, from the tile thumbnails
-COARSE_MAX_ZOOM = 7                  # z <= this uses the coarse level; OVERVIEW_MAX_ZOOM >= z > this uses the fine level
+OVERVIEW_MAX_ZOOM = 11               # z <= this is warped from the per-granule overviews; above it, from the tile thumbnails
+COARSE_MAX_ZOOM = 7                  # z <= this: coarse level; FINE_MAX_ZOOM >= z > this: fine level; above that, up to OVERVIEW_MAX_ZOOM: mid
+FINE_MAX_ZOOM = 10
 # level -> (linear reduction of a 10 m band, real pixels sampled per output-pixel edge). Measured mean absolute error of the
-# reduced image against the full-area average of the same band: fine ~2% (k=4), coarse ~1.7% (k=8) - see docs/FRONTEND_REACT.md.
-OVERVIEW_LEVELS = {"coarse": (64, 8), "fine": (16, 4)}
+# reduced image against the full-area average of the same band: mid ~1.7% (k=4), fine ~2.1% (k=4), coarse ~1.7% (k=8) - see
+# docs/FRONTEND_REACT.md. Resident per granule: mid ~6.4 MB, fine ~1.6 MB, coarse ~0.1 MB; all three levels for all 15 granules ~122 MB < the cap.
+OVERVIEW_LEVELS = {"coarse": (64, 8), "fine": (16, 4), "mid": (8, 4)}
 OVERVIEW_CAP_BYTES = 160 * 1024 * 1024   # hard RAM cap for decoded overviews (LRU); ~1.4 MB each, so ~110 granules
 TILE_CACHE_CAP_BYTES = 96 * 1024 * 1024  # hard RAM cap for rendered map tiles (LRU)
 MAX_COMPOSE_TILES = 1500             # a request touching more catalog tiles than this is answered "too coarse", not slowly
@@ -50,6 +53,7 @@ _GRANULE_RE = re.compile(r"_(\d{2}[A-Z]{3})_")
 _NUM_RE = re.compile(r"-?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?")
 
 _pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="basemap")
+_band_pool = ThreadPoolExecutor(max_workers=6, thread_name_prefix="basemap-band")      # a separate pool: band reads run inside _pool workers
 
 
 class BasemapError(ValueError):
@@ -354,9 +358,10 @@ def _decode_overview(repo, datasets_dir: Path, observation_id: str, level: str =
     paths = {b: d / f"{b}.tif" for b in ("B04", "B03", "B02")}
     if not all(p.is_file() for p in paths.values()):
         return None
-    bands, nodata, crs, transform, full_w, full_h = {}, None, None, None, 0, 0
     factor, k = OVERVIEW_LEVELS[level]
-    for b, path in paths.items():
+
+    def read_band(item):
+        b, path = item
         with rasterio.open(path) as ds:
             h, w = max(1, ds.height // factor), max(1, ds.width // factor)
             # The bands are one-row-per-block deflate: an area-average read must inflate every row of a ~170 MB file (measured
@@ -364,9 +369,11 @@ def _decode_overview(repo, datasets_dir: Path, observation_id: str, level: str =
             # the sampled rows. So read every (factor/k)-th row and column - real pixels, no interpolation - and average k x k
             # blocks of those samples down to 1/factor (error vs the full-area average: see OVERVIEW_LEVELS).
             sub = ds.read(1, out_shape=(h * k, w * k), resampling=Resampling.nearest)
-            bands[b] = np.rint(sub.reshape(h, k, w, k).mean(axis=(1, 3))).astype(sub.dtype)
-            if nodata is None:
-                nodata, crs, transform, full_w, full_h = ds.nodata, ds.crs, ds.transform, ds.width, ds.height
+            return b, np.rint(sub.reshape(h, k, w, k).mean(axis=(1, 3))).astype(sub.dtype), (ds.nodata, ds.crs, ds.transform, ds.width, ds.height)
+
+    got = list(_band_pool.map(read_band, paths.items()))          # the three bands are independent: read them together
+    bands = {b: arr for b, arr, _ in got}
+    nodata, crs, transform, full_w, full_h = got[0][2]
     rgb = make_true_color_uint8(bands, nodata=nodata, per_band_offset_dn=true_color_offsets_for_scene(scene_key),
                                 per_band_bounds_dn=true_color_bounds_for_scene(scene_key))
     valid = ((bands["B04"] > 0) | (bands["B03"] > 0) | (bands["B02"] > 0)).astype(np.uint8) * 255
@@ -403,7 +410,7 @@ def render_sentinel2_overview(repo, datasets_dir: Path, z: int, x: int, y: int, 
     arch = archive(repo)
     view = box(*bbox)
     ids = [oid for oid in arch.preferred(year).values() if arch.obs[oid]["hull"] is not None and arch.obs[oid]["hull"].intersects(view)]
-    level = "coarse" if z <= COARSE_MAX_ZOOM else "fine"
+    level = "coarse" if z <= COARSE_MAX_ZOOM else "fine" if z <= FINE_MAX_ZOOM else "mid"
     factor = OVERVIEW_LEVELS[level][0]
     meta = {"layer": "sentinel-2-overview", "level": level, "granules": len(ids), "composited": 0}
     if not ids:
@@ -619,6 +626,6 @@ def coverage(repo, bbox: tuple[float, float, float, float], year: str | None = N
             "scenes": [{"observation_id": a["observation_id"], "date": a["date"], "platform": a["platform"], "sensor": a["sensor"],
                         "mean_cloud": round(a["mean_cloud"], 4), "bbox": list(a["hull"].bounds)} for a in sorted(hit, key=lambda a: a["observation_id"])],
             "dates": sorted({str(a["date"]) for a in hit}), "native_max_zoom": S2_NATIVE_MAX_ZOOM, "gsd_m": 10.0,
-            "year": year, "overview_max_zoom": OVERVIEW_MAX_ZOOM, "coarse_max_zoom": COARSE_MAX_ZOOM,
+            "year": year, "overview_max_zoom": OVERVIEW_MAX_ZOOM, "coarse_max_zoom": COARSE_MAX_ZOOM, "fine_max_zoom": FINE_MAX_ZOOM,
             "selection_rule": "one representative acquisition per granule: the lowest mean tile cloud fraction (newest on a tie)",
-            "source": "catalog Sentinel-2 L2A true-colour imagery (tile thumbnails at z >= 11; reduced 1/16 and 1/64 overviews of the same bands below)"}
+            "source": "catalog Sentinel-2 L2A true-colour imagery (tile thumbnails at z >= 12; reduced 1/8, 1/16 and 1/64 overviews of the same bands below)"}
