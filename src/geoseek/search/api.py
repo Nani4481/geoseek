@@ -36,32 +36,11 @@ _REACT_DIR = Path(__file__).resolve().parents[1] / "analyst" / "web_react"
 async def lifespan(app: FastAPI):
     global _engine, _analyst, _analyst_error
     _engine = SearchEngine()  # loads RemoteCLIP + FAISS index ONCE, at startup
-    # Map support is warmed HERE, before the first request is served - never from a background thread: the catalog read behind
-    # both summaries holds the repository lock for a second or so, which would stall a search issued right after start-up.
-    # Metadata only (dates, cloud, footprints, cluster labels); no imagery is decoded.
-    import time as _t
-
-    try:
-        from geoseek.analyst.basemap import archive
-
-        t0 = _t.perf_counter()
-        archive(_engine.repo)
-        print(f"[basemap] catalog summary ready in {(_t.perf_counter() - t0) * 1000:.0f} ms")
-    except Exception as e:            # the map layer must never stop the service coming up
-        print(f"[basemap] summary warm-up skipped: {type(e).__name__}: {e}")
     try:
         from geoseek.analyst.service import AnalystService
 
         _analyst = AnalystService(engine=_engine)
         print(f"[analyst] service ready: {len(_analyst.details)} ranked candidates.")
-        try:
-            from geoseek.analyst.ui_support import cluster_geo
-
-            t0 = _t.perf_counter()
-            cluster_geo(_analyst)         # the Discovery map's per-cluster cells (catalog + stored clustering run, read-only)
-            print(f"[analyst] cluster geography ready in {(_t.perf_counter() - t0) * 1000:.0f} ms")
-        except Exception as e:
-            print(f"[analyst] cluster geography warm-up skipped: {type(e).__name__}: {e}")
     except Exception as e:  # the search API must still come up without a change report
         _analyst_error = f"{type(e).__name__}: {e}"
         print(f"[analyst] service unavailable: {_analyst_error}")

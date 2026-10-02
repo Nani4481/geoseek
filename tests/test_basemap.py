@@ -276,7 +276,7 @@ def test_zoom_picks_the_overview_level_and_both_levels_are_real_pixels_in_the_ri
     bands = {"B04": np.full((4, 4), 1800, np.uint16), "B03": np.full((4, 4), 1500, np.uint16), "B02": np.full((4, 4), 900, np.uint16)}
     want = make_true_color_uint8(bands, nodata=None)[0, 0]
     seen = {}
-    for z in (5, 7, 8, 10):
+    for z in (5, 7, 8, 10, 11):
         x, y = _tile_xyz_containing(*np.mean(pts[:4], axis=0), z)
         body, _, meta = bm.render_tile(repo, lambda t: _jpeg((0, 0, 0)), z, x, y, datasets_dir=root)
         assert meta["status"] == "ok", (z, meta)
@@ -284,9 +284,9 @@ def test_zoom_picks_the_overview_level_and_both_levels_are_real_pixels_in_the_ri
         px = _decode(body)
         got = px[px[..., 3] > 0][:, :3].mean(axis=0)
         assert np.abs(got - want).max() <= 3, (z, got, want)
-    assert seen == {5: "coarse", 7: "coarse", 8: "fine", 10: "fine"}
+    assert seen == {5: "coarse", 7: "coarse", 8: "fine", 10: "fine", 11: "mid"}
     by = bm.cache_stats()["overviews"]["bytes_by_level"]
-    assert set(by) == {"coarse", "fine"} and by["coarse"] < by["fine"] / 8, "the coarse level must be far smaller than the fine one"
+    assert set(by) == {"coarse", "fine", "mid"} and by["coarse"] < by["fine"] / 8 and by["fine"] < by["mid"], "levels must get coarser as they get smaller"
     assert bm.cache_stats()["overviews"]["bytes"] <= bm.OVERVIEW_CAP_BYTES
 
 
@@ -416,3 +416,23 @@ def test_http_coverage_validates_the_bbox(tmp_path, monkeypatch):
     assert c.get("/ui/basemap/coverage?bbox=5,2,3,4").status_code == 400
     ok = c.get("/ui/basemap/coverage?bbox=70,20,80,30")
     assert ok.status_code == 200 and {"available", "fraction", "scenes", "selection_rule", "native_max_zoom"} <= set(ok.json())
+
+
+def test_the_catalog_summary_is_built_lazily_and_exactly_once_under_concurrent_first_requests():
+    import threading
+
+    wkt, _ = _utm_square_wkt(500_000.0, 2_950_000.0, 2560.0)
+    reads = []
+
+    class CountingRepo(FakeRepo):
+        def iter_tile_records(self):
+            reads.append(1)
+            return super().iter_tile_records()
+
+    repo = CountingRepo(tiles=[_record("a", "S2A_44RPQ_20240110_0_L2A", wkt, 0.1)])
+    assert reads == [], "constructing the repo / importing the module must not read the catalog (nothing is warmed at boot)"
+    got = []
+    ts = [threading.Thread(target=lambda: got.append(bm.archive(repo))) for _ in range(8)]
+    [t.start() for t in ts]
+    [t.join() for t in ts]
+    assert len(reads) == 1 and len({id(g) for g in got}) == 1, f"{len(reads)} catalog reads for 8 simultaneous first requests"
