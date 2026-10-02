@@ -1,0 +1,58 @@
+.disc-page { display: flex; flex-direction: column; gap: 14px; }
+.disc-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 14px; align-items: stretch; }
+.disc-page > .disc-grid:last-child { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); }
+.disc-list .tbl { table-layout: fixed; }
+.disc-list .tbl td { padding: 6px 10px; overflow: hidden; text-overflow: ellipsis; }
+.disc-list .tbl .cl-name { color: var(--ink); }
+.disc-list .tbl .cl-where { font-size: 11px; }
+.disc-list .tbl td.mono { display: table-cell; }
+
+/* the computed reading of the clustering run, above the map */
+.interp { display: grid; gap: 7px; max-width: 150ch; }
+.interp p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+.interp b { color: var(--ink); font-weight: 600; }
+.interp-fact { border-left: 3px solid var(--cyan); padding-left: 11px; color: var(--ink); }
+.interp-chips { display: flex; flex-wrap: wrap; gap: 6px; padding-left: 14px; }
+.interp-chips .chip { cursor: pointer; }
+.interp-chips .chip.on { border-color: var(--cyan); background: rgba(76, 201, 240, 0.16); }
+.interp-src { font-size: 10.5px !important; }
+
+/* per-cluster summary (hover = preview, click = selected) */
+/* fixed height: empty, preview and selected states are the same size, so hovering never resizes the grid row (which would move what lies under the pointer) */
+.csum { display: grid; gap: 10px; height: 322px; overflow: hidden auto; align-content: start; }
+.csum.empty-state { gap: 6px; align-content: center; text-align: center; padding: 10px 24px; color: var(--ink-2); font-size: 12.5px; }
+.csum-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.csum-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; font-size: 13px; }
+.csum-head .chip { margin-left: auto; flex: none; }
+.csum-body { display: grid; grid-template-columns: minmax(220px, 0.8fr) minmax(0, 1.5fr); grid-template-areas: 'kv ex' 'mix ex'; gap: 10px 16px; align-items: start; }
+.csum-kv { grid-area: kv; gap: 4px 12px; font-size: 11.5px; }
+.csum-kv dd { text-align: right; overflow-wrap: anywhere; }
+.csum-mix { grid-area: mix; display: grid; gap: 4px; }
+.mixrow { display: grid; grid-template-columns: minmax(0, 1fr) 70px 38px; gap: 8px; align-items: center; font-size: 11px; }
+.mixrow > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink-2); }
+.mixrow > .mono { text-align: right; font-size: 10.5px; color: var(--ink-3); }
+.csum-ex { grid-area: ex; min-width: 0; }
+.csum-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.csum-tile { margin: 0; background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; overflow: hidden; min-width: 0; }
+.csum-tile .thumb-img { display: block; width: 100%; aspect-ratio: 1 / 1; object-fit: cover; }
+.csum-tile figcaption { display: grid; padding: 4px 7px 5px; font: 500 10px/14px var(--mono); }
+.csum-tile figcaption span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.csum-note { font-size: 10px; line-height: 1.4; margin-top: 7px; }
+
+/* region x cluster matrix */
+.mx-wrap { display: grid; gap: 8px; }
+.mx { width: 100%; border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: 11px; }
+.mx col.c0, .mx .mx-corner, .mx .mx-row { width: 236px; }
+.mx th, .mx td { padding: 0; }
+.mx .mx-corner { text-align: left; font-size: 10px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; padding: 0 8px 6px 0; vertical-align: bottom; }
+.mx .mx-col { height: 96px; vertical-align: bottom; font-weight: 500; color: var(--ink-2); }
+.mx .mx-col span { display: block; writing-mode: vertical-rl; transform: rotate(180deg); white-space: nowrap; margin: 0 auto 6px; font-size: 10.5px; }
+.mx .mx-group th { text-align: left; font-size: 10.5px; font-weight: 600; letter-spacing: 0.02em; color: var(--ink-2); padding: 9px 0 3px; border-bottom: 1px solid var(--line); }
+.mx .mx-row { text-align: left; font-weight: 400; display: table-cell; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding: 0 8px 0 2px; height: 23px; color: var(--ink-2); }
+.mx .mx-row .mx-name { margin-left: 7px; color: var(--ink-3); font-size: 10.5px; }
+.mx td { height: 23px; text-align: center; font: 500 10px var(--mono); color: #04121c; border-left: 2px solid var(--panel); border-bottom: 2px solid var(--panel); }
+.mx td.lead { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75); }
+.mx tbody tr[data-mx-cluster] { cursor: pointer; }
+.mx tbody tr[data-mx-cluster]:hover .mx-row, .mx tbody tr.hl .mx-row { color: #fff; box-shadow: inset 2px 0 0 #ffd166; }
+.mx tbody tr.sel .mx-row { color: #fff; box-shadow: inset 2px 0 0 var(--blue); }
+.mx-note { font-size: 10.5px; line-height: 1.45; }

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { api, tileThumb } from '@/api/client';
-import type { SpectralLayer, TileSpectral } from '@/api/types';
+import type { Polygon, SpectralLayer, TileSpectral } from '@/api/types';
 import { useApi } from '@/hooks/useApi';
 import { fmtPct } from '@/fmt';
 import { ErrorNote, Loading } from './Widgets';
@@ -27,7 +27,7 @@ function Legend({ l }: { l: SpectralLayer }) {
   );
 }
 
-function Figure({ idx, l, tileId, opacity, relevant }: { idx: Idx; l: SpectralLayer; tileId: string; opacity: number; relevant: boolean }) {
+function Figure({ idx, l, tileId, opacity, relevant, outline, focus }: { idx: Idx; l: SpectralLayer; tileId: string; opacity: number; relevant: boolean; outline?: string | null; focus?: boolean }) {
   const [failed, setFailed] = useState(false);
   const st = l.stats;
   return (
@@ -35,8 +35,14 @@ function Figure({ idx, l, tileId, opacity, relevant }: { idx: Idx; l: SpectralLa
       <div className="spec-img">
         <img className="base" src={tileThumb(tileId)} alt={`True-colour tile ${tileId}`} />
         {!failed && <img className="pix" src={l.image_url} alt={`${l.label} overlay, one pixel per 10 m`} style={{ opacity }} onError={() => setFailed(true)} />}
+        {outline && (
+          <svg className="outline" viewBox="0 0 1 1" preserveAspectRatio="none" aria-label="Candidate footprint" data-testid="footprint-outline">
+            <polygon points={outline} fill="none" stroke="#ffd166" strokeWidth="2" vectorEffect="non-scaling-stroke" />
+          </svg>
+        )}
         <span className="tag mono">{l.label}</span>
         {relevant && <span className="tag rel">relevant to your query</span>}
+        {focus && <span className="tag rel">decisive for this change type</span>}
       </div>
       <figcaption>
         <b>{l.label}</b> <span className="dim">· {l.meaning}</span>
@@ -53,36 +59,54 @@ function Figure({ idx, l, tileId, opacity, relevant }: { idx: Idx; l: SpectralLa
  * from the NIR and SWIR bands the retrieval model never sees. It deliberately does NOT draw an attention map: the model's
  * patches are hundreds of metres across and could not localise a structure.
  */
-export function SpectralEvidence({ tileId, query, onClose }: { tileId: string; query: string | null; onClose: () => void }) {
+export function SpectralEvidence({ tileId, query, onClose, focus, footprint, title, note }: {
+  tileId: string; query: string | null; onClose: () => void;
+  /** indices to switch on first (e.g. the ones that decided a candidate's change type) */
+  focus?: string[];
+  /** a candidate footprint to outline on every map */
+  footprint?: Polygon | null;
+  title?: string; note?: string;
+}) {
   const spec = useApi((s) => api.spectral(tileId, query, s), [tileId, query]);
   const d: TileSpectral | null = spec.data;
   const relevant = useMemo(() => new Set((d?.relevance.matches ?? []).map((m) => m.index)), [d]);
   const [on, setOn] = useState<Set<Idx>>(new Set());
+  const tile = useApi(footprint ? (sg) => api.tiles([tileId], sg) : null, [tileId, !!footprint]);
+  const focusKey = (focus ?? []).join(',');   // a stable key: callers pass a fresh array every render
+  const focusSet = useMemo(() => new Set(focusKey.split(',').filter((i): i is Idx => (ORDER as readonly string[]).includes(i))), [focusKey]);
+  // the footprint, as points in the tile's own [0,1]x[0,1] frame (west->east, north->south); the tile is ~2.5 km so lon/lat is linear enough
+  const outline = useMemo(() => {
+    const bb = tile.data?.tiles[0]?.bbox;
+    if (!bb || !footprint) return null;
+    const [w, so, e, n] = bb;
+    return footprint.coordinates[0].map(([x, y]) => `${((x - w) / (e - w)).toFixed(5)},${((n - y) / (n - so)).toFixed(5)}`).join(' ');
+  }, [tile.data, footprint]);
   const [opacity, setOpacity] = useState(0.8);
 
   // default: show the indices that bear on the query (or all three when none does)
   useEffect(() => {
     if (!d) return;
     const rel = ORDER.filter((i) => relevant.has(i));
-    setOn(new Set(rel.length ? rel : ORDER));
-  }, [d, relevant]);
+    setOn(new Set(focusSet.size ? ORDER.filter((i) => focusSet.has(i)) : rel.length ? rel : ORDER));
+  }, [d, relevant, focusSet]);
 
   const toggle = (i: Idx) => setOn((s) => { const x = new Set(s); if (x.has(i)) x.delete(i); else x.add(i); return x; });
 
   return (
-    <Panel title={`Spectral evidence · ${tileId}`} actions={<button className="btn sm" onClick={onClose} aria-label="Close spectral evidence">Close ✕</button>}>
+    <Panel title={title ?? `Spectral evidence · ${tileId}`} actions={<button className="btn sm" onClick={onClose} aria-label="Close spectral evidence">Close ✕</button>}>
       {spec.error ? <ErrorNote error={spec.error} onRetry={spec.reload} /> : !d ? <Loading rows={5} /> : (
         <div className="col spec-panel" style={{ gap: 12 }} data-tile={tileId}>
+          {note && <div className="dim" style={{ fontSize: 11.5 }} data-testid="spec-note">{note}</div>}
           <div className="spec-why" data-testid="spec-why">
             {query ? <>Search: <b>“{query}”</b>. </> : null}
-            {d.relevance.matches.length ? d.relevance.matches.map((m) => <span key={m.index} className="spec-match"><b>{m.index.toUpperCase()}</b> — {m.why} (matched: {m.terms.join(', ')}). </span>)
+            {focusSet.size ? <span>Starred: {ORDER.filter((i) => focusSet.has(i)).map((i) => d.layers[i].label).join(' and ')} — decided this change type; the remaining indices are one click away.</span> : d.relevance.matches.length ? d.relevance.matches.map((m) => <span key={m.index} className="spec-match"><b>{m.index.toUpperCase()}</b> — {m.why} (matched: {m.terms.join(', ')}). </span>)
               : <span className="dim">{d.relevance.note ?? 'No query: all three indices are shown.'} </span>}
           </div>
           <div className="row" style={{ alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             <span className="dim" style={{ fontSize: 11 }}>Overlays:</span>
             {ORDER.map((i) => (
               <button key={i} className={`btn sm ${on.has(i) ? 'on' : ''}`} aria-pressed={on.has(i)} data-toggle={i} onClick={() => toggle(i)} disabled={!d.usable}>
-                {relevant.has(i) ? '★ ' : ''}{d.layers[i].label}
+                {relevant.has(i) || focusSet.has(i) ? '★ ' : ''}{d.layers[i].label}
               </button>
             ))}
             <label className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>Opacity {Math.round(opacity * 100)}%
@@ -90,7 +114,7 @@ export function SpectralEvidence({ tileId, query, onClose }: { tileId: string; q
           </div>
           {!d.usable && <div className="warnbox" role="status">{d.unusable_reason}</div>}
           <div className="spec-grid">
-            {ORDER.filter((i) => on.has(i)).map((i) => <Figure key={i} idx={i} l={d.layers[i]} tileId={tileId} opacity={opacity} relevant={relevant.has(i)} />)}
+            {ORDER.filter((i) => on.has(i)).map((i) => <Figure key={i} idx={i} l={d.layers[i]} tileId={tileId} opacity={opacity} relevant={relevant.has(i)} outline={outline} focus={focusSet.has(i)} />)}
             {on.size === 0 && <div className="empty">Pick an index above to overlay it.</div>}
           </div>
           {d.classes && (

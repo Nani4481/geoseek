@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api, candidateImage } from '@/api/client';
-import type { BBox, CandidateDetail, Decision, Timeline as TL } from '@/api/types';
+import type { BBox, CandidateDetail, CandidateExplain, Decision, Timeline as TL } from '@/api/types';
 import { useApi } from '@/hooks/useApi';
 import { usePlaybackController, usePlaybackSelect, usePlaybackState, type PlaybackController } from '@/hooks/usePlayback';
 import { axisPositions, indexAt, layerOpacities } from '@/lib/timelapse';
-import { DASH, GATE_LABEL, bandOf, downloadJSON, fmtHa, fmtInt, fmtLonLat, fmtPct, isNum, typeColor } from '@/fmt';
+import { DASH, bandOf, downloadJSON, fmtHa, fmtInt, fmtLonLat, fmtPct, isNum, typeColor } from '@/fmt';
 import { go, href } from '@/router';
 import { useStore } from '@/state/store';
 import { CompareSlider } from './CompareSlider';
@@ -13,11 +13,13 @@ import { GeoMap } from './GeoMap';
 import { Panel } from './Panel';
 import { ThreatRingsResults, useThreatRings } from './ThreatRings';
 import { Timeline } from './Timeline';
-import { ConfidenceRing, DeltaBar, ErrorNote, Loading } from './Widgets';
+import { ConfidenceRing, ErrorNote, Loading } from './Widgets';
 
 export interface CandidateBundle {
   detail: CandidateDetail | null;
   timeline: TL | null;
+  explain: CandidateExplain | null;
+  explainError: string | null;
   error: string | null;
   loading: boolean;
   reload: () => void;
@@ -27,7 +29,8 @@ export interface CandidateBundle {
 export function useCandidate(id: string | null): CandidateBundle {
   const d = useApi(id ? (s) => api.candidate(id, s) : null, [id]);
   const t = useApi(id ? (s) => api.timeline(id, s) : null, [id]);
-  return { detail: d.data, timeline: t.data, error: d.error || t.error, loading: d.loading || t.loading, reload: d.reload };
+  const x = useApi(id ? (s) => api.explain(id, s) : null, [id]);
+  return { detail: d.data, timeline: t.data, explain: x.data, explainError: x.error, error: d.error || t.error, loading: d.loading || t.loading, reload: d.reload };
 }
 
 /**
@@ -174,6 +177,8 @@ export function ComparePanel({ id, pair, tl }: { id: string; pair: ReturnType<ty
   );
 }
 
+const jumpToWhy = () => document.getElementById('why-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
 export function DetailsPanel({ d, error }: { d: CandidateDetail | null; error?: string | null }) {
   const { label } = useStore();
   return (
@@ -194,16 +199,7 @@ export function DetailsPanel({ d, error }: { d: CandidateDetail | null; error?: 
             <dt>Model probability</dt><dd>{fmtPct(d.mean_model_prob)}</dd>
             <dt>Queue score</dt><dd>{isNum(d.queue_score) ? d.queue_score.toFixed(3) : DASH}</dd>
           </dl>
-          <div>
-            <div className="dim" style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 5 }} title="Index change minus the scene-wide seasonal change, so a drought-to-green season does not read as change">Spectral type · anomaly vs. season</div>
-            <div className="col" style={{ gap: 6 }}>
-              <DeltaBar label="NDVI" value={d.classification?.evidence?.ndvi_anomaly} hint="vegetation index anomaly" />
-              <DeltaBar label="NDBI" value={d.classification?.evidence?.ndbi_anomaly} hint="built-up index anomaly" />
-              <DeltaBar label="NDWI" value={d.classification?.evidence?.ndwi_anomaly} hint="water index anomaly" />
-            </div>
-            <div className="dim" style={{ fontSize: 11, marginTop: 6 }}>{d.classification?.detail}</div>
-          </div>
-          {d.terrain?.plain_language && <div className="dim" style={{ fontSize: 11.5 }}><b style={{ color: 'var(--ink-2)' }}>Terrain: </b>{d.terrain.plain_language}</div>}
+          <div className="faint" style={{ fontSize: 11 }}>Spectral evidence, terrain and the typing thresholds: <button className="btn sm" onClick={jumpToWhy}>Why this was flagged ↓</button></div>
         </div>
       )}
     </Panel>
@@ -225,18 +221,7 @@ export function ConfidencePanel({ d, error }: { d: CandidateDetail | null; error
               <div className="dim" style={{ fontSize: 11 }}>combined down-weight {isNum(d.suppression?.combined_downweight) ? d.suppression.combined_downweight.toFixed(2) : DASH}</div>
             </div>
           </div>
-          <ul className="mono" style={{ margin: 0, padding: 0, listStyle: 'none', fontSize: 10.5, color: 'var(--ink-3)', display: 'grid', gap: 2 }}>
-            {d.confidence_breakdown?.map((l, i) => <li key={i} style={{ color: l.startsWith('=>') ? 'var(--ink)' : undefined }}>{l}</li>)}
-          </ul>
-          <div>
-            <div className="dim" style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 3 }}>Evidence gates</div>
-            {d.suppression?.trace?.map((t) => (
-              <div key={t.rule} className={`gate ${t.verdict === 'pass' ? 'pass' : 'fail'}`} title={t.detail}>
-                <i>{t.verdict === 'pass' ? '✓' : '✕'}</i>{GATE_LABEL[t.rule] ?? t.rule}
-                <span className="faint mono" style={{ marginLeft: 'auto', fontSize: 10 }}>w {t.weight.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
+          <div className="faint" style={{ fontSize: 11 }}>What each piece of evidence contributed, the gate trace and the raw numbers: <button className="btn sm" onClick={jumpToWhy}>Why this was flagged ↓</button></div>
           <div>
             <div className="dim" style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>SAR corroboration</div>
             {sarOk ? (

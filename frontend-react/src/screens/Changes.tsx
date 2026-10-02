@@ -3,6 +3,8 @@ import { api } from '@/api/client';
 import type { BBox } from '@/api/types';
 import { ComparePanel, ConfidencePanel, DecisionPanel, DetailsPanel, LocationPanel, TemporalPanel, useCandidate, useDatePair } from '@/components/CandidatePanels';
 import { Panel } from '@/components/Panel';
+import { SpectralEvidence } from '@/components/SpectralEvidence';
+import { PipelineTracePanel, WhyPanel } from '@/components/WhyPanel';
 import { ErrorNote, Loading } from '@/components/Widgets';
 import { DASH, bandOf, downloadJSON, fmtHa, fmtInt, fmtPct, regionLabel, typeColor } from '@/fmt';
 import { useApi } from '@/hooks/useApi';
@@ -13,21 +15,28 @@ const PERSISTENCE = ['persistent', 'progressive', 'recent', 'transient', 'incons
 const PAGE = 40;
 
 export function Changes({ id }: { id: string | null }) {
-  const { selectedId, select, summary, label } = useStore();
-  const [changeType, setChangeType] = useState('');
+  const { selectedId, select, summary, label, takeChangesFilter } = useStore();
+  // a filter handed over by the Temporal screen (applied once, here, then forgotten)
+  const [opened] = useState(() => takeChangesFilter());
+  const [firstDetected, setFirstDetected] = useState(opened?.firstDetected ?? '');
+  const [sensor, setSensor] = useState(opened?.sensor ?? '');
+  const [originLabel, setOriginLabel] = useState(opened?.label ?? '');
+  const [changeType, setChangeType] = useState(opened?.changeType ?? '');
   const [minConf, setMinConf] = useState(0);
-  const [persistence, setPersistence] = useState('');
+  const [persistence, setPersistence] = useState(opened?.persistence ?? '');
   const [decision, setDecision] = useState('');
   const [sort, setSort] = useState('queue_score');
-  const [region, setRegion] = useState('');
+  const [region, setRegion] = useState(opened?.region ?? '');
   const [offset, setOffset] = useState(0);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
+  const [pixels, setPixels] = useState(false);
 
   const regions = useApi((s) => api.regions(s), []);
   const bbox: BBox | null = useMemo(() => regions.data?.regions.find((r) => r.name === region)?.bbox ?? null, [regions.data, region]);
-  const query = { change_type: changeType || undefined, min_confidence: minConf || undefined, persistence: persistence || undefined, decision: decision || undefined, sort, bbox, limit: PAGE, offset };
-  const list = useApi((s) => api.candidates(query, s), [changeType, minConf, persistence, decision, sort, region, regions.data, offset]);
-  useEffect(() => { setOffset(0); }, [changeType, minConf, persistence, decision, sort, region]);
+  const query = { change_type: changeType || undefined, min_confidence: minConf || undefined, persistence: persistence || undefined, decision: decision || undefined, sort, bbox, limit: PAGE, offset,
+    first_detected: firstDetected || undefined, sensor: sensor || undefined };
+  const list = useApi((s) => api.candidates(query, s), [changeType, minConf, persistence, decision, sort, region, regions.data, offset, firstDetected, sensor]);
+  useEffect(() => { setOffset(0); }, [changeType, minConf, persistence, decision, sort, region, firstDetected, sensor]);
 
   const active = id ?? selectedId;
   useEffect(() => { if (id) select(id); }, [id, select]);
@@ -35,6 +44,7 @@ export function Changes({ id }: { id: string | null }) {
 
   const bundle = useCandidate(active);
   const pair = useDatePair(bundle.timeline);
+  useEffect(() => { setPixels(false); }, [active]);
 
   const doExport = async () => {
     setExportMsg(null);
@@ -45,6 +55,8 @@ export function Changes({ id }: { id: string | null }) {
       if (persistence) filters.persistence = persistence;
       if (decision) filters.decision = decision;
       if (bbox) filters.bbox = bbox.join(',');
+      if (sensor) filters.sensor = sensor;
+      if (firstDetected) filters.first_detected = firstDetected;
       const r = await api.exportGeoJSON(undefined, filters);
       downloadJSON('geoseek_change_candidates.geojson', r.geojson);
       setExportMsg(`Exported ${fmtInt(r.count)} features with provenance`);
@@ -55,6 +67,7 @@ export function Changes({ id }: { id: string | null }) {
   const types = Object.keys(summary?.change_type_labels ?? {});
 
   return (
+    <>
     <div className="changes-grid">
       <div className="col queue-col">
         <Panel title="Review queue" grow stack actions={<button className="btn sm" onClick={doExport} title="GeoJSON for everything matching the filters">⇩ Export filtered</button>}>
@@ -88,6 +101,12 @@ export function Changes({ id }: { id: string | null }) {
               <input type="range" min={0} max={0.95} step={0.05} value={minConf} onChange={(e) => setMinConf(Number(e.target.value))} aria-label="Minimum confidence" />
             </label>
           </div>
+          {originLabel && (
+            <div className="row" style={{ alignItems: 'center', gap: 8, marginBottom: 8 }} data-testid="changes-origin">
+              <span className="chip cyan" title="This queue was opened from the Temporal screen with these candidates selected">Opened from Temporal · {originLabel}</span>
+              <button className="btn sm" onClick={() => { setFirstDetected(''); setSensor(''); setOriginLabel(''); }} aria-label="Clear the Temporal filter">Clear</button>
+            </div>
+          )}
           {exportMsg && <div style={{ fontSize: 11.5, color: 'var(--green)', marginBottom: 6 }} role="status">{exportMsg}</div>}
           {list.error ? <ErrorNote error={list.error} onRetry={list.reload} /> : !d ? <Loading rows={8} /> : (
             <>
@@ -139,5 +158,19 @@ export function Changes({ id }: { id: string | null }) {
         )}
       </div>
     </div>
+    {active && (
+      <section className="col" id="why-section" aria-label="Candidate explanation" style={{ marginTop: 14 }}>
+        <div className="why-grid">
+          <WhyPanel ex={bundle.explain} error={bundle.explainError} pixelsOpen={pixels} onShowPixels={() => setPixels((p) => !p)} />
+          <PipelineTracePanel ex={bundle.explain} error={bundle.explainError} />
+        </div>
+        {pixels && bundle.explain?.overlay && (
+          <SpectralEvidence tileId={bundle.explain.overlay.tile_id} query={null} onClose={() => setPixels(false)}
+            focus={bundle.explain.overlay.focus_indices} footprint={bundle.explain.overlay.geometry}
+            title={`Index maps behind the explanation · ${bundle.explain.overlay.acquired_at ?? bundle.explain.overlay.tile_id}`} note={bundle.explain.overlay.note} />
+        )}
+      </section>
+    )}
+    </>
   );
 }

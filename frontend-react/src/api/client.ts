@@ -3,7 +3,7 @@
 import type {
   BBox, CandidateDetail, CandidateList, ClusterInfo, ConsoleMetrics, DetectModelInfo, DetectObservation, DetectTile,
   HealthInfo, LatencyProbe, Notification, PresentationSummary, RegionListItem, SearchResponse, SimilarResponse,
-  TileDetections, TileFootprint, Timeline, Decision, ThreatRings, DetectionPoint, DossierProvenance, ProjectionSample, ProjectionLookup, TileSpectral, BasemapCoverage, ClusterGeo,
+  TileDetections, TileFootprint, Timeline, Decision, ThreatRings, DetectionPoint, DossierProvenance, ProjectionSample, ProjectionLookup, TileSpectral, BasemapCoverage, ClusterGeo, CandidateExplain, SuppressionFunnel, TemporalArchive,
 } from './types';
 
 export class ApiError extends Error {
@@ -43,6 +43,8 @@ export const bboxParam = (b: BBox | null | undefined): string | undefined => (b 
 export interface CandidateQuery {
   bbox?: BBox | null; change_type?: string; min_confidence?: number; persistence?: string; decision?: string;
   sort?: string; limit?: number; offset?: number; year?: string; sensor?: string;
+  /** exact first-detected bracket(s) 'FROM_TO' (comma-separated), or 'none' */
+  first_detected?: string;
 }
 
 export const api = {
@@ -59,6 +61,9 @@ export const api = {
     getJSON<CandidateList>('/candidates', { ...q, bbox: bboxParam(q.bbox) }, s),
   candidate: (id: string, s?: AbortSignal) => getJSON<CandidateDetail>(`/candidates/${encodeURIComponent(id)}`, undefined, s),
   timeline: (id: string, s?: AbortSignal) => getJSON<Timeline>(`/ui/candidates/${encodeURIComponent(id)}/timeline`, undefined, s),
+  explain: (id: string, s?: AbortSignal) => getJSON<CandidateExplain>(`/ui/candidates/${encodeURIComponent(id)}/explain`, undefined, s),
+  funnel: (s?: AbortSignal) => getJSON<SuppressionFunnel>('/ui/pipeline/funnel', undefined, s),
+  temporalArchive: (bbox: BBox | null, s?: AbortSignal) => getJSON<TemporalArchive>('/ui/temporal/archive', { bbox: bboxParam(bbox) }, s),
   dossier: (id: string, before: string, after: string, s?: AbortSignal) =>
     getJSON<DossierProvenance>(`/ui/candidates/${encodeURIComponent(id)}/dossier`, { before, after }, s),
   similarToCandidate: (id: string, k: number, s?: AbortSignal) =>

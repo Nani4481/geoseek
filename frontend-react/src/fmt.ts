@@ -9,6 +9,8 @@ export const fmtFixed = (x: number | null | undefined, d = 3) => (isNum(x) ? x.t
 export const fmtPct = (x: number | null | undefined, d = 1) => (isNum(x) ? `${(x * 100).toFixed(d)}%` : DASH);
 export const fmtHa = (m2: number | null | undefined) => (isNum(m2) ? `${(m2 / 10_000).toFixed(m2 < 100_000 ? 2 : 1)} ha` : DASH);
 export const fmtMs = (x: number | null | undefined) => (isNum(x) ? x.toFixed(x < 100 ? 1 : 0) : DASH);
+/** ground sample distance: 10 m stays `10 m`, 0.30517578 becomes `0.31 m` (the exact value belongs in a tooltip) */
+export const fmtGsd = (m: number | null | undefined) => (isNum(m) ? `${m >= 1 ? +m.toFixed(1) : +m.toFixed(2)} m` : DASH);
 export const fmtLon = (x: number) => `${Math.abs(x).toFixed(4)}°${x >= 0 ? 'E' : 'W'}`;
 export const fmtLat = (x: number) => `${Math.abs(x).toFixed(4)}°${x >= 0 ? 'N' : 'S'}`;
 export const fmtLonLat = (p: [number, number] | null | undefined) => (p ? `${fmtLat(p[1])}  ${fmtLon(p[0])}` : DASH);

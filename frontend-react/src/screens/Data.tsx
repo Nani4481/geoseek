@@ -1,14 +1,15 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/api/client';
 import type { BBox, ConsoleMetrics, RegionListItem } from '@/api/types';
 import { GeoMap } from '@/components/GeoMap';
 import { Panel } from '@/components/Panel';
+import { RasterCompare } from '@/components/RasterCompare';
+import { RasterPreview, defaultPreview, type PreviewState } from '@/components/RasterPreview';
 import { ErrorNote, Loading } from '@/components/Widgets';
-import { DASH, fmtInt, regionLabel } from '@/fmt';
+import { DASH, fmtGsd, fmtInt, regionLabel } from '@/fmt';
 import { useApi } from '@/hooks/useApi';
-import { parseRasterHeader, type RasterHeader } from '@/lib/rasterHeader';
-
-const MAX_FILES = 6;
+import { href } from '@/router';
+import { MAX_UPLOADS as MAX_FILES, addFiles, clearUploads, setUploadDate, useUploads, type Upload } from '@/lib/uploads';
 
 const human = (b: number | null) => (b === null ? DASH : b < 1024 ** 2 ? `${(b / 1024).toFixed(1)} kB` : b < 1024 ** 3 ? `${(b / 1024 ** 2).toFixed(1)} MB` : `${(b / 1024 ** 3).toFixed(2)} GB`);
 const bboxArea = (b: BBox) => Math.max(0, b[2] - b[0]) * Math.max(0, b[3] - b[1]);
@@ -17,24 +18,28 @@ function overlap(a: BBox, b: BBox): number {
   return w > 0 && h > 0 ? w * h : 0;
 }
 
-interface Parsed { name: string; header: RasterHeader | null; error: string | null }
-
-function verdict(p: Parsed): { cls: 'green' | 'amber' | 'red'; text: string } {
+function verdict(p: Upload): { cls: 'green' | 'amber' | 'red'; text: string } {
   if (!p.header) return { cls: 'red', text: 'NOT A READABLE GEOTIFF' };
   const bad = p.header.checks.filter((c) => !c.ok);
   return bad.length === 0 ? { cls: 'green', text: 'HEADER VALID · GEOREFERENCED' } : { cls: 'amber', text: `READABLE · ${bad.length} CHECK${bad.length === 1 ? '' : 'S'} FAILED` };
 }
 
-function RasterCard({ p, regions, sensors }: { p: Parsed; regions: RegionListItem[]; sensors: ConsoleMetrics['sensors'] }) {
+function RasterCard({ p, regions, sensors }: { p: Upload; regions: RegionListItem[]; sensors: ConsoleMetrics['sensors'] }) {
   const h = p.header;
   const v = verdict(p);
   const ll = h?.lonlatBounds ?? null;
   const overlapping = useMemo(() => (ll ? regions.map((r) => ({ r, frac: overlap(ll, r.bbox) / Math.max(bboxArea(ll), 1e-12), cover: overlap(ll, r.bbox) / Math.max(bboxArea(r.bbox), 1e-12) }))
     .filter((x) => x.frac > 0).sort((a, b) => b.frac - a.frac) : []), [ll, regions]);
   const gsdMatch = h?.resolution ? sensors.filter((s) => Math.abs(s.native_gsd_m - h.resolution![0]) / s.native_gsd_m < 0.01) : [];
-  const polys = useMemo(() => (ll ? [{ id: 'file', color: '#f5a524', fill: 0.25, label: p.name, geometry: { type: 'Polygon' as const, coordinates: [[[ll[0], ll[1]], [ll[2], ll[1]], [ll[2], ll[3]], [ll[0], ll[3]], [ll[0], ll[1]]]] } }] : []), [ll, p.name]);
+  // the footprint as it lies on the ground (its four corners), not just its lon/lat bounding box
+  const polys = useMemo(() => {
+    const c = h?.lonlatCorners;
+    return c ? [{ id: 'file', color: '#f5a524', fill: 0.22, label: p.name, geometry: { type: 'Polygon' as const, coordinates: [[...c, c[0]]] } }] : [];
+  }, [h?.lonlatCorners, p.name]);
   const boxes = useMemo(() => regions.map((r) => ({ name: r.name, bbox: r.bbox, label: regionLabel(r.name), color: '#4cc9f0' })), [regions]);
-  const fit = useMemo<BBox | null>(() => (ll ? [ll[0] - (ll[2] - ll[0]) * 0.6, ll[1] - (ll[3] - ll[1]) * 0.6, ll[2] + (ll[2] - ll[0]) * 0.6, ll[3] + (ll[3] - ll[1]) * 0.6] : null), [ll]);
+  const fit = useMemo<BBox | null>(() => (ll ? [ll[0], ll[1], ll[2], ll[3]] : null), [ll]);   // zoomed to the file's own bounds
+  const [preview, setPreview] = useState<PreviewState | null>(null);
+  useEffect(() => { if (p.pixels && !preview) setPreview(defaultPreview(p)); }, [p, p.pixels, preview]);
 
   return (
     <article className="raster-card" data-verdict={v.cls} aria-label={`Header check for ${p.name}`}>
@@ -57,7 +62,14 @@ function RasterCard({ p, regions, sensors }: { p: Parsed; regions: RegionListIte
               <dt>Affine transform</dt><dd className="mono" data-field="affine" style={{ fontSize: 10.5 }}>{h.affine ? `[${h.affine.map((x) => +x.toPrecision(10)).join(', ')}]` : DASH}</dd>
               <dt>Bounds (file CRS)</dt><dd className="mono" data-field="bounds" style={{ fontSize: 10.5 }}>{h.bounds ? h.bounds.map((x) => +x.toFixed(3)).join(', ') : DASH}</dd>
               <dt>Bounds (lon/lat)</dt><dd className="mono" data-field="lonlat" style={{ fontSize: 10.5 }}>{ll ? ll.map((x) => x.toFixed(5)).join(', ') : DASH}</dd>
-              <dt>Acquisition</dt><dd data-field="acquisition">{h.acquisition ? `${h.acquisition.iso ?? h.acquisition.raw} (${h.acquisition.source})` : 'none in the header'}</dd>
+              <dt>Acquisition</dt>
+              <dd data-field="acquisition">{h.acquisition ? `${h.acquisition.iso ?? h.acquisition.raw} (${h.acquisition.source})` : (
+                <span className="row" style={{ gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <span>none in the header</span>
+                  <input type="date" className="input" aria-label={`Acquisition date of ${p.name}, if you know it`} data-testid="upload-date" value={p.acquired.date ?? ''}
+                    onChange={(e) => setUploadDate(p.id, e.target.value)} style={{ padding: '2px 6px', fontSize: 11.5 }} />
+                  <span className="dim" style={{ fontSize: 10.5 }}>{p.acquired.source === 'entered by the analyst' ? 'entered by you, not read from the file' : 'enter it if you know it (the temporal view needs it)'}</span>
+                </span>)}</dd>
               {h.fileTimestamp && <><dt>File written</dt><dd data-field="filetime">{h.fileTimestamp.iso ?? h.fileTimestamp.raw} (TIFF DateTime — when the file was written)</dd></>}
               <dt>Layout</dt><dd>{h.tiled ? 'internally tiled' : 'striped'}{h.overviews ? ` · ${h.overviews} overview level${h.overviews === 1 ? '' : 's'}` : ' · no overviews'}{h.compression ? ` · ${h.compression}` : ''}</dd>
               <dt>NoData</dt><dd>{h.nodata ?? 'not set'}</dd>
@@ -73,11 +85,16 @@ function RasterCard({ p, regions, sensors }: { p: Parsed; regions: RegionListIte
             </div>
           </div>
           <div className="raster-map" aria-label="Footprint on the archive map">
-            {ll && fit ? <GeoMap ariaLabel="File footprint and archive regions" regions={boxes} polygons={polys} fit={fit} height={250} />
+            {ll && fit ? <GeoMap ariaLabel="File footprint on the archive imagery" basemap={{}} regions={boxes} polygons={polys} fit={fit} fitMaxZoom={17} height={290} />
               : <div className="empty">{h.lonlatNote ?? 'No footprint to draw.'}</div>}
+            {ll && <div className="dim rc-mapnote" data-testid="footprint-note">Amber outline: where this file lands, drawn on the archive's own imagery (dark where none is staged). Cyan boxes are archive regions.</div>}
           </div>
         </div>
       )}
+      {h && preview && <RasterPreview up={p} state={preview} onState={setPreview} />}
+      {h && !p.pixels && p.decoding && <div className="dim" style={{ fontSize: 12 }} role="status">Decoding pixels in this browser…</div>}
+      {h && p.pixelError && !p.pixels && <div className="err">The header parsed, but the pixel data could not be decoded here: {p.pixelError}</div>}
+      {h && preview && ll && <RasterCompare up={p} preview={preview} />}
     </article>
   );
 }
@@ -85,39 +102,33 @@ function RasterCard({ p, regions, sensors }: { p: Parsed; regions: RegionListIte
 function RasterCheck() {
   const regions = useApi((s) => api.regions(s), []);
   const metrics = useApi((s) => api.metrics(s), []);
-  const [items, setItems] = useState<Parsed[]>([]);
-  const [busy, setBusy] = useState(false);
+  const items = useUploads();
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-
-  const handle = useCallback(async (files: FileList | File[]) => {
-    const list = [...files].slice(0, MAX_FILES);
-    if (!list.length) return;
-    setBusy(true);
-    const out: Parsed[] = [];
-    for (const f of list) {
-      try { out.push({ name: f.name, header: await parseRasterHeader(f, f.name), error: null }); }
-      catch (e) { out.push({ name: f.name, header: null, error: e instanceof Error ? e.message : String(e) }); }
-    }
-    setItems(out); setBusy(false);
-  }, []);
+  const busy = items.some((u) => !u.header && !u.error);
+  const handle = useCallback((files: FileList | File[]) => { void addFiles(files); }, []);
 
   return (
-    <Panel title="Ad-hoc raster check · GeoTIFF header">
+    <Panel title="Ad-hoc raster check · header and pixel preview" actions={items.length > 0 ? <button className="btn sm" onClick={clearUploads} data-testid="clear-uploads">Clear files</button> : undefined}>
       <div className="col" style={{ gap: 12 }}>
         <div className={`dropzone ${over ? 'over' : ''}`} role="button" tabIndex={0} aria-label="Drop GeoTIFF files here or press Enter to choose"
           onDragOver={(e) => { e.preventDefault(); setOver(true); }} onDragLeave={() => setOver(false)}
-          onDrop={(e) => { e.preventDefault(); setOver(false); void handle(e.dataTransfer.files); }}
+          onDrop={(e) => { e.preventDefault(); setOver(false); handle(e.dataTransfer.files); }}
           onClick={() => input.current?.click()} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); input.current?.click(); } }}>
           <div style={{ fontSize: 28 }}>⇪</div>
           <div style={{ fontWeight: 600, fontSize: 14 }}>Drop a GeoTIFF / COG here, or click to choose</div>
-          <div className="dim" style={{ fontSize: 11.5, marginTop: 4 }}>The header is parsed in this browser (up to {MAX_FILES} files). Pixel data is not read and nothing leaves this machine.</div>
+          <div className="dim" style={{ fontSize: 11.5, marginTop: 4 }} data-testid="dropzone-caption">The header and the pixels are read in this browser (up to {MAX_FILES} files) to draw a preview. Nothing leaves this machine, and nothing is added to the archive.</div>
           <input ref={input} type="file" multiple accept=".tif,.tiff,.gtiff,image/tiff" style={{ display: 'none' }} aria-label="Choose GeoTIFF files" data-testid="raster-input"
-            onChange={(e) => { if (e.target.files) void handle(e.target.files); e.target.value = ''; }} />
+            onChange={(e) => { if (e.target.files) handle(e.target.files); e.target.value = ''; }} />
         </div>
         {busy && <Loading rows={2} />}
         {metrics.error && <ErrorNote error={metrics.error} />}
-        {items.map((p, i) => <RasterCard key={`${p.name}-${i}`} p={p} regions={regions.data?.regions ?? []} sensors={metrics.data?.sensors ?? []} />)}
+        {items.map((p) => (p.header || p.error ? <RasterCard key={p.id} p={p} regions={regions.data?.regions ?? []} sensors={metrics.data?.sensors ?? []} /> : null))}
+        {items.filter((u) => u.header && u.pixels).length >= 2 && (
+          <div className="raster-note" data-testid="to-temporal">
+            {items.filter((u) => u.header && u.pixels).length} files are loaded. If they overlap and carry different dates, their per-band statistics can be set side by side as a <a href={href('temporal', 'upload')}>spectral profile</a>. It is not change detection.
+          </div>
+        )}
         {items.length > 0 && (
           <div className="warnbox" role="note" data-testid="ingest-note">
             <b>Not ingested.</b> Checking a header does not add the file to the archive, and no ingest is running. Staging new imagery is done through the
@@ -143,15 +154,33 @@ function ArchiveInventory() {
             <dt>Searchable vectors</dt><dd>{fmtInt(d.counters.vectors_searchable)}</dd>
             <dt>Scenes</dt><dd>{fmtInt(d.counters.scenes)}</dd>
             <dt>Collections</dt><dd>{fmtInt(d.counters.collections)}</dd>
-            <dt>Change-pipeline acquisition dates</dt><dd className="mono" style={{ fontSize: 11 }}>{d.observation_dates.join(' · ')}</dd>
           </dl>
-          <table className="tbl" aria-label="Collections">
+          <div className="inv-dates" data-testid="inventory-dates">
+            <div className="inv-dates-label">Change-pipeline acquisition dates</div>
+            <ul aria-label="Change-pipeline acquisition dates">{d.observation_dates.map((x) => <li key={x}><span className="chip mono">{x}</span></li>)}</ul>
+          </div>
+          <table className="tbl inv inv-collections" aria-label="Collections">
+            <colgroup><col style={{ width: 136 }} /><col /><col style={{ width: 76 }} /><col style={{ width: 84 }} /></colgroup>
             <thead><tr><th>Collection</th><th>Sensor</th><th className="num">GSD</th><th className="num">Scenes</th></tr></thead>
-            <tbody>{d.sensors.map((s) => <tr key={s.collection_id}><td className="mono">{s.collection_id}</td><td>{s.platform} · {s.sensor}</td><td className="num">{s.native_gsd_m} m</td><td className="num">{fmtInt(s.n_scenes)}</td></tr>)}</tbody>
+            <tbody>{d.sensors.map((s) => {
+              const sensor = `${s.platform} · ${s.sensor}`;
+              return (
+                <tr key={s.collection_id}>
+                  <td className="mono" title={s.collection_id}>{s.collection_id}</td>
+                  <td title={sensor}>{sensor}</td>
+                  <td className="num" title={`${s.native_gsd_m} m`}>{fmtGsd(s.native_gsd_m)}</td>
+                  <td className="num">{fmtInt(s.n_scenes)}</td>
+                </tr>
+              );
+            })}</tbody>
           </table>
-          <table className="tbl" aria-label="Regions">
+          <table className="tbl inv inv-regions" aria-label="Regions">
+            <colgroup><col /><col style={{ width: 118 }} /><col style={{ width: 252 }} /></colgroup>
             <thead><tr><th>Region</th><th className="num">Observations</th><th>Bounding box</th></tr></thead>
-            <tbody>{(regions.data?.regions ?? []).map((r) => <tr key={r.name}><td>{regionLabel(r.name)}</td><td className="num">{fmtInt(r.n_observations)}</td><td className="mono dim" style={{ fontSize: 10.5 }}>{r.bbox.map((v) => v.toFixed(3)).join(', ')}</td></tr>)}</tbody>
+            <tbody>{(regions.data?.regions ?? []).map((r) => {
+              const box = r.bbox.map((v) => v.toFixed(3)).join(', ');
+              return <tr key={r.name}><td title={regionLabel(r.name)}>{regionLabel(r.name)}</td><td className="num">{fmtInt(r.n_observations)}</td><td className="mono dim" title={`west, south, east, north: ${box}`}>{box}</td></tr>;
+            })}</tbody>
           </table>
         </div>
       )}
