@@ -427,6 +427,9 @@ def projection_lookup(data_dir: Path, tile_ids: list[str]) -> dict:
 # --------------------------------------------------------------------------- cluster geography
 
 CLUSTER_CELL_DEG = 0.03          # ~3.3 km: about one 256-px Sentinel-2 tile; tiles of one cluster that share a cell are counted together
+CLUSTER_EXAMPLES = 4             # example tiles offered per cluster
+EXAMPLE_MIN_REGION_SHARE = 0.05  # a region supplies examples only if it holds at least this share of the cluster's tiles
+_EXAMPLE_POOL = 12               # candidates kept per (cluster, region) before the final pick
 _geo_cache: dict = {"key": None, "value": None}
 _geo_lock = threading.Lock()          # two simultaneous first requests build the cells once, not twice
 
@@ -448,8 +451,40 @@ def cluster_geo(svc) -> dict:
         return _build_cluster_geo(svc, p, key)
 
 
+def _observation_regions(svc) -> dict[str, str]:
+    """observation_id -> human region (the same collapse ``/regions`` uses); empty when the catalog cannot list observations."""
+    from geoseek.analyst.service import _region_of
+
+    try:
+        return {o.observation_id: _region_of(o.aoi_name) for o in svc.repo.list_observations()}
+    except Exception:
+        return {}
+
+
+def _pick_examples(pools: dict[str, list], counts: dict[str, int], n: int = CLUSTER_EXAMPLES) -> list[dict]:
+    """Up to ``n`` example tiles of one cluster, spread over the regions that matter to it.
+
+    ``pools`` maps region -> candidate tiles (already ordered clearest-first: lowest cloud fraction, then a fixed hash of the
+    tile id, so the pick is repeatable and not hand-chosen). Regions holding at least ``EXAMPLE_MIN_REGION_SHARE`` of the
+    cluster take turns, largest first; a cluster that lives in one region simply shows several tiles from it. These are
+    examples, not the most typical members.
+    """
+    total = sum(counts.values()) or 1
+    order = sorted(pools, key=lambda r: (-counts.get(r, 0), r))
+    keep = [r for r in order if counts.get(r, 0) / total >= EXAMPLE_MIN_REGION_SHARE] or order[:1]
+    out: list[dict] = []
+    depth = 0
+    while len(out) < n and any(depth < len(pools[r]) for r in keep):
+        for r in keep:
+            if depth < len(pools[r]) and len(out) < n:
+                out.append(pools[r][depth])
+        depth += 1
+    return out
+
+
 def _build_cluster_geo(svc, p, key) -> dict:
     import re
+    import zlib
 
     run = json.loads(p.read_text(encoding="utf-8"))
     label = run.get("tile_cluster", {})
@@ -457,6 +492,9 @@ def _build_cluster_geo(svc, p, key) -> dict:
     cells: dict[str, dict[tuple[int, int], list]] = {}
     bbox: dict[str, list[float]] = {}
     counts: dict[str, int] = {}
+    region_of = _observation_regions(svc)
+    region_counts: dict[str, dict[str, int]] = {}
+    pools: dict[str, dict[str, list]] = {}
     unplaced = 0
     for r in svc.repo.iter_tile_records():
         lab = label.get(r.tile_id)
@@ -470,6 +508,15 @@ def _build_cluster_geo(svc, p, key) -> dict:
         lon, lat = sum(xs) / 4.0, sum(ys) / 4.0
         c = str(lab)
         counts[c] = counts.get(c, 0) + 1
+        reg = region_of.get(r.observation_id) or "unknown"
+        rc = region_counts.setdefault(c, {})
+        rc[reg] = rc.get(reg, 0) + 1
+        pool = pools.setdefault(c, {}).setdefault(reg, [])
+        pool.append({"tile_id": r.tile_id, "region": reg, "acq_date": r.acq_date, "cloud_fraction": r.cloud_fraction,
+                     "centroid_lonlat": [round(lon, 5), round(lat, 5)], "_k": (r.cloud_fraction, zlib.crc32(r.tile_id.encode()))})
+        if len(pool) >= 4 * _EXAMPLE_POOL:                  # keep the pool small: clearest-first, trimmed periodically
+            pool.sort(key=lambda e: e["_k"])
+            del pool[_EXAMPLE_POOL:]
         ij = (math.floor(lon / CLUSTER_CELL_DEG), math.floor(lat / CLUSTER_CELL_DEG))
         cell = cells.setdefault(c, {}).get(ij)
         if cell is None:
@@ -481,8 +528,15 @@ def _build_cluster_geo(svc, p, key) -> dict:
     value = {
         "available": True, "cell_deg": CLUSTER_CELL_DEG, "n_clustered_tiles": sum(counts.values()), "n_unplaced": unplaced,
         "clusters": {c: {"n_tiles": counts[c], "n_cells": len(cells[c]), "bbox": [round(v, 5) for v in bbox[c]],
-                         "cells": [[round(x, 4), round(y, 4), n] for x, y, n in cells[c].values()]} for c in sorted(counts, key=int)},
+                         "cells": [[round(x, 4), round(y, 4), n] for x, y, n in cells[c].values()],
+                         "examples": _examples_for(pools.get(c, {}), region_counts.get(c, {}))} for c in sorted(counts, key=int)},
         "source": "tile_clusters.json (the stored clustering run) joined to catalog tile footprints",
     }
     _geo_cache.update(key=key, value=value)
     return value
+
+
+def _examples_for(pools: dict[str, list], counts: dict[str, int]) -> list[dict]:
+    for pool in pools.values():
+        pool.sort(key=lambda e: e["_k"])
+    return [{k: v for k, v in e.items() if k != "_k"} for e in _pick_examples(pools, counts)]

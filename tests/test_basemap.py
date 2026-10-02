@@ -373,6 +373,10 @@ def test_coverage_states_dates_fraction_and_the_selection_rule(tmp_path):
     inside = bm.coverage(repo, (lon - 0.02, lat - 0.02, lon + 0.02, lat + 0.02))
     assert inside["available"] and inside["fraction"] == pytest.approx(1.0, abs=0.02)
     assert inside["dates"] == ["2024-01-10"] and "lowest mean tile cloud" in inside["selection_rule"]
+    # every acquisition touching the view is listed (with the year filter off or on), so a client can pick the nearest date
+    assert [a["date"] for a in inside["acquisitions"]] == ["2024-01-10"]
+    assert [a["date"] for a in bm.coverage(repo, (lon - 0.02, lat - 0.02, lon + 0.02, lat + 0.02), year="2019")["acquisitions"]] == ["2024-01-10"]
+    assert bm.coverage(repo, (0.0, 0.0, 1.0, 1.0))["acquisitions"] == []
     half = bm.coverage(repo, (lon - 0.5, lat - 0.5, lon + 0.5, lat + 0.5))
     assert 0 < half["fraction"] < 0.5
     nowhere = bm.coverage(repo, (0.0, 0.0, 1.0, 1.0))

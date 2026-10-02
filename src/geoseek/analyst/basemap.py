@@ -622,7 +622,11 @@ def coverage(repo, bbox: tuple[float, float, float, float], year: str | None = N
     hit = [a for oid, a in arch.obs.items() if oid in pref and a["hull"] is not None and a["hull"].intersects(view)]
     union = unary_union([a["hull"] for a in hit]) if hit else None
     frac = float(union.intersection(view).area / view.area) if union is not None else 0.0
-    return {"layer": "sentinel-2", "available": bool(hit), "fraction": round(min(frac, 1.0), 4),
+    # every acquisition whose granule touches the view, whatever the year filter (so a client can pick the nearest date and then ask for that year)
+    acquisitions = sorted(({"date": str(a["date"]), "observation_id": a["observation_id"], "platform": a["platform"], "sensor": a["sensor"],
+                            "mean_cloud": round(a["mean_cloud"], 4)} for a in arch.obs.values() if a["hull"] is not None and a["hull"].intersects(view)),
+                          key=lambda r: (r["date"], r["observation_id"]))
+    return {"layer": "sentinel-2", "acquisitions": acquisitions, "available": bool(hit), "fraction": round(min(frac, 1.0), 4),
             "scenes": [{"observation_id": a["observation_id"], "date": a["date"], "platform": a["platform"], "sensor": a["sensor"],
                         "mean_cloud": round(a["mean_cloud"], 4), "bbox": list(a["hull"].bounds)} for a in sorted(hit, key=lambda a: a["observation_id"])],
             "dates": sorted({str(a["date"]) for a in hit}), "native_max_zoom": S2_NATIVE_MAX_ZOOM, "gsd_m": 10.0,
