@@ -7,3 +7,7 @@ src/geoseek/analyst/web/vendor/** -text
 # The React build output is byte-pinned by SHA-256 (frontend-react/build-pins.json, checked by tests/test_frontend_offline.py): no
 # line-ending conversion on any platform.
 src/geoseek/analyst/web_react/** -text
+
+# The lockfile is byte-pinned by SHA-256 (frontend-react/build-pins.json, checked by tests/test_frontend_offline.py): no line-ending
+# conversion on any platform, or core.autocrlf=true rewrites it with CRLF on checkout and the pin no longer matches.
+frontend-react/package-lock.json -text
