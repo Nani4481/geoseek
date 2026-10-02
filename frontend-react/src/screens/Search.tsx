@@ -3,14 +3,17 @@ import { api, tileThumb } from '@/api/client';
 import type { BBox } from '@/api/types';
 import { GeoMap, type MapPoint } from '@/components/GeoMap';
 import { Panel } from '@/components/Panel';
+import { SpectralEvidence } from '@/components/SpectralEvidence';
+import { VectorSpace, type PickedTile } from '@/components/VectorSpace';
 import { ErrorNote, Loading, TileImg } from '@/components/Widgets';
 import { fmtLonLat, fmtMs, regionLabel } from '@/fmt';
+import { fitPoints } from '@/lib/mapfit';
 import { useApi } from '@/hooks/useApi';
 import { href } from '@/router';
 import { useStore } from '@/state/store';
 
 interface Hit { tile_id: string; score: number; lon: number; lat: number; acq_date: string; sensor?: string; cloud?: number; cluster?: number | null }
-interface Result { mode: 'text' | 'tile' | 'point'; title: string; latency: number; hits: Hit[] }
+interface Result { mode: 'text' | 'tile' | 'point'; title: string; latency: number; hits: Hit[]; query: string | null }
 
 export function Search() {
   const { summary } = useStore();
@@ -27,6 +30,10 @@ export function Search() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [res, setRes] = useState<Result | null>(null);
+  const [evidenceTile, setEvidenceTile] = useState<string | null>(null);
+  const [focus, setFocus] = useState<PickedTile | null>(null);
+  const [hover, setHover] = useState<string | null>(null);   // tile id hovered on a card or on its map pin
+  const [outside, setOutside] = useState<number[]>([]);      // result numbers left out of the map frame (far from the rest)
 
   const suggestions = useMemo(() => {
     const out = new Set<string>();
@@ -37,29 +44,41 @@ export function Search() {
 
   const run = async <T,>(fn: () => Promise<T>, done: (r: T) => Result) => {
     setBusy(true); setErr(null);
-    try { setRes(done(await fn())); } catch (e) { setRes(null); setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
+    try {
+      const r = done(await fn());
+      setRes(r); setHover(null);
+      const f = fitPoints(r.hits);                               // frame the results on EVERY search, not just the first
+      setOutside(f.outside.map((i) => i + 1));
+      if (f.bbox) setFit(f.bbox);
+    } catch (e) { setRes(null); setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   };
 
   const searchText = (text = q) => {
     if (!text.trim()) return;
     setQ(text);
     run(() => api.searchText({ q: text.trim(), k, bbox, date_start: dateStart || undefined, date_end: dateEnd || undefined, max_cloud_fraction: cloud < 1 ? cloud : undefined }),
-      (r) => ({ mode: 'text', title: `“${r.query}”`, latency: r.latency_ms, hits: r.results.map((h) => ({ tile_id: h.tile_id, score: h.score, lon: h.lon, lat: h.lat, acq_date: h.acq_date, sensor: h.sensor, cloud: h.cloud_fraction })) }));
+      (r) => ({ mode: 'text', query: r.query ?? text.trim(), title: `“${r.query}”`, latency: r.latency_ms, hits: r.results.map((h) => ({ tile_id: h.tile_id, score: h.score, lon: h.lon, lat: h.lat, acq_date: h.acq_date, sensor: h.sensor, cloud: h.cloud_fraction })) }));
   };
   const moreLikeTile = (tile: string) =>
     run(() => api.searchImage({ tile_id: tile, k, bbox }),
-      (r) => ({ mode: 'tile', title: `similar to tile ${tile}`, latency: r.latency_ms, hits: r.results.map((h) => ({ tile_id: h.tile_id, score: h.score, lon: h.lon, lat: h.lat, acq_date: h.acq_date, sensor: h.sensor, cloud: h.cloud_fraction })) }));
+      (r) => ({ mode: 'tile', query: null, title: `similar to tile ${tile}`, latency: r.latency_ms, hits: r.results.map((h) => ({ tile_id: h.tile_id, score: h.score, lon: h.lon, lat: h.lat, acq_date: h.acq_date, sensor: h.sensor, cloud: h.cloud_fraction })) }));
   const moreLikePoint = (lon: number, lat: number) =>
     run(() => api.similarAt(lon, lat, Math.min(k, 50)),
-      (r) => ({ mode: 'point', title: `similar to the map point ${fmtLonLat([lon, lat])}`, latency: r.latency_ms, hits: r.results.map((h) => ({ tile_id: h.tile_id, score: h.score, lon: h.centroid_lonlat[0], lat: h.centroid_lonlat[1], acq_date: h.acq_date, cluster: h.cluster })) }));
+      (r) => ({ mode: 'point', query: null, title: `similar to the map point ${fmtLonLat([lon, lat])}`, latency: r.latency_ms, hits: r.results.map((h) => ({ tile_id: h.tile_id, score: h.score, lon: h.centroid_lonlat[0], lat: h.centroid_lonlat[1], acq_date: h.acq_date, cluster: h.cluster })) }));
 
   const regionBoxes = useMemo(() => (regions.data?.regions ?? []).map((r) => ({ name: r.name, bbox: r.bbox, label: regionLabel(r.name) })), [regions.data]);
-  const points: MapPoint[] = useMemo(() => (res?.hits ?? []).map((h, i) => ({ id: h.tile_id, lon: h.lon, lat: h.lat, label: `#${i + 1} ${h.acq_date}`, color: i === 0 ? '#f5a524' : '#4cc9f0', radius: i === 0 ? 7 : 5 })), [res]);
+  const points: MapPoint[] = useMemo(() => {
+    const out: MapPoint[] = (res?.hits ?? []).map((h, i) => ({ id: h.tile_id, lon: h.lon, lat: h.lat, pin: { text: String(i + 1) }, label: `#${i + 1} · ${h.acq_date} · similarity ${h.score.toFixed(3)} · click for more like this` }));
+    if (focus) out.push({ id: 'focus:' + focus.tile_id, lon: focus.lon, lat: focus.lat, label: `tile ${focus.tile_id} (picked in the embedding space)`, color: '#ffffff', radius: 9 });
+    return out;
+  }, [res, focus]);
+  const hitIds = useMemo(() => (res?.hits ?? []).map((h) => h.tile_id), [res]);
+  const pickTile = (t: PickedTile) => { setFocus(t); setFit([t.lon - 0.02, t.lat - 0.02, t.lon + 0.02, t.lat + 0.02]); };
 
   return (
     <div className="search-grid">
       <div className="col">
-        <Panel title="Semantic search" tier="live">
+        <Panel title="Semantic search">
           <form className="col" style={{ gap: 10 }} onSubmit={(e) => { e.preventDefault(); searchText(); }}>
             <div className="row" style={{ gap: 8 }}>
               <input className="input" style={{ flex: 1, fontSize: 14, padding: '9px 12px' }} value={q} onChange={(e) => setQ(e.target.value)}
@@ -92,7 +111,8 @@ export function Search() {
           </div>
         </Panel>
 
-        <Panel title={res ? `Results · ${res.title}` : 'Results'} tier="live"
+        {evidenceTile && <SpectralEvidence tileId={evidenceTile} query={res?.mode === 'text' ? res.query : null} onClose={() => setEvidenceTile(null)} />}
+        <Panel title={res ? `Results · ${res.title}` : 'Results'}
           actions={res && <span className="chip green mono" title="latency reported by the search engine for this request">{fmtMs(res.latency)} ms · {res.hits.length} hits</span>}>
           {err && <ErrorNote error={err} />}
           {busy ? <Loading rows={5} /> : !res ? (
@@ -100,15 +120,17 @@ export function Search() {
           ) : res.hits.length === 0 ? <div className="empty">No tiles matched the query and filters.</div> : (
             <div className="results">
               {res.hits.map((h, i) => (
-                <article key={h.tile_id} className="rcard">
+                <article key={h.tile_id} className={`rcard ${hover === h.tile_id ? 'hl' : ''}`.trim()} data-tile={h.tile_id} data-n={i + 1}
+                  onMouseEnter={() => setHover(h.tile_id)} onMouseLeave={() => setHover(null)}>
                   <div className="thumbwrap"><TileImg src={tileThumb(h.tile_id)} alt={`Tile ${h.tile_id}`} /><span className="rk">#{i + 1}</span></div>
                   <div className="meta">
                     <span className="mono">{h.acq_date}{h.sensor ? ` · ${h.sensor}` : ''}</span>
                     <span className="dim mono" style={{ fontSize: 10 }}>{fmtLonLat([h.lon, h.lat])}</span>
                     <span className="dim mono" style={{ fontSize: 10 }}>similarity {h.score.toFixed(3)}{h.cloud !== undefined ? ` · cloud ${Math.round(h.cloud * 100)}%` : ''}{h.cluster !== undefined && h.cluster !== null ? ` · cluster ${h.cluster}` : ''}</span>
-                    <div className="row" style={{ gap: 5, marginTop: 4 }}>
-                      <button className="btn sm" onClick={() => moreLikeTile(h.tile_id)} title="Image-to-image search seeded with this tile">More like this</button>
+                    <div className="actions">
+                      <button className="btn sm" onClick={() => moreLikeTile(h.tile_id)} title="More like this: image-to-image search seeded with this tile">Similar</button>
                       <a className="btn sm" href={href('fingerprints', 'tile:' + h.tile_id)} title="Open the structural fingerprint gallery for this tile">Compare</a>
+                      <button className="btn sm" data-evidence={h.tile_id} onClick={() => setEvidenceTile(h.tile_id)} title="Per-pixel NDWI / NDBI / NDVI of this tile: the measured reasons it looks like your query">Evidence</button>
                     </div>
                   </div>
                 </article>
@@ -118,13 +140,33 @@ export function Search() {
         </Panel>
       </div>
 
-      <Panel title="Map · spatial filter" tier="live" flush style={{ position: 'sticky', top: 0 }}
-        actions={<button className={`btn sm ${draw ? 'on' : ''}`} onClick={() => setDraw((d) => !d)} aria-pressed={draw}>{draw ? 'Drag on map…' : 'Draw box'}</button>}>
-        <GeoMap ariaLabel="Search map" regions={regionBoxes} points={points} bbox={bbox} fit={fit} drawMode={draw} height={520}
+      <div className="col">
+      <Panel title="Map · spatial filter" flush
+        actions={(
+          <>
+            {bbox && (
+              <span className="chip amber mono" data-testid="map-bbox-chip" title="The search is restricted to this box (west, south, east, north)">
+                box {bbox.map((v) => v.toFixed(2)).join(', ')}
+                <button className="chip-x" onClick={() => setBbox(null)} aria-label="Clear the search box" title="Clear the search box">✕</button>
+              </span>
+            )}
+            <button className={`btn sm ${draw ? 'on drawing' : ''}`} onClick={() => setDraw((d) => !d)} aria-pressed={draw}
+              title="Drag a rectangle on the map to restrict the search to it">{draw ? '✎ Drawing… (Esc)' : '▭ Draw box'}</button>
+          </>
+        )}>
+        <GeoMap ariaLabel="Search map" regions={regionBoxes} points={points} bbox={bbox} fit={fit} drawMode={draw} height={540} basemap={{}}
+          hoverId={hover} onHover={setHover} onCancelDraw={() => setDraw(false)}
           onBBox={(b) => { setBbox(b); setDraw(false); }}
           onMapClick={(lon, lat) => moreLikePoint(lon, lat)} onPointClick={(id) => moreLikeTile(id)} />
-        <div className="faint" style={{ padding: '7px 12px', fontSize: 11 }}>Click the map → find places that look like that point · click a result dot → more like that tile · “Draw box” → restrict the search area.</div>
+        {outside.length > 0 && (
+          <div className="warnbox" style={{ margin: '8px 12px 0' }} data-testid="map-outside">
+            {outside.length === 1 ? `Result #${outside[0]} lies` : `Results ${outside.map((n) => '#' + n).join(', ')} lie`} far from the others and outside this map view; the cards below still show {outside.length === 1 ? 'it' : 'them'}.
+          </div>
+        )}
+        <div className="faint" style={{ padding: '7px 12px', fontSize: 11 }}>Numbered pins match the result cards (hover either to see the other). Click the map → find places that look like that point · click a pin → more like that tile · “Draw box” → restrict the search area.</div>
       </Panel>
+        <VectorSpace hits={hitIds} selected={focus?.tile_id ?? null} onPick={pickTile} />
+      </div>
     </div>
   );
 }

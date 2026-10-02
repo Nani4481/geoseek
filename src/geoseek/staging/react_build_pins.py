@@ -80,6 +80,9 @@ ALLOWED_URLS: tuple[AllowedUrl, ...] = (
                "code up. String content only; nothing requests it."),
     AllowedUrl("https://discourse.threejs.org/t/updates-to-lighting-in-three-js-r155/53733", ERROR_DOC_TEXT,
                "three.js console.warn text about a lighting-units change; string content only."),
+    AllowedUrl("https://github.com/geotiffjs/geotiff.js/issues", ERROR_DOC_TEXT,
+               "geotiff.js appends this to the text of an Error it throws when a 64-bit TIFF offset exceeds Number.MAX_SAFE_INTEGER "
+               "(DataView64). String content only; nothing requests it. The console reads file headers only, via a Blob in this browser."),
     AllowedUrl("https://leafletjs.com", ATTRIBUTION_LINK,
                "href inside Leaflet's default attribution prefix. The console builds every map with attributionControl:false, "
                "so the markup is never created or rendered, and the page CSP would block a navigation fetch anyway."),
@@ -148,7 +151,8 @@ def _locked_versions() -> dict:
         return {}
     data = json.loads(lock.read_text(encoding="utf-8"))
     pk = data.get("packages", {})
-    keep = ("react", "react-dom", "vite", "typescript", "@vitejs/plugin-react", "@types/leaflet")
+    keep = ("react", "react-dom", "geotiff", "pako", "lerc", "zstddec", "quick-lru", "xml-utils", "web-worker", "parse-headers",
+            "@petamoriken/float16", "vite", "typescript", "@vitejs/plugin-react", "@types/leaflet")
     return {"package_lock_sha256": sha256_file(lock),
             "versions": {k: pk.get(f"node_modules/{k}", {}).get("version") for k in keep}}
 

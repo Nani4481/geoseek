@@ -9,6 +9,8 @@ never has to hardcode one.
   * latency_probe     - search latency MEASURED now on a few fixed queries (not a quoted benchmark)
   * candidate_timeline- acquisition dates + first-detected bracket + persistence for one candidate
   * tile_footprints   - real tile footprints for the fingerprint gallery's footprint axis
+  * candidate_dossier - catalog-sourced sensor provenance for the two dates a dossier is printed for
+  * projection_*      - the precomputed 3-D embedding projection (scripts/compute_projection.py): a display sample + exact lookups
 """
 
 from __future__ import annotations
@@ -274,3 +276,206 @@ def tile_footprints(repo, tile_ids: list[str]) -> list[dict]:
             "cloud_fraction": t.cloud_fraction, "observation_id": t.observation_id,
         })
     return out
+
+
+# --------------------------------------------------------------------------- dossier sensor provenance
+
+# Standard STAC `view:` fields. They are reported ONLY if some catalogued metadata blob actually carries them: the dossier
+# omits a field the catalog does not hold rather than showing a placeholder.
+_VIEW_FIELDS = {"sun_elevation_deg": "sun_elevation", "sun_azimuth_deg": "sun_azimuth", "off_nadir_deg": "off_nadir"}
+
+
+def _find_number(blobs: list, needle: str):
+    """First numeric value whose (normalised) key contains ``needle`` anywhere in the nested metadata dicts."""
+    stack = [b for b in blobs if isinstance(b, (dict, list))]
+    while stack:
+        cur = stack.pop(0)
+        items = cur.items() if isinstance(cur, dict) else enumerate(cur)
+        for k, v in items:
+            if isinstance(k, str) and needle in k.lower().replace(":", "_").replace("-", "_") and isinstance(v, (int, float))                     and not isinstance(v, bool):
+                return float(v)
+            if isinstance(v, (dict, list)):
+                stack.append(v)
+    return None
+
+
+def candidate_dossier(svc, candidate_id: str, before: str, after: str) -> dict | None:
+    """Sensor provenance for the before / after acquisitions of a candidate, read from the catalog (scene -> observation ->
+    collection -> nearest tile). ``before`` / ``after`` are dates or years from the timeline."""
+    from geoseek.analyst.service import S2_COLLECTION
+    from geoseek.change.analyze import DATE_TO_OBS
+
+    c = svc._by_id.get(candidate_id)
+    if c is None:
+        return None
+    lon, lat = c["centroid_lonlat"]
+    out_obs, found = [], {k: False for k in _VIEW_FIELDS}
+    for role, when in (("before", before), ("after", after)):
+        year = (when or "")[:4]
+        obs_id = DATE_TO_OBS.get(year)
+        if obs_id is None:
+            raise ValueError(f"{when!r} is not one of the catalog's acquisition years {sorted(DATE_TO_OBS)}")
+        obs = svc.repo.get_observation(obs_id)
+        scene = svc.repo.get_scene(obs.scene_id) if obs else None
+        coll = svc.repo.get_collection(scene.collection_id) if scene else None
+        tile, eps = None, 0.01
+        try:
+            recs = [r for r in svc.repo.query_tiles(bbox=(lon - eps, lat - eps, lon + eps, lat + eps), collection=S2_COLLECTION)
+                    if r.observation_id == obs_id]
+            tile = svc.repo.get_tile(recs[0].tile_id) if recs else None
+        except Exception:
+            tile = None
+        blobs = [getattr(scene, "metadata", None), getattr(obs, "metadata", None), getattr(coll, "metadata", None),
+                 getattr(tile, "quality_flags", None)]
+        row = {
+            "role": role, "requested": when, "observation_id": obs_id,
+            "acquired_at": obs.acquired_at if obs else None,
+            "acquired_at_precision": ((getattr(scene, "metadata", None) or {}).get("acquired_at_precision")),
+            "scene_id": scene.scene_id if scene else None,
+            "platform": scene.platform if scene else None,
+            "sensor": coll.sensor if coll else None, "collection_id": coll.collection_id if coll else None,
+            "native_gsd_m": coll.native_gsd_m if coll else None,
+            "processing_baseline": scene.processing_baseline if scene else None,
+            "crs": scene.crs if scene else None, "license": scene.license if scene else None,
+            "tile_id": tile.tile_id if tile else None,
+            "cloud_fraction": tile.cloud_fraction if tile else None,
+        }
+        for key, needle in _VIEW_FIELDS.items():
+            v = _find_number(blobs, needle)
+            if v is not None:
+                row[key] = v
+                found[key] = True
+        out_obs.append(row)
+    return {"candidate_id": candidate_id, "centroid_lonlat": [lon, lat], "observations": out_obs,
+            "view_fields_not_catalogued": sorted(k for k, ok in found.items() if not ok),
+            "source": "catalog: scenes / observations / collections / nearest tile to the candidate centroid"}
+
+
+# --------------------------------------------------------------------------- 3-D embedding projection
+
+PROJECTION_NPZ = "projection_3d.npz"
+PROJECTION_META = "projection_3d.meta.json"
+DEFAULT_PROJECTION_POINTS = 20_000
+MAX_PROJECTION_POINTS = 120_000
+_proj_cache: dict = {"key": None, "value": None}
+
+
+def _load_projection(data_dir: Path) -> dict | None:
+    """The finished artifact written by scripts/compute_projection.py, cached until the file changes. None if never computed."""
+    import numpy as np
+
+    npz, meta = Path(data_dir) / "discovery" / PROJECTION_NPZ, Path(data_dir) / "discovery" / PROJECTION_META
+    if not npz.is_file() or not meta.is_file():
+        return None
+    key = (str(npz), npz.stat().st_mtime_ns, meta.stat().st_mtime_ns)
+    if _proj_cache["key"] != key:
+        z = np.load(npz, allow_pickle=False)
+        ids = z["tile_ids"].astype(str)
+        _proj_cache.update(key=key, value={
+            "ids": ids, "xyz": z["xyz"], "lon": z["lon"], "lat": z["lat"], "region": z["region"], "cluster": z["cluster"],
+            "regions": [str(r) for r in z["regions"]], "index_of": {t: i for i, t in enumerate(ids.tolist())},
+            "meta": json.loads(meta.read_text(encoding="utf-8")),
+        })
+    return _proj_cache["value"]
+
+
+def projection_sample(data_dir: Path, current_vectors: int | None, max_points: int = DEFAULT_PROJECTION_POINTS, seed: int = 0) -> dict:
+    """A deterministic uniform random sample of the projection for drawing (every point if the artifact is smaller than
+    ``max_points``). The caller learns exactly how many points exist and how many are shown - the console prints both."""
+    import numpy as np
+
+    p = _load_projection(data_dir)
+    if p is None:
+        return {"available": False, "reason": "no projection has been computed - run `python scripts/compute_projection.py`"}
+    n = int(len(p["ids"]))
+    max_points = max(1, min(int(max_points), MAX_PROJECTION_POINTS))
+    idx = np.arange(n) if n <= max_points else np.sort(np.random.default_rng(seed).choice(n, size=max_points, replace=False))
+    meta = p["meta"]
+    clusters = sorted({int(c) for c in p["cluster"][idx].tolist() if c >= 0})
+    return {
+        "available": True, "n_total": n, "n_shown": int(len(idx)), "sampled": bool(len(idx) < n), "seed": seed,
+        "regions": p["regions"], "clusters": clusters,
+        "tile_ids": p["ids"][idx].tolist(),
+        "xyz": np.round(p["xyz"][idx], 4).reshape(-1).tolist(),
+        "lon": np.round(p["lon"][idx], 5).tolist(), "lat": np.round(p["lat"][idx], 5).tolist(),
+        "region": p["region"][idx].astype(int).tolist(), "cluster": p["cluster"][idx].astype(int).tolist(),
+        "stale": current_vectors is not None and current_vectors != meta.get("n_points"),
+        "current_vectors": current_vectors,
+        "meta": {k: meta.get(k) for k in ("method", "umap", "pca_components", "libraries", "wall_seconds", "power_source",
+                                          "created_at", "caveat", "n_points", "partial")},
+    }
+
+
+def projection_lookup(data_dir: Path, tile_ids: list[str]) -> dict:
+    """Exact coordinates for specific tiles (search hits), whether or not they are in the display sample."""
+    p = _load_projection(data_dir)
+    if p is None:
+        return {"available": False, "points": [], "missing": list(tile_ids)}
+    pts, missing = [], []
+    for t in tile_ids[:500]:
+        i = p["index_of"].get(t)
+        if i is None:
+            missing.append(t)
+            continue
+        x, y, z = (round(float(v), 4) for v in p["xyz"][i])
+        pts.append({"tile_id": t, "xyz": [x, y, z], "lon": round(float(p["lon"][i]), 5), "lat": round(float(p["lat"][i]), 5),
+                    "region": p["regions"][int(p["region"][i])], "cluster": int(p["cluster"][i])})
+    return {"available": True, "points": pts, "missing": missing}
+
+
+# --------------------------------------------------------------------------- cluster geography
+
+CLUSTER_CELL_DEG = 0.03          # ~3.3 km: about one 256-px Sentinel-2 tile; tiles of one cluster that share a cell are counted together
+_geo_cache: dict = {"key": None, "value": None}
+
+
+def cluster_geo(svc) -> dict:
+    """Where each archive cluster lies: every clustered tile's centre, binned to ``CLUSTER_CELL_DEG`` cells per cluster.
+
+    Cluster membership is read from the same stored clustering run ``/discovery/clusters`` reports (``tile_clusters.json``) and
+    each tile's position from the catalog footprint, so ``n_tiles`` per cluster equals that run's own ``sizes`` entry. Cells carry
+    their tile count; nothing is smoothed, sampled or estimated.
+    """
+    import re
+
+    p = Path(svc.settings.index_dir) / "tile_clusters.json"
+    if not p.is_file():
+        return {"available": False, "note": "run scripts/cluster_at_scale.py"}
+    key = (str(p), p.stat().st_mtime_ns, id(svc.repo))
+    if _geo_cache["key"] == key:
+        return _geo_cache["value"]
+    run = json.loads(p.read_text(encoding="utf-8"))
+    label = run.get("tile_cluster", {})
+    num = re.compile(r"-?\d+(?:\.\d+)?")
+    cells: dict[str, dict[tuple[int, int], list]] = {}
+    bbox: dict[str, list[float]] = {}
+    counts: dict[str, int] = {}
+    unplaced = 0
+    for r in svc.repo.iter_tile_records():
+        lab = label.get(r.tile_id)
+        if lab is None:
+            continue
+        v = [float(t) for t in num.findall(r.geom_wkt_4326)]
+        if len(v) < 8:
+            unplaced += 1
+            continue
+        xs, ys = v[0:8:2], v[1:8:2]
+        lon, lat = sum(xs) / 4.0, sum(ys) / 4.0
+        c = str(lab)
+        counts[c] = counts.get(c, 0) + 1
+        ij = (math.floor(lon / CLUSTER_CELL_DEG), math.floor(lat / CLUSTER_CELL_DEG))
+        cell = cells.setdefault(c, {}).get(ij)
+        if cell is None:
+            cells[c][ij] = [(ij[0] + 0.5) * CLUSTER_CELL_DEG, (ij[1] + 0.5) * CLUSTER_CELL_DEG, 1]
+        else:
+            cell[2] += 1
+        b = bbox.setdefault(c, [min(xs), min(ys), max(xs), max(ys)])
+        b[0], b[1], b[2], b[3] = min(b[0], min(xs)), min(b[1], min(ys)), max(b[2], max(xs)), max(b[3], max(ys))
+    value = {
+        "available": True, "cell_deg": CLUSTER_CELL_DEG, "n_clustered_tiles": sum(counts.values()), "n_unplaced": unplaced,
+        "clusters": {c: {"n_tiles": counts[c], "n_cells": len(cells[c]), "bbox": [round(v, 5) for v in bbox[c]],
+                         "cells": [[round(x, 4), round(y, 4), n] for x, y, n in cells[c].values()]} for c in sorted(counts, key=int)},
+        "source": "tile_clusters.json (the stored clustering run) joined to catalog tile footprints",
+    }
+    _geo_cache.update(key=key, value=value)
+    return value

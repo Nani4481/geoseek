@@ -52,8 +52,10 @@ export interface Decision {
   confidence_at_decision: number | null;
 }
 
+export interface RepresentativeTile { tile_id: string; cloud_fraction: number | null; acquired_at: string | null; row: number; col: number }
 export interface ProvenanceObservation {
   role: 'before' | 'after'; observation_id: string; acquired_at: string | null;
+  representative_tile?: RepresentativeTile | null;
   scene: { scene_id: string; platform: string; source_url: string; license: string; processing_baseline: string; crs: string } | null;
   collection: { collection_id: string; sensor: string; platform: string; bands: string[]; native_gsd_m: number } | null;
 }
@@ -163,7 +165,7 @@ export interface Notification {
 }
 
 export interface DetectObservation {
-  observation_id: string; aoi_name: string; role: string; n_tiles: number; n_tiles_with_detections: number;
+  observation_id: string; aoi_name: string; role: string; acquired_at: string | null; platform: string | null; sensor: string | null; native_gsd_m: number | null; n_tiles: number; n_tiles_with_detections: number;
   n_detections: number; by_class: Record<string, number>;
 }
 export interface DetectTile { tile_id: string; row: number; col: number; n_detections: number; by_class: Record<string, number>; mean_score: number; cloud_fraction: number }
@@ -179,3 +181,67 @@ export interface ClusterInfo {
 }
 export interface RegionListItem { name: string; bbox: BBox; n_observations: number }
 export interface HealthInfo { status: string; vectors: number; analyst: string; candidates?: number }
+
+export type RingKind = 'restricted_zone' | 'change_candidate' | 'detection' | 'watch_area';
+export interface RingFeature {
+  kind: RingKind; id: string; name: string; distance_m: number; ring_index: number; ring_m: number; contains_centre: boolean;
+  lon: number; lat: number; nearest: [number, number]; detail: Record<string, string | number | boolean | null>;
+}
+export interface ThreatRings {
+  center: { lon: number; lat: number }; radii_m: number[];
+  rings: { radius_m: number; counts: Partial<Record<RingKind, number>>; total: number }[];
+  features: RingFeature[]; truncated: boolean; n_features: number;
+  sources: Partial<Record<RingKind, { features_searched: number; within_largest_ring: number }>>;
+  excluded: string | null; notes: string[];
+}
+export interface DetectionPoint {
+  id: string; lon: number; lat: number; class: string; score: number; tile_id: string;
+  length_m: number | null; width_m: number | null; heading_deg: number | null; long_side_px: number | null;
+}
+
+export interface BasemapScene { observation_id: string; date: string; platform: string; sensor: string; bbox: BBox; mean_cloud?: number }
+export interface BasemapCoverage {
+  layer: string; available: boolean; fraction: number; scenes: BasemapScene[]; dates: string[]; native_max_zoom: number; gsd_m: number;
+  source: string; selection_rule?: string; year?: string | null; overview_max_zoom?: number; coarse_max_zoom?: number;
+}
+export interface ClusterGeoEntry { n_tiles: number; n_cells: number; bbox: BBox; cells: number[][] }
+export interface ClusterGeo { available: boolean; cell_deg: number; n_clustered_tiles: number; n_unplaced: number; clusters: Record<string, ClusterGeoEntry>; source: string }
+
+export interface DossierObservation {
+  role: 'before' | 'after'; requested: string; observation_id: string; acquired_at: string | null; acquired_at_precision?: string | null;
+  scene_id: string | null; platform: string | null; sensor: string | null; collection_id: string | null; native_gsd_m: number | null;
+  processing_baseline: string | null; crs: string | null; license: string | null; tile_id: string | null; cloud_fraction: number | null;
+  // present ONLY when the catalog holds them - never a placeholder
+  sun_elevation_deg?: number; sun_azimuth_deg?: number; off_nadir_deg?: number;
+}
+export interface DossierProvenance {
+  candidate_id: string; centroid_lonlat: LonLat; observations: DossierObservation[]; view_fields_not_catalogued: string[]; source: string;
+}
+
+export interface ProjectionSample {
+  available: boolean; reason?: string;
+  n_total: number; n_shown: number; sampled: boolean; seed: number;
+  regions: string[]; clusters: number[];
+  tile_ids: string[]; xyz: number[]; lon: number[]; lat: number[]; region: number[]; cluster: number[];
+  stale: boolean; current_vectors: number | null;
+  meta: { method: string; umap: Record<string, number | string>; pca_components: number; libraries: Record<string, string>;
+    wall_seconds: { total: number; umap: number }; power_source: string; created_at: string; caveat: string; n_points: number; partial: boolean };
+}
+export interface ProjectionLookup {
+  available: boolean; missing: string[];
+  points: { tile_id: string; xyz: [number, number, number]; lon: number; lat: number; region: string; cluster: number }[];
+}
+export interface SpectralStats { mean: number; std: number; p10: number; p50: number; p90: number }
+export interface SpectralLayer {
+  label: string; meaning: string; formula: string; bands: string[]; domain: [number, number]; stops: [number, string][];
+  high: string; low: string; stats: SpectralStats | null; image_url: string;
+}
+export interface TileSpectral {
+  tile_id: string; width_px: number; height_px: number; gsd_m: number; scene_id: string; acquired_at: string;
+  valid_fraction: number; usable: boolean; unusable_reason: string | null;
+  layers: Record<'ndvi' | 'ndwi' | 'ndbi', SpectralLayer>;
+  classes: Record<'water_frac' | 'veg_frac' | 'dense_veg_frac' | 'bare_frac' | 'built_frac', number> | null;
+  class_rules: Record<'water_frac' | 'veg_frac' | 'dense_veg_frac' | 'bare_frac' | 'built_frac', string>;
+  relevance: { query: string | null; matches: { index: 'ndvi' | 'ndwi' | 'ndbi'; terms: string[]; why: string }[]; note: string | null };
+  embedding_patch_m: number | null; source: string; caveat: string;
+}
