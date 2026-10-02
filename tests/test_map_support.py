@@ -92,3 +92,47 @@ def test_cluster_geo_is_built_once_when_two_first_requests_arrive_together(tmp_p
     [t.start() for t in ts]
     [t.join() for t in ts]
     assert len(reads) == 1 and all(o is out[0] for o in out)
+
+
+def _repo_with_regions(tiles, obs_regions):
+    obs = [SimpleNamespace(observation_id=o, aoi_name=r) for o, r in obs_regions.items()]
+    return SimpleNamespace(iter_tile_records=lambda: iter(tiles), list_observations=lambda: obs)
+
+
+def test_cluster_geo_examples_are_spread_over_the_regions_that_matter_and_are_repeatable(tmp_path):
+    ui_support._geo_cache.update(key=None, value=None)
+    # cluster 0: 14 tiles in region A, 10 in region B, 1 stray in region C (< 5 %: contributes no example); cluster 1 lives in A only
+    tiles = ([_rec(f"a_r{i:03d}_c000", 80.0 + i * 0.1, 26.0) for i in range(14)] + [_rec(f"b_r{i:03d}_c000", 70.0 + i * 0.1, 24.0) for i in range(10)]
+             + [_rec("c_r000_c000", 77.0, 28.0)] + [_rec(f"a_r{i:03d}_c001", 81.0 + i * 0.1, 26.5) for i in range(10)])
+    run = {"tile_cluster": {**{t.tile_id: 0 for t in tiles[:25]}, **{t.tile_id: 1 for t in tiles[25:]}}}
+    (tmp_path / "tile_clusters.json").write_text(json.dumps(run), encoding="utf-8")
+    svc = SimpleNamespace(settings=SimpleNamespace(index_dir=tmp_path),
+                          repo=_repo_with_regions(tiles, {"a": "ayodhya_44RPQ_diverse", "b": "kutch_42QZG_diverse", "c": "deccan_43PGQ_diverse"}))
+    g = ui_support.cluster_geo(svc)
+    ex0 = g["clusters"]["0"]["examples"]
+    assert len(ex0) == ui_support.CLUSTER_EXAMPLES
+    assert {e["region"] for e in ex0} == {"ayodhya", "kutch"}, "the 1-in-25 stray region supplies no example"
+    assert [e["region"] for e in ex0][:2] == ["ayodhya", "kutch"], "regions take turns, largest first"
+    assert all(set(e) == {"tile_id", "region", "acq_date", "cloud_fraction", "centroid_lonlat"} for e in ex0), "no private sort key leaks"
+    ex1 = g["clusters"]["1"]["examples"]
+    assert len(ex1) == ui_support.CLUSTER_EXAMPLES and {e["region"] for e in ex1} == {"ayodhya"} and len({e["tile_id"] for e in ex1}) == 4
+    assert all(t["tile_id"] in run["tile_cluster"] and run["tile_cluster"][t["tile_id"]] == 1 for t in ex1)
+    ui_support._geo_cache.update(key=None, value=None)
+    assert ui_support.cluster_geo(svc)["clusters"]["0"]["examples"] == ex0, "the same rule gives the same examples on a rebuild"
+
+
+def test_cluster_geo_examples_prefer_the_clearest_tiles():
+    pools = {"r": [{"tile_id": "x", "_k": (0.0, 1)}, {"tile_id": "y", "_k": (0.4, 0)}]}
+    assert [e["tile_id"] for e in ui_support._pick_examples(pools, {"r": 2}, n=1)] == ["x"]
+    assert ui_support._pick_examples({}, {}) == []
+
+
+def test_discovery_clusters_exposes_the_stored_region_counts(tmp_path):
+    from geoseek.analyst.service import AnalystService
+
+    d = {"n_clusters": 1, "noise_count": 0, "n_tiles": 3, "sizes": {"0": 3}, "tile_cluster": {"o_r000_c000": 0},
+         "region_purity": {"0": {"size": 3, "dominant_region": "kutch", "purity": 0.667, "regions": {"kutch": 2, "kanha": 1}}}}
+    (tmp_path / "tile_clusters.json").write_text(json.dumps(d), encoding="utf-8")
+    out = AnalystService.discovery_clusters(SimpleNamespace(settings=SimpleNamespace(index_dir=tmp_path)))
+    assert out["region_purity"]["0"]["regions"] == {"kutch": 2, "kanha": 1}
+    assert sum(out["region_purity"]["0"]["regions"].values()) == out["sizes"]["0"]

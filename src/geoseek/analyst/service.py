@@ -203,7 +203,7 @@ class AnalystService:
     def list_candidates(
         self, *, bbox=None, date_start=None, date_end=None, change_type=None, min_confidence=None,
         sensor=None, persistence=None, decision=None, sort="queue_score", limit=100, offset=0,
-        candidate_ids=None, year=None,
+        candidate_ids=None, year=None, first_detected=None,
     ) -> dict:
         if year:
             year = str(year)
@@ -211,6 +211,7 @@ class AnalystService:
             date_end = date_end or f"{year}-12-31"
         verdicts = self._current_verdicts()
         ids_filter = set(candidate_ids) if candidate_ids else None
+        fd_set = {x.strip() for x in str(first_detected).split(",") if x.strip()} if first_detected else None
         rows = []
         for c in self.details:
             if ids_filter is not None and c["candidate_id"] not in ids_filter:
@@ -221,6 +222,10 @@ class AnalystService:
                 continue
             if persistence and c.get("persistence") != persistence:
                 continue
+            if fd_set is not None:
+                w = c.get("earliest_supported")
+                if ("none" if not w else f"{w[0]}_{w[1]}") not in fd_set:
+                    continue
             if sensor:
                 s = sensor.lower()
                 if s in ("sentinel-1", "s1", "sar", "c-sar"):
@@ -258,7 +263,7 @@ class AnalystService:
             "filters": {"bbox": bbox, "date_start": date_start, "date_end": date_end,
                         "change_type": change_type, "min_confidence": min_confidence,
                         "sensor": sensor, "persistence": persistence, "decision": decision,
-                        "year": year},
+                        "year": year, "first_detected": first_detected},
             "candidates": [self._summary(c, v) for c, v in page],
         }
 
@@ -730,6 +735,8 @@ class AnalystService:
             "n_tiles": d.get("n_tiles"), "sizes": d.get("sizes"),
             "cluster_concepts": d.get("cluster_concepts"),
             "display_labels": d.get("display_labels"),
+            # per cluster: size, dominant_region, purity and the tile count in every region (measured at clustering time)
+            "region_purity": d.get("region_purity"),
             "params": d.get("params"),
             "per_observation_counts": by_obs,
             "cluster_map_png": d.get("cluster_map_png"),

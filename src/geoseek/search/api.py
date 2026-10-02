@@ -220,13 +220,15 @@ def list_candidates(
     year: Optional[str] = Query(None, description="e.g. '2024' - shorthand for "
                                 "date_start=YEAR-01-01 & date_end=YEAR-12-31 "
                                 "(ignored where date_start/date_end are already given)"),
+    first_detected: Optional[str] = Query(None, description="EXACT first-detected bracket 'FROM_TO' (e.g. 2021-03-04_2024-03-08), comma-separated for several, "
+                                          "or 'none' for candidates with no supported interval"),
 ):
     return _get_analyst().list_candidates(
         bbox=_parse_bbox(bbox), date_start=date_start, date_end=date_end, change_type=change_type,
         min_confidence=min_confidence, sensor=sensor, persistence=persistence, decision=decision,
         sort=sort, limit=limit, offset=offset,
         candidate_ids=[c.strip() for c in candidate_ids.split(",") if c.strip()] if candidate_ids else None,
-        year=year,
+        year=year, first_detected=first_detected,
     )
 
 
@@ -529,6 +531,36 @@ def ui_candidate_timeline(candidate_id: str):
     if tl is None:
         raise HTTPException(status_code=404, detail=f"no candidate {candidate_id!r}")
     return tl
+
+
+@app.get("/ui/candidates/{candidate_id}/explain")
+def ui_candidate_explain(candidate_id: str):
+    """Why one candidate was flagged: a lead sentence from the winning rule and stored values, the confidence decomposition,
+    the suppression trace and spectral deltas vs thresholds (see geoseek.analyst.explain)."""
+    from geoseek.analyst.explain import explain_candidate
+
+    out = explain_candidate(_get_analyst(), candidate_id)
+    if out is None:
+        raise HTTPException(status_code=404, detail=f"no candidate {candidate_id!r}")
+    return out
+
+
+@app.get("/ui/pipeline/funnel")
+def ui_pipeline_funnel():
+    """The false-alarm suppression pipeline: raw components -> after each gate -> survivors, per pair, with what happens to
+    the survivors and whether rejected components are retained (see geoseek.analyst.explain)."""
+    from geoseek.analyst.explain import suppression_funnel
+
+    return suppression_funnel(_get_analyst())
+
+
+@app.get("/ui/temporal/archive")
+def ui_temporal_archive(bbox: Optional[str] = Query(None, description="west,south,east,north - restrict stored candidates to this region")):
+    """Per-acquisition-interval view of the change pipeline's own output: candidate counts by type, cumulative area, persistence and
+    SAR coverage (see geoseek.analyst.temporal). Observed dates only - nothing is interpolated between acquisitions."""
+    from geoseek.analyst.temporal import temporal_archive
+
+    return temporal_archive(_get_analyst(), _parse_bbox(bbox))
 
 
 @app.get("/ui/candidates/{candidate_id}/dossier")
