@@ -70,3 +70,6 @@ frontend-react/.vite/
 # tests/test_phase6.py POSTs /export (csv + geojson) on every full pytest run; those artifacts must never be committable.
 # (Already covered by data/change_model/ above; listed explicitly so removing that broader rule cannot expose them.)
 data/change_model/exports/
+
+# Report screenshots (15 MB of PNGs) are kept on disk, not in history.
+docs/screenshots/
