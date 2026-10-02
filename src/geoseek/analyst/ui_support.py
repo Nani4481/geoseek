@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import math
 import statistics
+import threading
 import time
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -427,6 +428,7 @@ def projection_lookup(data_dir: Path, tile_ids: list[str]) -> dict:
 
 CLUSTER_CELL_DEG = 0.03          # ~3.3 km: about one 256-px Sentinel-2 tile; tiles of one cluster that share a cell are counted together
 _geo_cache: dict = {"key": None, "value": None}
+_geo_lock = threading.Lock()          # two simultaneous first requests build the cells once, not twice
 
 
 def cluster_geo(svc) -> dict:
@@ -436,14 +438,19 @@ def cluster_geo(svc) -> dict:
     each tile's position from the catalog footprint, so ``n_tiles`` per cluster equals that run's own ``sizes`` entry. Cells carry
     their tile count; nothing is smoothed, sampled or estimated.
     """
-    import re
-
     p = Path(svc.settings.index_dir) / "tile_clusters.json"
     if not p.is_file():
         return {"available": False, "note": "run scripts/cluster_at_scale.py"}
     key = (str(p), p.stat().st_mtime_ns, id(svc.repo))
-    if _geo_cache["key"] == key:
-        return _geo_cache["value"]
+    with _geo_lock:
+        if _geo_cache["key"] == key:
+            return _geo_cache["value"]
+        return _build_cluster_geo(svc, p, key)
+
+
+def _build_cluster_geo(svc, p, key) -> dict:
+    import re
+
     run = json.loads(p.read_text(encoding="utf-8"))
     label = run.get("tile_cluster", {})
     num = re.compile(r"-?\d+(?:\.\d+)?")

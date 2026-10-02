@@ -178,6 +178,10 @@ try {
   });
 
   await step('changes: compare slider responds to a real mouse drag and arrow keys', async () => {
+    // Opening a candidate (re)starts the on-load sweep 0.5-1.3 s later (measured idle / under CPU load), and the sweep hides this slider.
+    // A "ready and at rest" reading taken before that moment belongs to the PREVIOUS candidate, so first let the new sweep begin (if it
+    // is going to: it has already run when this step is reached late), then wait for it to finish.
+    await b.waitFor(`!!document.querySelector('.lapse-stage')`, 2500, 'new candidate sweep starts').catch(() => {});
     await b.waitFor(READY, 30000, 'timeline imagery preloaded'); await sleep(300);
     await b.waitFor(REST, 30000, 'on-load timeline sweep settles to the before/after slider');
     const r = await b.rectOf('.compare');

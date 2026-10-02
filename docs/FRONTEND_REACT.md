@@ -318,17 +318,27 @@ equal unclipped result-card buttons (down to the grid's 196 px minimum card) and
 canvas shows through, nothing is filled in). Nothing is written to `data/` and no new dataset is introduced, so there is no provenance entry.
 
 * Sentinel-2: one acquisition per MGRS granule - the lowest mean tile cloud fraction, newest on a tie. The map caption states this rule and
-  that it is *not* the date of the overlaid features. z >= 11 is composited from the catalog's tile thumbnails; below that, from per-granule
-  overviews decoded lazily from the same band rasters and held in byte-capped LRUs (overviews 160 MB, rendered tiles 96 MB):
-  fine level 1/16 for z 8-10 (4 x 4 real pixels averaged per 16 x 16 block), coarse level 1/64 for z <= 7 (8 x 8 per 64 x 64). Only the
-  sampled rows are inflated - area-averaging forces a full inflate of every row of a ~170 MB strip-deflate file and took 116 s on a cold
-  whole-archive view. Sampling error against the full-area average of the same band, mean absolute, 6 scenes: **fine 2.1 %, coarse 1.7 %**
-  (a 4 x 4 coarse sampling would be 4.0 %, 1 x 1 is 19.7 %).
+  that it is *not* the date of the overlaid features. z >= 12 is composited from the catalog's tile thumbnails; below that, from per-granule
+  overviews decoded lazily from the same band rasters and held in byte-capped LRUs (overviews 160 MiB, rendered tiles 96 MiB). Three levels,
+  each about as coarse as the map pixel it serves: **mid** 1/8 for z 11 (4 x 4 real pixels averaged per 8 x 8 block), **fine** 1/16 for z 8-10
+  (4 x 4 per 16 x 16), **coarse** 1/64 for z <= 7 (8 x 8 per 64 x 64). Only the sampled rows are inflated - area-averaging forces a full
+  inflate of every row of a ~170 MB strip-deflate file and took 116 s on a cold whole-archive view; the three bands are read in parallel.
+  Sampling error against the full-area average of the same band, mean absolute over 6 scenes: **mid 1.7 %, fine 2.1 %, coarse 1.7 %**
+  (cheaper samplings measured and rejected: coarse 4 x 4 = 4.0 %, 1 x 1 = 19.7 %; mid 2 x 2 = 4.7 %, 1 x 1 = 13.6 %).
+* **Nothing is warmed at boot.** The catalog summary behind the basemap (per-granule date, cloud, footprint hull; ~0.9-1.6 s) is built by the
+  first map request, once, under a lock; the cluster geography (`/ui/clusters/geo`, ~2.7 s) by the first Discovery visit. Boot is unchanged.
+  Measured: a background-thread warm-up made the first search 2-3x slower (median 138 ms vs 59 ms: GIL contention with the catalog read) but
+  never near the 1 s that `test_search` allows, even with 14 busy processes on 16 cores (max 249 ms); the lazy and boot-time variants first
+  searched in 59-73 ms. Boot-time warming cost +3.8 s of start-up for nothing a search needs.
 * `?scene=<observation_id>` serves a staged Maxar scene (R/G/B bands), looked up in the catalog - never used as a path. The Detect map uses
   it: the Sentinel-2 archive has no coverage where those scenes lie, and the scene is the imagery the detections were found on.
-* Measured (this machine; AC power verified at the end of the sweep - charging, battery 30 %, not re-checked per run; the OS file cache could not be flushed, so "cold" means cold process caches, with files read in earlier runs possibly still in the OS cache): whole-archive first view 3.4-3.9 s; z6-7 0.04-0.3 s; first z8 view of one
-  region 1.4-2.4 s; z9-10 0.1-0.6 s; z11 first view (6 tiles, thumbnail path) 3.8 s; z12-13 0.6 s; warm anywhere 20-30 ms. Resident:
-  coarse level 1.5 MB + fine level 24.0 MB for all 15 granules (cap 160 MB); server RSS +190 MB over the whole sweep.
+* Measured (this machine; AC power verified at the end of the sweep - charging, battery 30 %, not re-checked per run; the OS file cache could
+  not be flushed, so "cold" means cold process caches, with files read in earlier runs possibly still in the OS cache). Fresh server, lazy
+  summary included: whole-archive first view 3.9 s (4.6 s on another run); z6-7 0.04-0.4 s; first z8 view of one region 0.6-1.7 s; z9-10
+  0.1-0.6 s; **z11 first view (6 tiles) 1.7 s** (3.8 s when it still used thumbnails); first z12 view (12 tiles, thumbnails) 3.0 s, z13 0.8 s;
+  warm anywhere 20-30 ms. The z11 gain moved the cold thumbnail cost one zoom level deeper: z11 no longer warms the thumbnail cache for z12.
+  Resident for all 15 granules at all three levels: coarse 1.5 MB + fine 24.0 MB + mid 96.1 MB = 121.6 MB of the 167.8 MB cap, no evictions;
+  server RSS 2.46 GB at that point.
 
 **Maps** (all through `components/GeoMap.tsx`): `basemap={{}}` adds the local layer and an honest caption (granules in view and their date range
 come from `/ui/basemap/coverage`); `pin` points are numbered / labelled markers addressed by id, with `hoverId` / `onHover` for card <-> pin
