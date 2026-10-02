@@ -3,7 +3,7 @@
 import type {
   BBox, CandidateDetail, CandidateList, ClusterInfo, ConsoleMetrics, DetectModelInfo, DetectObservation, DetectTile,
   HealthInfo, LatencyProbe, Notification, PresentationSummary, RegionListItem, SearchResponse, SimilarResponse,
-  TileDetections, TileFootprint, Timeline, Decision,
+  TileDetections, TileFootprint, Timeline, Decision, ThreatRings, DetectionPoint, DossierProvenance, ProjectionSample, ProjectionLookup, TileSpectral, BasemapCoverage, ClusterGeo,
 } from './types';
 
 export class ApiError extends Error {
@@ -59,6 +59,8 @@ export const api = {
     getJSON<CandidateList>('/candidates', { ...q, bbox: bboxParam(q.bbox) }, s),
   candidate: (id: string, s?: AbortSignal) => getJSON<CandidateDetail>(`/candidates/${encodeURIComponent(id)}`, undefined, s),
   timeline: (id: string, s?: AbortSignal) => getJSON<Timeline>(`/ui/candidates/${encodeURIComponent(id)}/timeline`, undefined, s),
+  dossier: (id: string, before: string, after: string, s?: AbortSignal) =>
+    getJSON<DossierProvenance>(`/ui/candidates/${encodeURIComponent(id)}/dossier`, { before, after }, s),
   similarToCandidate: (id: string, k: number, s?: AbortSignal) =>
     getJSON<SimilarResponse>(`/candidates/${encodeURIComponent(id)}/similar`, { k }, s),
   decide: (id: string, decision: 'confirm' | 'reject' | 'reopen', note: string, analyst: string) =>
@@ -78,7 +80,18 @@ export const api = {
   tiles: (ids: string[], s?: AbortSignal) => getJSON<{ tiles: TileFootprint[] }>('/ui/tiles', { ids: ids.join(',') }, s),
 
   clusters: (s?: AbortSignal) => getJSON<ClusterInfo>('/discovery/clusters', undefined, s),
+  clusterGeo: (s?: AbortSignal) => getJSON<ClusterGeo>('/ui/clusters/geo', undefined, s),
+  basemapCoverage: (p: { bbox: BBox; year?: string; scene?: string }, s?: AbortSignal) =>
+    getJSON<BasemapCoverage>('/ui/basemap/coverage', { bbox: bboxParam(p.bbox), year: p.year, scene: p.scene }, s),
 
+  threatRings: (p: { lon: number; lat: number; radii_m: number[]; exclude?: string }, s?: AbortSignal) =>
+    getJSON<ThreatRings>('/ui/threat-rings', { lon: p.lon, lat: p.lat, radii_m: p.radii_m.join(','), exclude: p.exclude }, s),
+  detectionPoints: (obs: string, s?: AbortSignal) =>
+    getJSON<{ observation_id: string; points: DetectionPoint[] }>(`/ui/detections/${encodeURIComponent(obs)}/points`, undefined, s),
+  projection: (max_points: number, s?: AbortSignal) => getJSON<ProjectionSample>('/ui/projection', { max_points }, s),
+  projectionLookup: (ids: string[], s?: AbortSignal) => getJSON<ProjectionLookup>('/ui/projection/lookup', { ids: ids.join(',') }, s),
+  spectral: (tileId: string, q: string | null, s?: AbortSignal) =>
+    getJSON<TileSpectral>(`/ui/tiles/${encodeURIComponent(tileId)}/spectral`, { q }, s),
   detectModel: (s?: AbortSignal) => getJSON<DetectModelInfo>('/detect/model-info', undefined, s),
   detectObservations: (s?: AbortSignal) => getJSON<{ observations: DetectObservation[] }>('/detect/observations', undefined, s),
   detectTiles: (obs: string, s?: AbortSignal) => getJSON<{ tiles: DetectTile[] }>(`/detect/observations/${encodeURIComponent(obs)}/tiles`, undefined, s),
@@ -92,4 +105,3 @@ export const candidateImage = (id: string, year: string, view: 'rgb' | 'overlay'
   `/candidates/${encodeURIComponent(id)}/imagery?date=${encodeURIComponent(year)}&view=${view}&scale=${scale}`;
 export const detectTileImage = (obs: string, row: number, col: number) =>
   `/detect/observations/${encodeURIComponent(obs)}/tiles/${row}/${col}/image.png`;
-export const CLUSTER_MAP_URL = '/discovery/cluster-map.png';

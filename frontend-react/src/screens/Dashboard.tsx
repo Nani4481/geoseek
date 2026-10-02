@@ -5,17 +5,16 @@ import { ComparePanel, ConfidencePanel, DetailsPanel, TemporalPanel, useCandidat
 import { Globe, type Focus, type Pin } from '@/components/Globe';
 import { Panel } from '@/components/Panel';
 import { ErrorNote, Loading, StatCard } from '@/components/Widgets';
-import { DASH, bandOf, fmtFixed, fmtHa, fmtInt, fmtMs, fmtPct, regionLabel, typeColor } from '@/fmt';
+import { DASH, bandOf, fmtHa, fmtInt, fmtMs, fmtPct, regionLabel, typeColor } from '@/fmt';
 import { go, href } from '@/router';
 import { useStore } from '@/state/store';
 import { useApi, type ApiState } from '@/hooks/useApi';
 
 function StatRow({ m, lat }: { m: ApiState<ConsoleMetrics>; lat: ApiState<LatencyProbe> }) {
   const d = m.data;
-  const cm = d?.change_model, det = d?.detector;
   const analysed = d?.findings_by_region.filter((r) => r.candidates > 0).length;
   return (
-    <div className="stats" aria-label="Headline figures">
+    <div className="stats" aria-label="Operational figures">
       <StatCard label="Tiles indexed" loading={m.loading} error={m.error} value={fmtInt(d?.counters.tiles_indexed)}
         sub={<><b>{fmtInt(d?.counters.vectors_searchable)}</b> searchable vectors</>} />
       <StatCard label="Scenes" loading={m.loading} error={m.error} value={fmtInt(d?.counters.scenes)}
@@ -24,21 +23,13 @@ function StatRow({ m, lat }: { m: ApiState<ConsoleMetrics>; lat: ApiState<Latenc
         sub={<><b>{analysed ?? DASH}</b> analysed for change</>} />
       <StatCard label="Sensors" loading={m.loading} error={m.error} value={fmtInt(d?.counters.sensors)}
         sub={d?.sensors.map((s) => s.platform.replace(' Open Data Program', '')).join(' · ')} />
+      <StatCard label="Change candidates" loading={m.loading} error={m.error} value={fmtInt(d?.counters.change_candidates)}
+        sub={<>awaiting analyst review in <b>Changes</b></>} />
+      <StatCard label="Analyst decisions" loading={m.loading} error={m.error} value={fmtInt(d?.counters.analyst_decisions)}
+        sub="confirm / reject / reopen rows in the audit log" />
       <StatCard label="Search latency" loading={lat.loading} error={lat.error} value={fmtMs(lat.data?.median_ms)} unit="ms"
         title={lat.data?.source}
         sub={lat.data ? <>median of {lat.data.n_queries} probes · p95 <b>{fmtMs(lat.data.p95_ms)}</b> · measured now</> : undefined} />
-      <StatCard label="Change detection F1" loading={m.loading} error={m.error || (cm && !cm.available ? 'model card not found' : null)}
-        value={fmtPct(cm?.f1, 1)} title={cm ? `${cm.dataset}. ${cm.caveat}` : undefined}
-        sub={cm?.available ? <>P <b>{fmtPct(cm.precision, 1)}</b> · R <b>{fmtPct(cm.recall, 1)}</b> · OSCD held-out</> : undefined} />
-      <StatCard label="Object detection AP50" loading={m.loading} error={m.error || (det && !det.dota_val ? 'eval results not found' : null)}
-        value={fmtFixed(det?.dota_val?.small_vehicle_ap50, 3)}
-        title={det?.dota_val ? `${det.dota_val.dataset}\n${det.caveat}` : undefined}
-        sub={det?.dota_val ? (
-          <>small-vehicle · DOTA val<br /><b>{fmtFixed(det.dota_val.ground_vehicles_ap50, 3)}</b> ground vehicles<br />
-            {det.xview_test && <>xView test: {fmtFixed(det.xview_test.small_vehicle_ap50, 3)} small · {fmtFixed(det.xview_test.large_vehicle_ap50, 3)} large</>}</>
-        ) : undefined} />
-      <StatCard label="Change candidates" loading={m.loading} error={m.error} value={fmtInt(d?.counters.change_candidates)}
-        sub={<><b>{fmtInt(d?.counters.analyst_decisions)}</b> analyst decisions logged</>} />
     </div>
   );
 }
@@ -52,10 +43,10 @@ function Breakdown({ m }: { m: ApiState<ConsoleMetrics> }) {
   const total = types.reduce((s, [, n]) => s + n, 0) || 1;
   return (
     <div className="dash-pair">
-      <Panel title="Findings by region" tier="live">
+      <Panel title="Findings by region" stack>
         {m.error ? <ErrorNote error={m.error} onRetry={m.reload} /> : !d ? <Loading rows={6} /> : (
           <>
-            <div className="col" style={{ gap: 7 }}>
+            <div className="even-rows">
               {regions.map((r) => (
                 <div key={r.name} className="brow" style={{ opacity: r.candidates ? 1 : 0.55 }}>
                   <span title={r.name}>{regionLabel(r.name)}</span>
@@ -70,17 +61,22 @@ function Breakdown({ m }: { m: ApiState<ConsoleMetrics> }) {
           </>
         )}
       </Panel>
-      <Panel title="Findings by change type" tier="live">
+      <Panel title="Findings by change type" stack>
         {m.error ? <ErrorNote error={m.error} onRetry={m.reload} /> : !d ? <Loading rows={6} /> : (
-          <div className="col" style={{ gap: 7 }}>
-            {types.map(([t, n]) => (
-              <div key={t} className="brow">
-                <span>{label(t)}</span>
-                <div className="bar"><i style={{ width: `${(n / total) * 100}%`, background: typeColor(t) }} /></div>
-                <span className="mono" style={{ textAlign: 'right' }}>{fmtInt(n)} <span className="faint">{fmtPct(n / total, 0)}</span></span>
-              </div>
-            ))}
-          </div>
+          <>
+            <div className="even-rows">
+              {types.map(([t, n]) => (
+                <div key={t} className="brow">
+                  <span>{label(t)}</span>
+                  <div className="bar"><i style={{ width: `${(n / total) * 100}%`, background: typeColor(t) }} /></div>
+                  <span className="mono" style={{ textAlign: 'right' }}>{fmtInt(n)} <span className="faint">{fmtPct(n / total, 0)}</span></span>
+                </div>
+              ))}
+            </div>
+            <div className="faint" style={{ fontSize: 10.5, marginTop: 8 }}>
+              Share of all {fmtInt(types.reduce((a, [, n]) => a + n, 0))} change candidates, by the class the change pipeline assigned.
+            </div>
+          </>
         )}
       </Panel>
     </div>
@@ -146,7 +142,7 @@ export function Dashboard() {
     <div className="col" style={{ gap: 14 }}>
       <StatRow m={metrics} lat={latency} />
       <div className="dash-hero">
-        <Panel title="Area of interest · globe" tier="live" flush className="hero">
+        <Panel title="Area of interest · globe" flush className="hero">
           <div className="hero-body">
             <Globe pins={pins} focus={focus} selectedPin={null} onPinClick={(id) => { setPinInfo(id); }} />
             <div className="hero-legend legend-row">
@@ -172,7 +168,7 @@ export function Dashboard() {
             )}
           </div>
         </Panel>
-        <Panel title="Alert feed" tier="live" className="feed"
+        <Panel title="Alert feed" className="feed"
           actions={<span className="chip red" title="Candidates whose centroid falls inside a restricted-zone box">{fmtInt(summary?.counters.restricted_zone_alerts)} in restricted zones</span>}>
           {top.error ? <ErrorNote error={top.error} onRetry={top.reload} /> : top.loading ? <Loading rows={6} /> : alerts.length === 0 ? <div className="empty">No alerts.</div> : (
             <ul className="feed-list">
@@ -199,9 +195,9 @@ export function Dashboard() {
         {sel && <span className="chip" style={{ color: typeColor(sel.change_type), borderColor: typeColor(sel.change_type) }}>{label(sel.change_type)}</span>}
         {selectedId && <a className="btn sm" href={href('changes', selectedId)}>Open in Changes →</a>}
       </div>
-      <TemporalPanel tl={bundle.timeline} active={pair.active} onPick={pair.setActive} error={bundle.error} />
+      <TemporalPanel tl={bundle.timeline} pair={pair} error={bundle.error} />
       <div className="dash-triple">
-        {selectedId ? <ComparePanel id={selectedId} pair={pair} tl={bundle.timeline} /> : <Panel title="Before / after" tier="live"><Loading rows={4} /></Panel>}
+        {selectedId ? <ComparePanel id={selectedId} pair={pair} tl={bundle.timeline} /> : <Panel title="Before / after"><Loading rows={4} /></Panel>}
         <DetailsPanel d={bundle.detail} error={bundle.error} />
         <ConfidencePanel d={bundle.detail} error={bundle.error} />
       </div>

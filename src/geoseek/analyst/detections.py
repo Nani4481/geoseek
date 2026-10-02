@@ -61,13 +61,17 @@ def _obs_by_id(repo, observation_id: str):
 def list_observations(repo) -> list[dict]:
     settings = get_settings()
     out = []
+    coll = repo.get_collection(COLLECTION_ID)
     for o in repo.list_observations(collection=COLLECTION_ID):
         sp = settings.data_dir / "detections" / o.observation_id / "summary.json"
         if not sp.is_file():
             continue
         s = json.loads(sp.read_text(encoding="utf-8"))
+        scene = repo.get_scene(o.scene_id)
         out.append({
             "observation_id": o.observation_id, "aoi_name": o.aoi_name,
+            "acquired_at": o.acquired_at, "platform": scene.platform if scene else None,
+            "sensor": coll.sensor if coll else None, "native_gsd_m": coll.native_gsd_m if coll else None,
             "role": (o.metadata or {}).get("role"),
             "n_tiles": s.get("n_tiles"), "n_tiles_with_detections": s.get("n_tiles_with_detections"),
             "n_detections": s.get("n_detections"), "by_class": s.get("by_class"),

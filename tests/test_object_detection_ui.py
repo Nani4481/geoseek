@@ -92,6 +92,8 @@ def test_observations_lists_maxar_aois_with_counts(client):
     van_nuys = next(o for o in obs if o["observation_id"] == VAN_NUYS)
     assert van_nuys["n_detections"] > 0
     assert van_nuys["by_class"]["small-vehicle"] > 0
+    # scene metadata the Detect map's subtitle is built from (catalog values, not constants in the UI)
+    assert van_nuys["acquired_at"] == "2025-01-16" and van_nuys["platform"] and van_nuys["sensor"] and van_nuys["native_gsd_m"] < 1
 
 
 def test_observations_are_sorted_by_detection_count_descending(client):

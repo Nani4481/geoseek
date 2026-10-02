@@ -41,6 +41,7 @@ export function Fingerprints({ seed }: { seed: string | null }) {
   const fpBy = useMemo(() => new Map<string, TileFootprint>((fps.data?.tiles ?? []).map((t) => [t.tile_id, t])), [fps.data]);
 
   const [cmp, setCmp] = useState<string | null>(null);
+  const [hover, setHover] = useState<string | null>(null);   // 'seed' or a tile id: the card or map pin under the pointer
   useEffect(() => { setCmp(rows[0]?.tile_id ?? null); }, [rows]);
   const seedFp = sim.data ? fpBy.get(sim.data.seed_tile_id) : undefined;
   const seedCenter: LonLat | null = seedFp ? [(seedFp.bbox[0] + seedFp.bbox[2]) / 2, (seedFp.bbox[1] + seedFp.bbox[3]) / 2] : null;
@@ -52,10 +53,13 @@ export function Fingerprints({ seed }: { seed: string | null }) {
   const same = cur && sim.data ? cur.cluster !== null && cur.cluster === sim.data.seed_cluster : null;
 
   const points: MapPoint[] = useMemo(() => {
-    const p: MapPoint[] = rows.map((r) => ({ id: r.tile_id, lon: r.lonlat[0], lat: r.lonlat[1], color: r.tile_id === cmp ? '#ffffff' : '#4cc9f0', radius: r.tile_id === cmp ? 7 : 4 }));
-    if (seedCenter) p.push({ id: 'seed', lon: seedCenter[0], lat: seedCenter[1], color: '#f5a524', radius: 8, label: 'seed' });
+    const p: MapPoint[] = rows.map((r, i) => ({
+      id: r.tile_id, lon: r.lonlat[0], lat: r.lonlat[1], pin: { text: String(i + 1), kind: r.tile_id === cmp ? 'sel' : 'hit' },
+      label: `#${i + 1} · similarity ${r.score.toFixed(3)} · ${r.date} · click to compare with the seed`,
+    }));
+    if (seedCenter) p.push({ id: 'seed', lon: seedCenter[0], lat: seedCenter[1], pin: { text: 'Seed', kind: 'seed' }, label: `Seed tile ${sim.data?.seed_tile_id ?? ''} · ${fmtLonLat(seedCenter)}` });
     return p;
-  }, [rows, cmp, seedCenter]);
+  }, [rows, cmp, seedCenter, sim.data?.seed_tile_id]);
 
   // fit only when the SET of tiles changes - not when the user merely selects a different tile
   const setKey = ids.join(',');
@@ -82,15 +86,16 @@ export function Fingerprints({ seed }: { seed: string | null }) {
       </div>
       {sim.error ? <ErrorNote error={sim.error} /> : (
         <div className="fp-grid">
-          <Panel title="Similar tiles" tier="surfaced">
+          <Panel title="Similar tiles" grow>
             {sim.loading || !sim.data ? <Loading rows={6} /> : (
               <div className="fp-tiles">
-                <button className="fp-tile seed" style={{ cursor: 'default' }} aria-label="Seed tile">
+                <button className={`fp-tile seed ${hover === 'seed' ? 'hl' : ''}`.trim()} style={{ cursor: 'default' }} aria-label="Seed tile" onMouseEnter={() => setHover('seed')} onMouseLeave={() => setHover(null)}>
                   <TileImg src={tileThumb(sim.data.seed_tile_id)} alt="Seed tile" />
-                  <div className="cap"><b style={{ color: 'var(--amber)' }}>SEED</b><span>{seedDate(sim.data.seed_tile_id)}</span></div>
+                  <div className="cap"><b style={{ color: 'var(--amber)' }}>SEED</b><span>{seedDate(sim.data.seed_tile_id) || DASH}</span></div>
                 </button>
                 {rows.map((r, i) => (
-                  <button key={r.tile_id} className={`fp-tile ${r.tile_id === cmp ? 'sel' : ''}`} onClick={() => setCmp(r.tile_id)} aria-pressed={r.tile_id === cmp} aria-label={`Similar tile ${i + 1}`}>
+                  <button key={r.tile_id} className={`fp-tile ${r.tile_id === cmp ? 'sel' : ''} ${hover === r.tile_id ? 'hl' : ''}`.replace(/\s+/g, ' ').trim()} data-tile={r.tile_id} data-n={i + 1}
+                    onClick={() => setCmp(r.tile_id)} onMouseEnter={() => setHover(r.tile_id)} onMouseLeave={() => setHover(null)} aria-pressed={r.tile_id === cmp} aria-label={`Similar tile ${i + 1}`}>
                     <TileImg src={tileThumb(r.tile_id)} alt={`Similar tile ${i + 1}`} />
                     <div className="cap"><span>#{i + 1} · {r.score.toFixed(3)}</span><span>{r.date}</span></div>
                   </button>
@@ -99,7 +104,7 @@ export function Fingerprints({ seed }: { seed: string | null }) {
             )}
           </Panel>
           <div className="col">
-            <Panel title="Similarity comparison" tier="surfaced">
+            <Panel title="Similarity comparison">
               {!sim.data || !cur ? <Loading rows={5} /> : (
                 <div className="col" style={{ gap: 12 }}>
                   <div className="cmp-pair">
@@ -118,8 +123,8 @@ export function Fingerprints({ seed }: { seed: string | null }) {
                 </div>
               )}
             </Panel>
-            <Panel title="Spatial spread" tier="surfaced" flush>
-              <GeoMap ariaLabel="Spatial spread of similar tiles" points={points} height={250} fit={fit}
+            <Panel title="Spatial spread" flush fill grow>
+              <GeoMap ariaLabel="Spatial spread of similar tiles" points={points} height={340} fill fit={fit} fitMaxZoom={14} basemap={{}} hoverId={hover} onHover={setHover}
                 onPointClick={(id) => { if (id !== 'seed') setCmp(id); }} />
             </Panel>
           </div>

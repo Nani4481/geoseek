@@ -27,13 +27,7 @@ h1, h2, h3, h4, p { margin: 0; }
 .rail a svg { width: 21px; height: 21px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .rail a:hover { background: rgba(91, 140, 255, 0.1); color: var(--ink); }
 .rail a.active { background: rgba(91, 140, 255, 0.18); color: #fff; box-shadow: inset 2px 0 0 var(--blue); }
-.rail .tier-dot { position: absolute; top: 5px; right: 8px; width: 6px; height: 6px; border-radius: 50%; }
-.rail .tier-dot.live { background: var(--green); }
-.rail .tier-dot.surfaced { background: var(--cyan); }
-.rail .tier-dot.roadmap { background: transparent; border: 1.5px dashed var(--amber); width: 8px; height: 8px; }
 .rail .sep { width: 34px; height: 1px; background: var(--line); margin: 6px 0; }
-.rail .legend { margin-top: auto; padding: 8px 6px 2px; font-size: 8.5px; color: var(--ink-4); line-height: 1.7; text-align: left; }
-.rail .legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 4px; vertical-align: middle; }
 
 .topbar { display: flex; align-items: center; gap: 16px; padding: 0 20px; border-bottom: 1px solid var(--line); background: rgba(7, 13, 32, 0.85); backdrop-filter: blur(8px); }
 .topbar h1 { font-size: 15px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; }

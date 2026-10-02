@@ -4,7 +4,6 @@ import type { LonLat } from '@/api/types';
 import { useCandidate } from '@/components/CandidatePanels';
 import { Globe, type Focus, type Pin } from '@/components/Globe';
 import { OfflinePill } from '@/components/Shell';
-import { TierBadge } from '@/components/Panel';
 import { bandOf, fmtHa, fmtLonLat, fmtPct } from '@/fmt';
 import { go } from '@/router';
 import { useStore } from '@/state/store';
@@ -188,7 +187,6 @@ export function Briefing() {
             </div>
             <div style={{ position: 'absolute', right: 16, top: 16, zIndex: 7, display: 'flex', gap: 10, alignItems: 'center' }}>
               <OfflinePill />
-              <TierBadge tier="surfaced" />
               <button className="btn" onClick={exit} style={{ borderColor: '#fff', background: '#000' }}>Exit ✕ (Esc)</button>
             </div>
             <div className="toolbar" role="toolbar" aria-label="Briefing controls">

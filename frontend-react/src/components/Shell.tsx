@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { istDate, istTime } from '@/fmt';
 import { useOfflineStatus } from '@/hooks/useOfflineStatus';
 import { href } from '@/router';
-import type { Tier } from './Panel';
 
 const I = (d: string) => (
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d={d} /></svg>
@@ -15,41 +14,38 @@ const ICONS = {
   discovery: I('M12 5a2 2 0 1 0 0 .01M5 17a2 2 0 1 0 0 .01M19 17a2 2 0 1 0 0 .01M12 7v4M10.5 12.5L6 15.5M13.5 12.5L18 15.5'),
   fingerprints: I('M6 18c0-3 2-5 2-8a4 4 0 0 1 8 0c0 3-1 5-1 8M9 20c0-3 1-5 1-8a2 2 0 0 1 4 0c0 4-1 6-1 8M4 13c0-5 3-9 8-9s8 4 8 9'),
   briefing: I('M3 4h18v12H3zM8 20h8M12 16v4M7 12l3-3 3 2 4-4'),
-  roadmap: I('M5 21V4M5 4h11l-2 4 2 4H5'),
+  data: I('M4 6c0-1.7 3.6-3 8-3s8 1.3 8 3-3.6 3-8 3-8-1.3-8-3zM4 6v6c0 1.7 3.6 3 8 3s8-1.3 8-3V6M4 12v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6'),
+  settings: I('M4 7h9M17 7h3M4 17h3M11 17h9M15 4v6M9 14v6'),
 };
 
-interface NavItem { id: string; label: string; tier: Tier; icon: keyof typeof ICONS }
+interface NavItem { id: string; label: string; icon: keyof typeof ICONS }
 export const NAV: NavItem[] = [
-  { id: 'dashboard', label: 'Dashboard', tier: 'live', icon: 'dashboard' },
-  { id: 'search', label: 'Search', tier: 'live', icon: 'search' },
-  { id: 'changes', label: 'Changes', tier: 'live', icon: 'changes' },
-  { id: 'detect', label: 'Detect', tier: 'live', icon: 'detect' },
-  { id: 'discovery', label: 'Discover', tier: 'live', icon: 'discovery' },
-  { id: 'fingerprints', label: 'Similar', tier: 'surfaced', icon: 'fingerprints' },
-  { id: 'briefing', label: 'Brief', tier: 'surfaced', icon: 'briefing' },
-  { id: 'roadmap', label: 'Roadmap', tier: 'roadmap', icon: 'roadmap' },
+  { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
+  { id: 'search', label: 'Search', icon: 'search' },
+  { id: 'changes', label: 'Changes', icon: 'changes' },
+  { id: 'detect', label: 'Detect', icon: 'detect' },
+  { id: 'discovery', label: 'Discover', icon: 'discovery' },
+  { id: 'fingerprints', label: 'Similar', icon: 'fingerprints' },
+  { id: 'briefing', label: 'Brief', icon: 'briefing' },
+  { id: 'data', label: 'Data', icon: 'data' },
+  { id: 'settings', label: 'Settings', icon: 'settings' },
 ];
+// a thin divider after these entries groups the rail: analysis | exploration | administration
+const SEPARATE_AFTER = new Set(['discovery', 'briefing']);
 
 export function Rail({ active }: { active: string }) {
   return (
     <nav className="rail" aria-label="Primary">
       <div className="logo" aria-hidden="true">GS</div>
-      {NAV.map((n, i) => (
+      {NAV.map((n) => (
         <span key={n.id} style={{ display: 'contents' }}>
-          {n.id === 'roadmap' && <div className="sep" />}
-          <a href={href(n.id)} className={active === n.id ? 'active' : ''} title={`${n.label} — ${n.tier}`} aria-current={active === n.id ? 'page' : undefined}>
+          <a href={href(n.id)} className={active === n.id ? 'active' : ''} title={n.label} aria-current={active === n.id ? 'page' : undefined}>
             {ICONS[n.icon]}
             <span>{n.label}</span>
-            <i className={`tier-dot ${n.tier}`} />
           </a>
-          {i === 4 && <div className="sep" />}
+          {SEPARATE_AFTER.has(n.id) && <div className="sep" />}
         </span>
       ))}
-      <div className="legend">
-        <div><i style={{ background: 'var(--green)' }} />Live</div>
-        <div><i style={{ background: 'var(--cyan)' }} />Existing backend</div>
-        <div><i style={{ border: '1.5px dashed var(--amber)' }} />Roadmap</div>
-      </div>
     </nav>
   );
 }

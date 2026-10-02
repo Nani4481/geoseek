@@ -12,6 +12,7 @@
     "verify:offline": "node tools/verify-offline.mjs"
   },
   "dependencies": {
+    "geotiff": "3.0.5",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },

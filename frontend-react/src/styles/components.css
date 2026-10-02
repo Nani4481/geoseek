@@ -1,24 +1,10 @@
-/* ---------------- Panel + tier chrome ---------------- */
+/* ---------------- Panel ---------------- */
 .panel { background: linear-gradient(180deg, var(--panel), #091229); border: 1px solid var(--line); border-radius: var(--radius); display: flex; flex-direction: column; min-width: 0; min-height: 0; position: relative; }
 .panel > header { display: flex; align-items: center; gap: 10px; padding: 9px 14px; border-bottom: 1px solid var(--line); min-height: 40px; }
 .panel > header h3 { min-width: 0; overflow: hidden; text-overflow: ellipsis; font-size: 11.5px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
 .panel > header .grow { flex: 1; }
 .panel .body { padding: 12px 14px; min-height: 0; flex: 1; position: relative; }
 .panel .body.flush { padding: 0; }
-.tier-badge { display: inline-flex; align-items: center; gap: 6px; font: 600 9.5px var(--mono); letter-spacing: 0.09em; padding: 3px 8px; border-radius: 999px; border: 1px solid; white-space: nowrap; }
-.tier-badge i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
-.tier-badge.live { color: var(--green); border-color: rgba(52, 211, 153, 0.4); background: rgba(52, 211, 153, 0.08); }
-.tier-badge.surfaced { color: var(--cyan); border-color: rgba(76, 201, 240, 0.4); background: rgba(76, 201, 240, 0.08); }
-.tier-badge.roadmap { color: #1a1204; background: var(--amber); border: 1px dashed #fff3; font-size: 10.5px; padding: 4px 10px; letter-spacing: 0.07em; }
-.tier-badge.roadmap i { background: #1a1204; }
-.panel.t-surfaced { border-color: rgba(76, 201, 240, 0.3); }
-.panel.t-roadmap { border: 2px dashed rgba(245, 165, 36, 0.7); background: repeating-linear-gradient(135deg, rgba(245, 165, 36, 0.045) 0 11px, transparent 11px 22px), #0a1228; overflow: hidden; }
-.panel.t-roadmap > header { background: repeating-linear-gradient(135deg, rgba(245, 165, 36, 0.2) 0 9px, rgba(245, 165, 36, 0.08) 9px 18px); border-bottom: 2px dashed rgba(245, 165, 36, 0.6); }
-.panel.t-roadmap > header h3 { color: var(--amber); }
-.roadmap-note { padding: 8px 14px; font-size: 11.5px; color: #ffd58a; background: rgba(245, 165, 36, 0.1); border-bottom: 1px dashed rgba(245, 165, 36, 0.5); display: flex; gap: 8px; align-items: baseline; }
-.roadmap-note b { color: var(--amber); letter-spacing: 0.06em; font-size: 10.5px; text-transform: uppercase; white-space: nowrap; }
-.panel.t-roadmap .body { filter: saturate(0.6); }
-.panel.t-roadmap::after { content: 'ROADMAP · NOT IMPLEMENTED'; position: absolute; right: -60px; bottom: 54px; transform: rotate(-24deg); font: 700 24px var(--mono); letter-spacing: 0.14em; color: rgba(245, 165, 36, 0.13); pointer-events: none; white-space: nowrap; }
 
 /* ---------------- Stat cards ---------------- */
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(158px, 1fr)); gap: 12px; }
@@ -96,3 +82,23 @@
 .tabs button { background: transparent; border: 1px solid transparent; border-radius: 8px; padding: 5px 11px; font-size: 12px; color: var(--ink-3); }
 .tabs button:hover { color: var(--ink); background: rgba(255, 255, 255, 0.05); }
 .tabs button.on { color: #fff; background: rgba(91, 140, 255, 0.2); border-color: rgba(91, 140, 255, 0.5); }
+
+/* ---------------- Timeline playback (presentation only; positions come from real acquisition dates) ---------------- */
+.tl .tl-scrub { position: absolute; left: -10px; right: -10px; top: 12px; height: 28px; cursor: ew-resize; touch-action: none; border-radius: 6px; }
+.tl .tl-scrub:hover { background: rgba(76, 201, 240, 0.06); }
+.tl .dot { transition: opacity 0.25s, box-shadow 0.25s, transform 0.25s; }
+.tl .dot.unlit { opacity: 0.28; transform: scale(0.82); box-shadow: none; }
+.tl .dot.lit { opacity: 1; }
+.tl[data-playing='1'] .dot.lit { box-shadow: 0 0 12px rgba(76, 201, 240, 0.55); }
+.tl .lbl, .tl .seg { transition: opacity 0.25s; }
+.tl .lbl.unlit, .tl .seg.unlit { opacity: 0.25; }
+.tl .bracket.drawing { border-right-style: solid; }
+.tl .playhead { position: absolute; top: 14px; bottom: 6px; width: 2px; margin-left: -1px; background: linear-gradient(180deg, var(--cyan), rgba(76, 201, 240, 0.15)); box-shadow: 0 0 12px rgba(76, 201, 240, 0.8); pointer-events: none; z-index: 2; }
+.tl .playhead b { position: absolute; top: -4px; left: 50%; transform: translate(-50%, -100%); font-size: 10px; font-weight: 600; color: #04121c; background: var(--cyan); border-radius: 5px; padding: 1px 6px; white-space: nowrap; }
+.lapse-controls { display: flex; align-items: center; gap: 8px; }
+.lapse-controls input[type='range'] { width: 150px; accent-color: var(--cyan); }
+.lapse-controls .readout { min-width: 126px; font-size: 11px; color: var(--ink-2); white-space: nowrap; }
+.lapse-stage { position: relative; background: #02050f; overflow: hidden; border-radius: 8px; aspect-ratio: 1 / 1; width: 100%; }
+.lapse-stage img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; pointer-events: none; will-change: opacity; }
+.lapse-stage .tag { position: absolute; top: 8px; padding: 3px 8px; border-radius: 6px; font-size: 10.5px; font-weight: 600; background: rgba(5, 10, 23, 0.82); border: 1px solid var(--line-2); pointer-events: none; z-index: 2; }
+.lapse-stage .tag.l { left: 8px; } .lapse-stage .tag.r { right: 8px; color: var(--cyan); }
