@@ -8,7 +8,7 @@ no network call once the app is running.
 
     python scripts/stage_chartjs.py
 
-Output: src/geoseek/analyst/web/vendor/chart.umd.js
+Output: src/geoseek/analyst/vendor/chart.umd.js
 """
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ TARBALL_URL = f"https://registry.npmjs.org/chart.js/-/chart.js-{VERSION}.tgz"
 EXPECTED_SHA1 = "b682d2e7249f7a0cbb1b1d31c840266ae9db64b7"  # npm's published shasum for this version
 LICENSE = "MIT (Chart.js)"
 
-VENDOR_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "web" / "vendor"
+VENDOR_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "vendor"
 OUT_PATH = VENDOR_DIR / "chart.umd.js"
 MEMBER = "package/dist/chart.umd.js"
 

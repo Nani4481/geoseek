@@ -1,5 +1,5 @@
-"""The offline guarantee: nothing shipped under src/geoseek/analyst/web/ may
-reference an external URL.
+"""The offline guarantee: nothing shipped under src/geoseek/analyst/vendor/ (the vendored third-party files) or
+src/geoseek/analyst/web/ (the interface being retired) may reference an external URL.
 
 This replaces the check that used to live inside
 test_phase6_presentation.py::test_existing_analyst_endpoints_unaffected. That
@@ -14,7 +14,7 @@ docs/FRONTEND_AUDIT.md Section 9/10):
      report being staged, so on a machine where the ML pipeline hasn't been
      run, this "we ship nothing external" guarantee silently never ran.
 
-This version scans every text file under the web root, has no dependency on
+This version scans every text file under the scanned roots, has no dependency on
 the production catalog (it only reads files already in the repo), and treats
 a vendored third-party file as exempt ONLY if it is explicitly allow-listed in
 the provenance manifest by relative path AND sha256, with every external URL
@@ -32,8 +32,11 @@ from pathlib import Path
 import pytest
 
 from geoseek.config import get_settings
+from geoseek.staging import vendor_provenance as VP
 
-WEB_ROOT = get_settings().project_root / "src" / "geoseek" / "analyst" / "web"
+ANALYST_DIR = get_settings().project_root / "src" / "geoseek" / "analyst"
+VENDOR_ROOT = ANALYST_DIR / "vendor"      # vendored libraries, textures and fonts: shared, hash-pinned
+WEB_ROOT = ANALYST_DIR / "web"            # the interface being retired; scanned until it is deleted
 MANIFEST_PATH = get_settings().provenance_manifest_path
 
 # Files of these kinds are scanned with the full regex sweep below (URLs,
@@ -93,9 +96,21 @@ def _findings(text: str) -> list[str]:
 
 
 def _iter_scan_files():
-    for p in sorted(WEB_ROOT.rglob("*")):
-        if p.is_file():
-            yield p
+    for root in (VENDOR_ROOT, WEB_ROOT):
+        if root.is_dir():
+            for p in sorted(root.rglob("*")):
+                if p.is_file():
+                    yield p
+
+
+def _scan_id(p: Path) -> str:
+    """'vendor/leaflet/leaflet.js' or 'web/css/tokens.css': unique across both roots."""
+    return p.relative_to(ANALYST_DIR).as_posix()
+
+
+def _vendor_key(scan_id: str) -> str | None:
+    """The manifest / allowlist key (path relative to VENDOR_ROOT) for a scan id, or None outside the vendor root."""
+    return scan_id[len("vendor/"):] if scan_id.startswith("vendor/") else None
 
 
 def _sha256(path: Path) -> str:
@@ -106,17 +121,17 @@ def _sha256(path: Path) -> str:
     return h.hexdigest()
 
 
-def _to_web_relative(local_path: str) -> str | None:
+def _to_vendor_relative(local_path: str) -> str | None:
     if not local_path:
         return None
     try:
-        return Path(local_path).resolve().relative_to(WEB_ROOT.resolve()).as_posix()
+        return Path(local_path).resolve().relative_to(VENDOR_ROOT.resolve()).as_posix()
     except (ValueError, OSError):
         return None
 
 
 def _load_vendor_allowlist() -> dict:
-    """{relative/path/from/web_root.ext: {"sha256": ..., "external_urls": {...}}}
+    """{relative/path/from/vendor_root.ext: {"sha256": ..., "external_urls": {...}}}
 
     Sourced from data/provenance_manifest.json's own "artifacts" list (the
     same record scripts/stage_threejs.py etc. already write), reading two
@@ -141,7 +156,7 @@ def _load_vendor_allowlist() -> dict:
     def _record(entry: dict) -> None:
         if "external_urls" not in entry:
             return
-        rel = _to_web_relative(entry.get("local_path", ""))
+        rel = _to_vendor_relative(entry.get("local_path", ""))
         if rel is None:
             return
         allow[rel] = {
@@ -161,18 +176,16 @@ _TEXT_FILES = [p for p in _ALL_FILES if p.suffix.lower() in TEXT_SUFFIXES]
 _OTHER_FILES = [p for p in _ALL_FILES if p.suffix.lower() not in TEXT_SUFFIXES]
 
 
-@pytest.mark.parametrize(
-    "relpath", [p.relative_to(WEB_ROOT).as_posix() for p in _TEXT_FILES], ids=lambda s: s
-)
+@pytest.mark.parametrize("relpath", [_scan_id(p) for p in _TEXT_FILES], ids=lambda s: s)
 def test_no_external_urls_in_text_asset(relpath):
-    path = WEB_ROOT / relpath
+    path = ANALYST_DIR / relpath
     text = path.read_text(encoding="utf-8", errors="replace")
     findings = _findings(text)
     if not findings:
         return
 
     allow = _load_vendor_allowlist()
-    entry = allow.get(relpath)
+    entry = allow.get(_vendor_key(relpath))
     if entry is None:
         pytest.fail(
             f"{relpath} references what looks like an external URL and is not "
@@ -193,51 +206,53 @@ def test_no_external_urls_in_text_asset(relpath):
 
 
 def _load_vendor_hashes() -> dict[str, str]:
-    """{web-relative path: pinned sha256} for EVERY manifest entry (artifact or grouped sub-file) that points
-    into the web root - not only the ones that enumerate external URLs."""
+    """{vendor-relative path: pinned sha256} for EVERY manifest entry (artifact or grouped sub-file) that points
+    into the vendor root - not only the ones that enumerate external URLs."""
     if not MANIFEST_PATH.is_file():
         pytest.fail(f"Provenance manifest missing at {MANIFEST_PATH}; run `python -m geoseek.staging.vendor_provenance`.")
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     out: dict[str, str] = {}
     for art in manifest.get("artifacts", []):
         for entry in (art, *art.get("files", [])):
-            rel = _to_web_relative(entry.get("local_path", ""))
+            rel = _to_vendor_relative(entry.get("local_path", ""))
             if rel is not None and entry.get("sha256"):
                 out[rel] = entry["sha256"]
     return out
 
 
-_VENDOR_FILES = [p for p in _ALL_FILES if p.relative_to(WEB_ROOT).parts[0] == "vendor"]
+# The fonts are the one vendored subtree the manifest does not pin (VP.UNPINNED_SUBTREES): the React build pins each copied
+# font by SHA256 with its vendor_source, so a changed font fails test_react_file_is_hash_pinned instead.
+_PINNED_VENDOR_FILES = [p for p in _ALL_FILES
+                        if p.is_relative_to(VENDOR_ROOT) and p.relative_to(VENDOR_ROOT).parts[0] not in VP.UNPINNED_SUBTREES]
 
 
-@pytest.mark.parametrize("relpath", [p.relative_to(WEB_ROOT).as_posix() for p in _VENDOR_FILES], ids=lambda s: s)
+@pytest.mark.parametrize("relpath", [_scan_id(p) for p in _PINNED_VENDOR_FILES], ids=lambda s: s)
 def test_every_vendored_file_is_hash_pinned_in_the_manifest(relpath):
     """The hash check used to run only for vendored files that happened to contain a URL, so a file without any
-    (OrbitControls.js) could drift from its recorded hash unnoticed. Every file under vendor/ - text or binary,
-    URL-bearing or not - must be pinned, and must still hash to the pin."""
+    (OrbitControls.js) could drift from its recorded hash unnoticed. Every pinned vendored file - text or binary,
+    URL-bearing or not - must be in the manifest, and must still hash to the pin."""
+    key = _vendor_key(relpath)
     pins = _load_vendor_hashes()
-    assert relpath in pins, (f"{relpath} is vendored but not pinned in the provenance manifest "
-                             f"(run `python -m geoseek.staging.vendor_provenance`)")
-    assert _sha256(WEB_ROOT / relpath) == pins[relpath], (
+    assert key in pins, (f"{relpath} is vendored but not pinned in the provenance manifest "
+                         f"(run `python -m geoseek.staging.vendor_provenance`)")
+    assert _sha256(ANALYST_DIR / relpath) == pins[key], (
         f"{relpath} no longer hashes to its pinned sha256. Either it changed (re-review it) or the checkout converted "
-        f"line endings (vendor/** must be '-text' in .gitattributes).")
+        f"line endings (analyst/vendor/** must be '-text' in .gitattributes).")
 
 
-@pytest.mark.parametrize(
-    "relpath", [p.relative_to(WEB_ROOT).as_posix() for p in _OTHER_FILES], ids=lambda s: s
-)
+@pytest.mark.parametrize("relpath", [_scan_id(p) for p in _OTHER_FILES], ids=lambda s: s)
 def test_no_external_urls_in_binary_asset(relpath):
     """Binary assets (images, fonts, ...) can't meaningfully contain a fetch()
     call, but embedded metadata (EXIF, an ICC profile comment, ...) could in
     principle carry a URL. A cheap raw-byte substring check costs nothing and
     closes that gap - "recursively scan EVERY file" means every file."""
-    path = WEB_ROOT / relpath
+    path = ANALYST_DIR / relpath
     raw = path.read_bytes()
     hits = [needle for needle in (b"http://", b"https://") if needle in raw]
     if not hits:
         return
     allow = _load_vendor_allowlist()
-    entry = allow.get(relpath)
+    entry = allow.get(_vendor_key(relpath))
     assert entry is not None, f"{relpath} (binary) contains {hits} and is not in the vendor allowlist"
     assert _sha256(path) == entry["sha256"], f"{relpath} changed since being allow-listed; re-review and update the manifest"
 
@@ -270,6 +285,7 @@ def test_web_root_has_files_to_scan():
     assert len(_TEXT_FILES) >= 4  # index.html, tokens.css, api-client.js, shell.js at minimum
     assert any(p.suffix.lower() == ".woff2" for p in _OTHER_FILES), \
         "expected at least one vendored .woff2 font to exist and be scanned"
+    assert any(p.is_relative_to(VENDOR_ROOT) for p in _TEXT_FILES), f"nothing under {VENDOR_ROOT} was scanned"
 
 
 # =====================================================================================================================
@@ -354,24 +370,24 @@ def test_react_allowlist_is_reviewed_and_never_a_live_fetch():
 
 def test_react_bundled_vendor_inputs_are_the_pinned_vendor_bytes():
     """The React bundle reuses the vendored three.js / OrbitControls / Leaflet; they must still be exactly the bytes the
-    build was made from AND exactly the bytes the provenance manifest pins for the existing frontend."""
+    build was made from AND exactly the bytes the provenance manifest pins."""
     pins = _react_pins()["vendored_inputs_bundled"]
     assert set(pins) == set(rbp.VENDOR_INPUTS), "pinned vendored inputs differ from react_build_pins.VENDOR_INPUTS"
     manifest_pins = _load_vendor_hashes()
     for rel, sha in pins.items():
-        assert _sha256(WEB_ROOT / rel) == sha, f"{rel} changed since the React build was made from it - rebuild and re-pin"
+        assert _sha256(VENDOR_ROOT / rel) == sha, f"{rel} changed since the React build was made from it - rebuild and re-pin"
         assert rel in manifest_pins, f"{rel} is not pinned in the provenance manifest"
         assert manifest_pins[rel] == sha, f"{rel}: React pin disagrees with the provenance manifest"
 
 
 def test_react_copied_assets_are_byte_identical_to_their_vendor_source():
-    """Textures / fonts / the Leaflet marker image the build copied must be identical to the existing frontend's files."""
+    """Textures / fonts / the Leaflet marker image the build copied must be identical to the vendored source files."""
     copied = {rel: e for rel, e in _react_pins()["files"].items() if "vendor_source" in e}
-    assert any(e["vendor_source"].startswith("vendor/earth/") for e in copied.values()), "Earth textures not traced to vendor/"
-    assert any(e["vendor_source"].startswith("fonts/") for e in copied.values()), "fonts not traced to analyst/web/fonts"
+    assert any(e["vendor_source"].startswith("earth/") for e in copied.values()), "Earth textures not traced to vendor/"
+    assert any(e["vendor_source"].startswith("fonts/") for e in copied.values()), "fonts not traced to analyst/vendor/fonts"
     manifest_pins = _load_vendor_hashes()
     for rel, e in copied.items():
-        src = WEB_ROOT / e["vendor_source"]
+        src = VENDOR_ROOT / e["vendor_source"]
         assert src.is_file(), f"{rel}: source {e['vendor_source']} missing"
         assert _sha256(src) == e["sha256"] == _sha256(REACT_ROOT / rel), f"{rel} differs from {e['vendor_source']}"
         if e["vendor_source"] in manifest_pins:

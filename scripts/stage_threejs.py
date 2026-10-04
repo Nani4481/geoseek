@@ -7,8 +7,8 @@ once the app is running.
 
     python scripts/stage_threejs.py
 
-Output: src/geoseek/analyst/web/vendor/three.module.min.js
-        src/geoseek/analyst/web/vendor/OrbitControls.js
+Output: src/geoseek/analyst/vendor/three.module.min.js
+        src/geoseek/analyst/vendor/OrbitControls.js
 """
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ from geoseek.staging.manifest import build_record, load_manifest, write_manifest
 TAG = "r160"
 RAW_BASE = f"https://raw.githubusercontent.com/mrdoob/three.js/{TAG}"
 LICENSE_URL = f"{RAW_BASE}/LICENSE"
-VENDOR_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "web" / "vendor"
+VENDOR_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "vendor"
 
 FILES = {
     "threejs_vendor": ("build/three.module.min.js", "three.module.min.js"),

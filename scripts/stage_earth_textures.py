@@ -17,10 +17,10 @@ JPEG) since the globe shader uses it as a translucent overlay.
 
     python scripts/stage_earth_textures.py
 
-Output: src/geoseek/analyst/web/vendor/earth/day.jpg      (2048x1024)
-        src/geoseek/analyst/web/vendor/earth/night.jpg    (2048x1024)
-        src/geoseek/analyst/web/vendor/earth/specular.jpg (1024x512)
-        src/geoseek/analyst/web/vendor/earth/clouds.png   (1024x512, RGBA)
+Output: src/geoseek/analyst/vendor/earth/day.jpg      (2048x1024)
+        src/geoseek/analyst/vendor/earth/night.jpg    (2048x1024)
+        src/geoseek/analyst/vendor/earth/specular.jpg (1024x512)
+        src/geoseek/analyst/vendor/earth/clouds.png   (1024x512, RGBA)
 """
 from __future__ import annotations
 
@@ -34,7 +34,7 @@ from geoseek.staging.manifest import load_manifest, sha256_of, write_manifest
 TAG = "r160"
 BASE_URL = f"https://raw.githubusercontent.com/mrdoob/three.js/{TAG}/examples/textures/planets/"
 SRC_DIR = Path(__file__).resolve().parent.parent / "data" / "earth_textures_src"
-OUT_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "web" / "vendor" / "earth"
+OUT_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "vendor" / "earth"
 
 SOURCES = {
     "day": "earth_atmos_2048.jpg",

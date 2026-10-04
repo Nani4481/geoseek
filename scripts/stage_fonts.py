@@ -11,8 +11,8 @@ already does for us.
 
     python scripts/stage_fonts.py
 
-Output: src/geoseek/analyst/web/fonts/Inter-{Regular,Medium,SemiBold,Bold}.woff2
-        src/geoseek/analyst/web/fonts/JetBrainsMono-{Regular,Medium,SemiBold}.woff2
+Output: src/geoseek/analyst/vendor/fonts/Inter-{Regular,Medium,SemiBold,Bold}.woff2
+        src/geoseek/analyst/vendor/fonts/JetBrainsMono-{Regular,Medium,SemiBold}.woff2
 """
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ JBM_BASE = f"https://raw.githubusercontent.com/JetBrains/JetBrainsMono/{JBM_TAG}
 JBM_LICENSE_URL = f"https://raw.githubusercontent.com/JetBrains/JetBrainsMono/{JBM_TAG}/OFL.txt"
 JBM_WEIGHTS = ["Regular", "Medium", "SemiBold"]  # matches what tokens.css declares
 
-OUT_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "web" / "fonts"
+OUT_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "vendor" / "fonts"
 
 
 def stage_family(*, family_name: str, base_url: str, weights: list[str], license_url: str,

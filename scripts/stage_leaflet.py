@@ -8,11 +8,11 @@ running.
 
     python scripts/stage_leaflet.py
 
-Output: src/geoseek/analyst/web/vendor/leaflet/leaflet.js
-        src/geoseek/analyst/web/vendor/leaflet/leaflet.css
-        src/geoseek/analyst/web/vendor/leaflet/images/marker-icon.png
-        src/geoseek/analyst/web/vendor/leaflet/images/marker-icon-2x.png
-        src/geoseek/analyst/web/vendor/leaflet/images/marker-shadow.png
+Output: src/geoseek/analyst/vendor/leaflet/leaflet.js
+        src/geoseek/analyst/vendor/leaflet/leaflet.css
+        src/geoseek/analyst/vendor/leaflet/images/marker-icon.png
+        src/geoseek/analyst/vendor/leaflet/images/marker-icon-2x.png
+        src/geoseek/analyst/vendor/leaflet/images/marker-shadow.png
 """
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ TARBALL_URL = f"https://registry.npmjs.org/leaflet/-/leaflet-{VERSION}.tgz"
 EXPECTED_SHA1 = "23fae724e282fa25745aff82ca4d394748db7d8d"  # npm's published shasum for this version
 LICENSE = "BSD-2-Clause (Leaflet)"
 
-VENDOR_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "web" / "vendor" / "leaflet"
+VENDOR_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst" / "vendor" / "leaflet"
 MEMBERS = {
     "package/dist/leaflet.js": VENDOR_DIR / "leaflet.js",
     "package/dist/leaflet.css": VENDOR_DIR / "leaflet.css",

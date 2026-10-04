@@ -5,7 +5,7 @@ Same two rules the vendored directory is held to by ``tests/test_frontend_offlin
 1. **Hash pin.** Every file the build emits is pinned by SHA-256 in ``frontend-react/build-pins.json`` (committed).
    Any drift - an edited chunk, a stray file, a missing file - fails the test until a human re-runs the build and
    re-reviews. The pin also records which vendored inputs (three.js, Leaflet, OrbitControls, fonts, textures) were
-   bundled, so the test can prove those bytes are the already-pinned ones from ``analyst/web/vendor``.
+   bundled, so the test can prove those bytes are the already-pinned ones from ``analyst/vendor``.
 2. **URL scan.** Every external-looking URL string in a shipped text file must be classified in
    :data:`ALLOWED_URLS` below. Protocol-relative references, CSS ``@import`` of a remote URL and ``fetch()`` /
    ``XMLHttpRequest`` / ``Image().src`` to a remote URL are never allowed.
@@ -33,7 +33,7 @@ from pathlib import Path
 from geoseek.config import PROJECT_ROOT
 
 FRONTEND_DIR = PROJECT_ROOT / "frontend-react"
-WEB_ROOT = PROJECT_ROOT / "src" / "geoseek" / "analyst" / "web"
+VENDOR_ROOT = PROJECT_ROOT / "src" / "geoseek" / "analyst" / "vendor"
 REACT_ROOT = PROJECT_ROOT / "src" / "geoseek" / "analyst" / "web_react"
 PINS_PATH = FRONTEND_DIR / "build-pins.json"
 
@@ -41,13 +41,12 @@ TEXT_SUFFIXES = {".js", ".mjs", ".css", ".html", ".svg", ".json"}
 
 # Vendored files bundled INTO the JS/CSS by Vite aliases (see frontend-react/vite.config.ts). Read-only inputs.
 VENDOR_INPUTS = (
-    "vendor/three.module.min.js",
-    "vendor/OrbitControls.js",
-    "vendor/leaflet/leaflet.js",
-    "vendor/leaflet/leaflet.css",
+    "three.module.min.js",
+    "OrbitControls.js",
+    "leaflet/leaflet.js",
+    "leaflet/leaflet.css",
 )
-# Directories whose files the build may copy verbatim (hashed filename, identical bytes).
-VENDOR_COPY_DIRS = ("vendor", "fonts")
+# Every file under VENDOR_ROOT is one the build may copy verbatim (hashed filename, identical bytes): textures, fonts, the marker image.
 
 LIVE_FETCH_KIND = "live_runtime_fetch"       # a submission blocker: must never appear in ALLOWED_URLS (a test enforces it)
 XML_NAMESPACE = "xml_namespace_identifier"
@@ -136,12 +135,11 @@ def sha256_file(path: Path) -> str:
 
 
 def _vendor_source_index() -> dict[str, str]:
-    """sha256 -> web-relative path, for every file the build could have copied verbatim."""
+    """sha256 -> vendor-relative path, for every file the build could have copied verbatim."""
     out: dict[str, str] = {}
-    for d in VENDOR_COPY_DIRS:
-        for p in sorted((WEB_ROOT / d).rglob("*")):
-            if p.is_file():
-                out.setdefault(sha256_file(p), p.relative_to(WEB_ROOT).as_posix())
+    for p in sorted(VENDOR_ROOT.rglob("*")):
+        if p.is_file():
+            out.setdefault(sha256_file(p), p.relative_to(VENDOR_ROOT).as_posix())
     return out
 
 
@@ -190,7 +188,7 @@ def compute_pins() -> dict:
         raise ValueError("\n".join(problems))
     inputs = {}
     for rel in VENDOR_INPUTS:
-        src = WEB_ROOT / rel
+        src = VENDOR_ROOT / rel
         inputs[rel] = sha256_file(src)
     return {
         "generated_by": "python -m geoseek.staging.react_build_pins",

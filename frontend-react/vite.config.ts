@@ -5,19 +5,19 @@ import { fileURLToPath } from 'node:url';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.resolve(here, '..');
-// The existing frontend's vendored, hash-pinned third-party files. They are only ever READ from here:
-// the React build bundles those exact bytes, it never edits or depends on that frontend running.
-const WEB = path.resolve(repo, 'src/geoseek/analyst/web');
+// The vendored, hash-pinned third-party files (three.js, OrbitControls, Leaflet, the Earth textures, the web fonts).
+// They are only ever READ from here: the build bundles those exact bytes. Provenance: geoseek.staging.vendor_provenance.
+const VENDOR = path.resolve(repo, 'src/geoseek/analyst/vendor');
 
 export default defineConfig({
   base: '/react/',
   plugins: [react()],
   resolve: {
     alias: {
-      three: path.join(WEB, 'vendor/three.module.min.js'),
-      leaflet: path.join(WEB, 'vendor/leaflet/leaflet.js'),
-      '@vendor': path.join(WEB, 'vendor'),
-      '@webfonts': path.join(WEB, 'fonts'),
+      three: path.join(VENDOR, 'three.module.min.js'),
+      leaflet: path.join(VENDOR, 'leaflet/leaflet.js'),
+      '@vendor': VENDOR,
+      '@webfonts': path.join(VENDOR, 'fonts'),
       '@': path.join(here, 'src'),
     },
   },

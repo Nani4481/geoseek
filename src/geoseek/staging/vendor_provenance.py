@@ -1,4 +1,4 @@
-"""Provenance for everything vendored under ``analyst/web/vendor/`` - committed, and regenerable offline.
+"""Provenance for everything vendored under ``analyst/vendor/`` - committed, and regenerable offline.
 
 The offline guarantee (``tests/test_frontend_offline.py``) pins every vendored file by SHA256 in
 ``data/provenance_manifest.json`` and requires every external-looking URL string in a vendored text file to be
@@ -10,8 +10,8 @@ The claim this supports is "0 external network requests at runtime", not "0 exte
 assets": vendored libraries legitimately contain attribution banners, XML namespace identifiers, browser-bug
 citations and diagnostic text. Each such string is listed below with a classification. Nothing here is a live
 runtime fetch (``LIVE_FETCH_KIND`` is forbidden by a test); the app's own code contains no external URL, drives
-Leaflet with ``attributionControl: false`` + ``L.imageOverlay`` (no tile layer) and three.js with same-origin
-texture URLs only.
+Leaflet with ``attributionControl: false`` (its one tile layer is the same-origin ``/ui/basemap`` one) and three.js
+with same-origin texture URLs only.
 
 Vendored files are byte-pinned: ``.gitattributes`` marks ``vendor/**`` as ``-text`` so no checkout converts line
 endings (a CRLF checkout changes the SHA256 of otherwise-identical files).
@@ -26,8 +26,11 @@ from pathlib import Path
 from geoseek.config import PROJECT_ROOT
 from geoseek.staging.manifest import build_record, load_manifest, sha256_of, write_manifest
 
-WEB_ROOT = PROJECT_ROOT / "src" / "geoseek" / "analyst" / "web"
-VENDOR_ROOT = WEB_ROOT / "vendor"
+VENDOR_ROOT = PROJECT_ROOT / "src" / "geoseek" / "analyst" / "vendor"
+# Subtrees of VENDOR_ROOT that are not pinned in the manifest. The web fonts are pinned through the React build's own
+# pins (frontend-react/build-pins.json records each copied font's SHA256 and its vendor_source); they have never had
+# manifest entries, and this module keeps that scope rather than inventing provenance for them.
+UNPINNED_SUBTREES = ("fonts",)
 
 LIVE_FETCH_KIND = "live_runtime_fetch"          # a submission blocker: must never appear in this file
 ATTRIBUTION = "attribution_comment"
@@ -49,22 +52,22 @@ def _attr(url: str, banner: str) -> VendorUrl:
     return VendorUrl(url, ATTRIBUTION, f"{banner} Inert comment text; never dereferenced.")
 
 
-# relative-to-web-root path -> every URL-looking string in the file, classified. (An empty tuple = no URLs.)
+# path relative to VENDOR_ROOT -> every URL-looking string in the file, classified. (An empty tuple = no URLs.)
 VENDOR_URLS: dict[str, tuple[VendorUrl, ...]] = {
-    "vendor/chart.umd.js": (
+    "chart.umd.js": (
         _attr("https://www.chartjs.org", "`/*! Chart.js v4.4.4 ... */` licence banner."),
         _attr("https://github.com/kurkle/color#readme", "`/*! @kurkle/color v0.3.2 ... */` banner of the bundled dependency."),
         VendorUrl("sourceMappingURL=chart.umd.js.map", SOURCEMAP,
                   "Relative reference to a .map file that is not shipped; only browser devtools would ever request it, "
                   "and it is not an external URL (the URL scan does not flag it)."),
     ),
-    "vendor/leaflet/leaflet.css": (
+    "leaflet/leaflet.css": (
         VendorUrl("https://bugs.chromium.org/p/chromium/issues/detail?id=600120", OTHER,
                   "CSS comment citing a browser bug next to a workaround (documentation only)."),
         VendorUrl("https://bugzilla.mozilla.org/show_bug.cgi?id=888319", OTHER,
                   "CSS comment citing a browser bug next to a workaround (documentation only)."),
     ),
-    "vendor/leaflet/leaflet.js": (
+    "leaflet/leaflet.js": (
         _attr("https://leafletjs.com", "`/* @preserve Leaflet 1.9.4 ... */` header."),
         VendorUrl("https://leafletjs.com", OTHER,
                   "`<a href>` inside the default attribution-control HTML string. The app builds its map with "
@@ -75,7 +78,7 @@ VENDOR_URLS: dict[str, tuple[VendorUrl, ...]] = {
                   "Relative reference to a .map file that is not shipped; devtools-only; not an external URL."),
     ),
     # kept verbatim from the entry that was already in the manifest (kinds are the original, more specific labels)
-    "vendor/three.module.min.js": (
+    "three.module.min.js": (
         VendorUrl("http://www.w3.org/1999/xhtml", "namespace_constant",
                   "XML namespace URI string literal, passed to document.createElementNS() calls inside three.js's own "
                   "DOM-renderer helpers. Never dereferenced over the network - it is an opaque identifier the DOM spec "
@@ -89,7 +92,7 @@ VENDOR_URLS: dict[str, tuple[VendorUrl, ...]] = {
                   "diagnostic text - never fetched, never assigned to a src/href, never opened programmatically. Appears "
                   "twice (two call sites emit the same message)."),
     ),
-    "vendor/OrbitControls.js": (),
+    "OrbitControls.js": (),
 }
 
 # Provenance for vendored files whose manifest entry may be missing (staged by scripts/stage_*.py, whose manifest
@@ -103,22 +106,22 @@ def _leaflet_name(filename: str) -> str:
 
 
 SOURCES: dict[str, dict] = {
-    "vendor/chart.umd.js": dict(name="chartjs_vendor", source_url=_CHART_TGZ, license="MIT (Chart.js)", pinned_version="4.4.4"),
-    **{f"vendor/leaflet/{f}": dict(name=_leaflet_name(f), source_url=_LEAFLET_TGZ, license="BSD-2-Clause (Leaflet)",
+    "chart.umd.js": dict(name="chartjs_vendor", source_url=_CHART_TGZ, license="MIT (Chart.js)", pinned_version="4.4.4"),
+    **{f"leaflet/{f}": dict(name=_leaflet_name(f), source_url=_LEAFLET_TGZ, license="BSD-2-Clause (Leaflet)",
                                    pinned_version="1.9.4")
        for f in ("leaflet.js", "leaflet.css")},
-    **{f"vendor/leaflet/images/{f}": dict(name=_leaflet_name(f), source_url=_LEAFLET_TGZ, license="BSD-2-Clause (Leaflet)",
+    **{f"leaflet/images/{f}": dict(name=_leaflet_name(f), source_url=_LEAFLET_TGZ, license="BSD-2-Clause (Leaflet)",
                                           pinned_version="1.9.4")
        for f in ("marker-icon.png", "marker-icon-2x.png", "marker-shadow.png")},
-    "vendor/three.module.min.js": dict(
+    "three.module.min.js": dict(
         name="threejs_vendor", license="MIT - The MIT License", pinned_version="r160",
         source_url="https://raw.githubusercontent.com/mrdoob/three.js/r160/build/three.module.min.js"),
-    "vendor/OrbitControls.js": dict(
+    "OrbitControls.js": dict(
         name="threejs_orbitcontrols_vendor", license="MIT - The MIT License", pinned_version="r160",
         source_url="https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/jsm/controls/OrbitControls.js"),
     # Earth textures are re-encoded derivatives (PIL, scripts/stage_earth_textures.py), so they are pinned to the bytes
     # that are committed here, not to the upstream files they were made from.
-    **{f"vendor/earth/{f}": dict(
+    **{f"earth/{f}": dict(
         name=f"earth_{f.split('.')[0]}", pinned_version="r160",
         license="Public domain (NASA Visible Earth imagery) - re-encoded by scripts/stage_earth_textures.py",
         source_url=f"https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/textures/planets/{up}")
@@ -127,23 +130,24 @@ SOURCES: dict[str, dict] = {
 }
 
 
-def web_relative(path: str | Path) -> str | None:
+def vendor_relative(path: str | Path) -> str | None:
     try:
-        return Path(path).resolve().relative_to(WEB_ROOT.resolve()).as_posix()
+        return Path(path).resolve().relative_to(VENDOR_ROOT.resolve()).as_posix()
     except (ValueError, OSError):
         return None
 
 
 def vendor_files() -> list[Path]:
-    return sorted(p for p in VENDOR_ROOT.rglob("*") if p.is_file())
+    return sorted(p for p in VENDOR_ROOT.rglob("*")
+                  if p.is_file() and p.relative_to(VENDOR_ROOT).parts[0] not in UNPINNED_SUBTREES)
 
 
 def _find_entries(manifest: dict) -> dict[str, dict]:
-    """web-relative path -> the manifest dict (artifact or grouped sub-file) that pins it."""
+    """vendor-relative path -> the manifest dict (artifact or grouped sub-file) that pins it."""
     found: dict[str, dict] = {}
     for art in manifest.get("artifacts", []):
         for entry in (art, *art.get("files", [])):
-            rel = web_relative(entry.get("local_path", "")) if entry.get("local_path") else None
+            rel = vendor_relative(entry.get("local_path", "")) if entry.get("local_path") else None
             if rel:
                 found[rel] = entry
     return found
@@ -158,7 +162,7 @@ def update_manifest(manifest: dict) -> list[str]:
     artifacts = manifest.setdefault("artifacts", [])
     entries = _find_entries(manifest)
     for path in vendor_files():
-        rel = path.relative_to(WEB_ROOT).as_posix()
+        rel = path.relative_to(VENDOR_ROOT).as_posix()
         sha, size = sha256_of(path), path.stat().st_size
         entry = entries.get(rel)
         if entry is None:
@@ -188,7 +192,7 @@ def check_manifest(manifest: dict) -> list[str]:
     """Problems if the manifest does not pin every vendored file at its current SHA256 (read-only)."""
     entries, problems = _find_entries(manifest), []
     for path in vendor_files():
-        rel = path.relative_to(WEB_ROOT).as_posix()
+        rel = path.relative_to(VENDOR_ROOT).as_posix()
         e = entries.get(rel)
         if e is None:
             problems.append(f"{rel}: no manifest entry")
