@@ -115,9 +115,52 @@ def _detector_block(svc) -> dict:
     return out
 
 
+def _region_catalog(svc) -> dict[str, dict]:
+    """Per-region figures read straight from the catalog (tiles, observations, acquisitions, date range, sensors,
+    co-registration records) and whether the change pipeline's own observation list touches the region. Returns ``{}``
+    if the catalog cannot be read, so the console shows nothing rather than a guess."""
+    from geoseek.analyst.service import _region_of
+
+    try:
+        repo = svc.repo
+        scene_coll = {s.scene_id: s.collection_id for s in repo.list_scenes()}
+        colls = {c.collection_id: c for c in repo.list_collections()}
+        tiles = repo.count_tiles_by_observation()
+        observations = repo.list_observations()
+    except Exception:
+        return {}
+    used = set((getattr(svc, "report", None) or {}).get("observations", []))
+    by_region: dict[str, list] = {}
+    for o in observations:
+        by_region.setdefault(_region_of(o.aoi_name), []).append(o)
+    out: dict[str, dict] = {}
+    for name, obs in by_region.items():
+        by_coll: dict[str, list] = {}
+        for o in obs:
+            by_coll.setdefault(scene_coll.get(o.scene_id, "unknown"), []).append(o)
+        sensors = []
+        for cid, group in by_coll.items():
+            dates = sorted({str(o.acquired_at)[:10] for o in group})
+            c = colls.get(cid)
+            sensors.append({
+                "collection_id": cid, "platform": getattr(c, "platform", None), "sensor": getattr(c, "sensor", None),
+                "n_observations": len(group), "n_acquisitions": len(dates), "first_date": dates[0], "last_date": dates[-1],
+                "n_tiles": sum(tiles.get(o.observation_id, 0) for o in group),
+                "n_coregistered": sum(1 for o in group if o.coregistration),   # observations carrying a co-registration record
+            })
+        # the sensor with the deepest acquisition history is the one a change stack would be built from
+        sensors.sort(key=lambda x: (-x["n_acquisitions"], -x["n_tiles"], x["collection_id"]))
+        all_dates = sorted({str(o.acquired_at)[:10] for o in obs})
+        out[name] = {"analysed": any(o.observation_id in used for o in obs),
+                     "n_tiles": sum(tiles.get(o.observation_id, 0) for o in obs),
+                     "first_date": all_dates[0], "last_date": all_dates[-1], "sensors": sensors}
+    return out
+
+
 def _region_counts(svc) -> list[dict]:
     regions = svc.list_regions()
     counts = {r["name"]: 0 for r in regions}
+    by_type: dict[str, dict[str, int]] = {r["name"]: {} for r in regions}
     for c in svc.details:
         lon, lat = c.get("centroid_lonlat") or (None, None)
         if lon is None:
@@ -126,8 +169,12 @@ def _region_counts(svc) -> list[dict]:
             w, s, e, n = r["bbox"]
             if w <= lon <= e and s <= lat <= n:
                 counts[r["name"]] += 1
+                t = c.get("change_type", "other")
+                by_type[r["name"]][t] = by_type[r["name"]].get(t, 0) + 1
                 break
-    return [{**r, "candidates": counts[r["name"]],
+    cat = _region_catalog(svc)
+    return [{**r, "candidates": counts[r["name"]], "by_type": by_type[r["name"]],
+             "catalog": cat.get(r["name"]),
              "center": [round((r["bbox"][0] + r["bbox"][2]) / 2, 5), round((r["bbox"][1] + r["bbox"][3]) / 2, 5)]}
             for r in regions]
 

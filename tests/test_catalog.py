@@ -362,3 +362,12 @@ def test_production_catalog_has_five_dates_with_alignment_provenance():
     scene_2026 = repo.get_scene(obs_by_date["2026-03-08"].scene_id)
     assert scene_2026.platform == "Sentinel-2C"
     repo.close()
+
+
+def test_count_tiles_by_observation_sql_override_matches_the_generic_default(tmp_path):
+    repo = _seed_repo(tmp_path / "cat.sqlite")
+    fast = repo.count_tiles_by_observation()
+    assert fast == {"S2B_44RPQ_20190330_1_L2A_scaled": 2}                      # grouped in SQL
+    assert fast == MetadataRepository.count_tiles_by_observation(repo)           # same answer through the seam's default
+    assert sum(fast.values()) == repo.count_tiles()
+    repo.close()

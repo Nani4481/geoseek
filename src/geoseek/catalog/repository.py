@@ -129,6 +129,14 @@ class MetadataRepository(abc.ABC):
     @abc.abstractmethod
     def count_tiles(self) -> int: ...
 
+    def count_tiles_by_observation(self) -> dict[str, int]:
+        """``{observation_id: tile count}``. Non-abstract on purpose: a backend with a cheaper aggregate overrides it,
+        any other still satisfies the seam through :meth:`list_tiles`."""
+        counts: dict[str, int] = {}
+        for t in self.list_tiles():
+            counts[t.observation_id] = counts.get(t.observation_id, 0) + 1
+        return counts
+
     # -- per-tile spectral descriptor (Phase 10) ------------------------------
     # Non-abstract on purpose: a backend without spectral support still satisfies the seam.
 

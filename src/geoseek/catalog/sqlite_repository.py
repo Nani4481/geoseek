@@ -526,6 +526,11 @@ class SQLiteMetadataRepository(MetadataRepository):
         with self._lock:
             return int(self._conn.execute("SELECT COUNT(*) FROM tiles").fetchone()[0])
 
+    def count_tiles_by_observation(self) -> dict[str, int]:
+        with self._lock:
+            rows = self._conn.execute("SELECT observation_id, COUNT(*) FROM tiles GROUP BY observation_id").fetchall()
+        return {r[0]: int(r[1]) for r in rows}
+
     # -- analyst audit trail (PS 2.2.5) -------------------------------------
     # INSERT only. The schema's BEFORE UPDATE / BEFORE DELETE triggers on
     # analyst_decisions reject any rewrite at the storage layer, so this log is

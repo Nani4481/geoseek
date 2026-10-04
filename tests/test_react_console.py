@@ -210,3 +210,60 @@ def test_console_metrics_report_missing_sources_instead_of_inventing_numbers(tmp
     m = ui_support.console_metrics(_metrics_svc(tmp_path, with_eval=False, with_card=False, monkeypatch=monkeypatch))
     assert m["change_model"] == {"available": False}
     assert "dota_val" not in m["detector"]                                 # no eval file -> no DOTA numbers at all
+
+
+# ------------------------------------------------------------------ region catalog figures (Findings by region) --------
+
+
+def _catalog_svc(*, report_obs):
+    def obs(oid, scene, when, aoi, coreg):
+        return SimpleNamespace(observation_id=oid, scene_id=scene, acquired_at=when, aoi_name=aoi, coregistration=coreg)
+
+    observations = [
+        obs("o1", "sc1", "2019-03-30T05:00:00Z", "alpha_44RPQ_scaled", {"method": "fft"}),
+        obs("o2", "sc2", "2021-03-04", "alpha_44RPQ_scaled", {"role": "reference"}),
+        obs("o3", "sc3", "2021-03-06", "alpha-82km", {"method": "geocode"}),        # a SAR look in the same region
+        obs("o4", "sc4", "2023-10-11", "beta_43RGP_diverse", {}),
+        obs("o5", "sc5", "2023-10-11", "beta_43RGP_diverse", {}),                   # same date twice: one acquisition, two observations
+        obs("o6", "sc6", "2024-02-01", "beta_43RGP_diverse", {}),
+    ]
+    scenes = [SimpleNamespace(scene_id=f"sc{i}", collection_id=c) for i, c in
+              [(1, "s2"), (2, "s2"), (3, "s1"), (4, "s2"), (5, "s2"), (6, "s2")]]
+    colls = [SimpleNamespace(collection_id="s2", sensor="MSI", platform="Sentinel-2"), SimpleNamespace(collection_id="s1", sensor="C-SAR", platform="Sentinel-1")]
+    tiles = {"o1": 10, "o2": 10, "o3": 7, "o4": 5, "o5": 5, "o6": 5}
+    repo = SimpleNamespace(list_scenes=lambda: scenes, list_collections=lambda: colls, list_observations=lambda: observations,
+                           count_tiles_by_observation=lambda: tiles, count_tiles=lambda: sum(tiles.values()))
+    return SimpleNamespace(repo=repo, report={"observations": report_obs}), tiles
+
+
+def test_region_catalog_figures_are_counted_from_the_catalog_not_typed_in():
+    svc, tiles = _catalog_svc(report_obs=["o1", "o2"])
+    cat = ui_support._region_catalog(svc)
+    assert set(cat) == {"alpha", "beta"}
+    a, b = cat["alpha"], cat["beta"]
+    assert a["analysed"] is True and b["analysed"] is False                      # from the pipeline's own observation list
+    assert (a["n_tiles"], b["n_tiles"]) == (27, 15) and a["n_tiles"] + b["n_tiles"] == sum(tiles.values())
+    assert (a["first_date"], a["last_date"]) == ("2019-03-30", "2021-03-06")      # across every sensor
+    s2, sar = a["sensors"]                                                       # deepest history first
+    assert s2["collection_id"] == "s2" and (s2["n_observations"], s2["n_acquisitions"], s2["n_coregistered"]) == (2, 2, 2)
+    assert (s2["first_date"], s2["last_date"], s2["n_tiles"]) == ("2019-03-30", "2021-03-04", 20)
+    assert sar["collection_id"] == "s1" and sar["sensor"] == "C-SAR" and sar["n_coregistered"] == 1
+    (only,) = b["sensors"]
+    assert (only["n_observations"], only["n_acquisitions"], only["n_coregistered"]) == (3, 2, 0)   # two granules on one date = one acquisition
+
+
+def test_region_catalog_marks_nothing_analysed_when_the_pipeline_report_is_empty_and_degrades_without_a_catalog():
+    svc, _ = _catalog_svc(report_obs=[])
+    assert not any(r["analysed"] for r in ui_support._region_catalog(svc).values())
+    broken = SimpleNamespace(repo=SimpleNamespace(), report={})                  # a repo that cannot answer: no figures, never a guess
+    assert ui_support._region_catalog(broken) == {}
+
+
+def test_region_counts_carry_the_breakdown_by_type_and_the_catalog_block():
+    svc, _ = _catalog_svc(report_obs=["o1"])
+    svc.list_regions = lambda: [{"name": "alpha", "bbox": [0, 0, 1, 1], "n_observations": 3}, {"name": "beta", "bbox": [5, 5, 6, 6], "n_observations": 3}]
+    svc.details = [{"centroid_lonlat": [0.5, 0.5], "change_type": "road"}, {"centroid_lonlat": [0.2, 0.9], "change_type": "road"},
+                   {"centroid_lonlat": [0.3, 0.3], "change_type": "other"}]
+    a, b = ui_support._region_counts(svc)
+    assert a["candidates"] == 3 and a["by_type"] == {"road": 2, "other": 1} and a["catalog"]["analysed"] is True
+    assert b["candidates"] == 0 and b["by_type"] == {} and b["catalog"]["analysed"] is False
