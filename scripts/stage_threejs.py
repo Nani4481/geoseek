@@ -1,8 +1,8 @@
-"""Stage three.js locally for the analyst UI's interactive globe - a one-time
-build-time fetch (same category as scripts/build_basemap.py fetching Natural
-Earth data), never touched at runtime. globe.js imports both files as plain ES
-modules from this same FastAPI origin (via an import map in index.html for
-the bare "three" specifier OrbitControls.js uses) - no CDN, no network call
+"""Stage three.js locally for the analyst console's globe and vector-space view -
+a one-time build-time fetch, never touched at runtime. The React console
+imports both files through the Vite aliases in frontend-react/vite.config.ts
+("three" resolves to three.module.min.js, which is also what OrbitControls.js
+imports), so the build bundles exactly these bytes - no CDN, no network call
 once the app is running.
 
     python scripts/stage_threejs.py

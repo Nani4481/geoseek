@@ -1,8 +1,8 @@
-"""Stage the analyst UI's self-hosted webfonts - a one-time build-time fetch
+"""Stage the analyst console's self-hosted webfonts - a one-time build-time fetch
 (same category as scripts/stage_threejs.py / stage_earth_textures.py), never
-touched at runtime. css/tokens.css's @font-face rules load these as plain
-files from this same FastAPI origin - no CDN, no network call once the app
-is running.
+touched at runtime. frontend-react/src/styles/tokens.css's @font-face rules
+reference these through the Vite alias, and the build copies them into the
+console's own assets - no CDN, no network call once the app is running.
 
 Inter (UI prose) and JetBrains Mono (machine-readable values) are both
 SIL Open Font License 1.1 - free to redistribute, no restriction beyond

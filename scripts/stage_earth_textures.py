@@ -1,7 +1,6 @@
 """Stage NASA Blue Marble Earth textures for the interactive globe - a
-one-time build-time fetch (same category as scripts/build_basemap.py fetching
-Natural Earth data / scripts/stage_threejs.py fetching three.js itself),
-never touched at runtime.
+one-time build-time fetch (same category as scripts/stage_threejs.py fetching
+three.js itself), never touched at runtime.
 
 The files themselves are NASA Visible Earth's public-domain "Blue Marble"
 (day) / "Black Marble" (night lights) / ocean specular mask / cloud composites,

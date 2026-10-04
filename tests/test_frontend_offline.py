@@ -1,5 +1,5 @@
-"""The offline guarantee: nothing shipped under src/geoseek/analyst/vendor/ (the vendored third-party files) or
-src/geoseek/analyst/web/ (the interface being retired) may reference an external URL.
+"""The offline guarantee: nothing shipped under src/geoseek/analyst/vendor/ (the vendored third-party files) may
+reference an external URL. (The React console build, src/geoseek/analyst/web_react/, has its own section below.)
 
 This replaces the check that used to live inside
 test_phase6_presentation.py::test_existing_analyst_endpoints_unaffected. That
@@ -36,7 +36,6 @@ from geoseek.staging import vendor_provenance as VP
 
 ANALYST_DIR = get_settings().project_root / "src" / "geoseek" / "analyst"
 VENDOR_ROOT = ANALYST_DIR / "vendor"      # vendored libraries, textures and fonts: shared, hash-pinned
-WEB_ROOT = ANALYST_DIR / "web"            # the interface being retired; scanned until it is deleted
 MANIFEST_PATH = get_settings().provenance_manifest_path
 
 # Files of these kinds are scanned with the full regex sweep below (URLs,
@@ -96,21 +95,19 @@ def _findings(text: str) -> list[str]:
 
 
 def _iter_scan_files():
-    for root in (VENDOR_ROOT, WEB_ROOT):
-        if root.is_dir():
-            for p in sorted(root.rglob("*")):
-                if p.is_file():
-                    yield p
+    for p in sorted(VENDOR_ROOT.rglob("*")):
+        if p.is_file():
+            yield p
 
 
 def _scan_id(p: Path) -> str:
-    """'vendor/leaflet/leaflet.js' or 'web/css/tokens.css': unique across both roots."""
+    """'vendor/leaflet/leaflet.js': the test id (path relative to the analyst package)."""
     return p.relative_to(ANALYST_DIR).as_posix()
 
 
-def _vendor_key(scan_id: str) -> str | None:
-    """The manifest / allowlist key (path relative to VENDOR_ROOT) for a scan id, or None outside the vendor root."""
-    return scan_id[len("vendor/"):] if scan_id.startswith("vendor/") else None
+def _vendor_key(scan_id: str) -> str:
+    """The manifest / allowlist key: the path relative to VENDOR_ROOT."""
+    return scan_id[len("vendor/"):]
 
 
 def _sha256(path: Path) -> str:
@@ -257,35 +254,13 @@ def test_no_external_urls_in_binary_asset(relpath):
     assert _sha256(path) == entry["sha256"], f"{relpath} changed since being allow-listed; re-review and update the manifest"
 
 
-def test_tokens_css_is_clean():
-    """Explicit call-out for the design-token layer: it must be clean under
-    the exact same rules as everything else - this is redundant with the
-    parametrized sweep above (it's under WEB_ROOT and has a scanned suffix)
-    but is kept as its own named test so a regression here is unambiguous in
-    a test report, not just "one of N parametrized cases failed".
-
-    The analyst UI rebuild replaced the old root-level tokens.css/tokens.js
-    (Phase 1 of the prior redesign) with css/tokens.css and no separate JS
-    token file - see docs/FRONTEND_AUDIT.md for the superseded layout."""
-    path = WEB_ROOT / "css" / "tokens.css"
-    assert path.is_file(), f"tokens.css not found under {WEB_ROOT / 'css'}"
-    findings = _findings(path.read_text(encoding="utf-8"))
-    assert not findings, f"tokens.css contains external references: {findings}"
-
-
-def test_web_root_has_files_to_scan():
-    """Guards against the parametrize lists above silently being empty (e.g.
-    WEB_ROOT resolved to the wrong directory) and every test in this module
-    trivially "passing" by having nothing to check.
-
-    The analyst UI rebuild vendors fonts (binary) instead of three.js - the
-    prior redesign's vendor/three.module.min.js no longer exists by design
-    (the globe view it backed was retired), so this checks for a vendored
-    font instead of that specific former dependency."""
-    assert len(_TEXT_FILES) >= 4  # index.html, tokens.css, api-client.js, shell.js at minimum
+def test_vendor_root_has_files_to_scan():
+    """Guards against the parametrize lists above silently being empty (e.g. VENDOR_ROOT resolved to the wrong directory)
+    and every test in this module trivially "passing" by having nothing to check."""
+    assert len(_TEXT_FILES) >= 4  # three.module.min.js, OrbitControls.js, leaflet.js, leaflet.css at minimum
     assert any(p.suffix.lower() == ".woff2" for p in _OTHER_FILES), \
         "expected at least one vendored .woff2 font to exist and be scanned"
-    assert any(p.is_relative_to(VENDOR_ROOT) for p in _TEXT_FILES), f"nothing under {VENDOR_ROOT} was scanned"
+    assert any(p.suffix.lower() == ".jpg" for p in _OTHER_FILES), "expected the vendored Earth textures to be scanned"
 
 
 # =====================================================================================================================

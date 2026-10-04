@@ -1,10 +1,8 @@
-"""Stage Leaflet locally for the analyst UI's interactive candidate map - a
-one-time build-time fetch (same category as scripts/stage_threejs.py), never
-touched at runtime. index.html loads vendor/leaflet/leaflet.js as a classic
-script (Leaflet's own dist build is a UMD global, not an ES module) and
-vendor/leaflet/leaflet.css as a stylesheet; js/components/candidate-map.js
-then uses the resulting global `L`. No CDN, no network call once the app is
-running.
+"""Stage Leaflet locally for the analyst console's maps - a one-time build-time
+fetch (same category as scripts/stage_threejs.py), never touched at runtime.
+The React console imports leaflet.js and leaflet.css through the Vite aliases in
+frontend-react/vite.config.ts, so the build bundles exactly these bytes. No CDN,
+no network call once the app is running.
 
     python scripts/stage_leaflet.py
 
