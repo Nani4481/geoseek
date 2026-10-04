@@ -9,8 +9,7 @@ no network call once the app is running.
 Output: src/geoseek/analyst/vendor/leaflet/leaflet.js
         src/geoseek/analyst/vendor/leaflet/leaflet.css
         src/geoseek/analyst/vendor/leaflet/images/marker-icon.png
-        src/geoseek/analyst/vendor/leaflet/images/marker-icon-2x.png
-        src/geoseek/analyst/vendor/leaflet/images/marker-shadow.png
+(The console draws every marker as a divIcon, so Leaflet's default 2x / shadow marker images are not staged.)
 """
 from __future__ import annotations
 
@@ -32,8 +31,6 @@ MEMBERS = {
     "package/dist/leaflet.js": VENDOR_DIR / "leaflet.js",
     "package/dist/leaflet.css": VENDOR_DIR / "leaflet.css",
     "package/dist/images/marker-icon.png": VENDOR_DIR / "images" / "marker-icon.png",
-    "package/dist/images/marker-icon-2x.png": VENDOR_DIR / "images" / "marker-icon-2x.png",
-    "package/dist/images/marker-shadow.png": VENDOR_DIR / "images" / "marker-shadow.png",
 }
 
 

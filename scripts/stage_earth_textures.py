@@ -38,11 +38,7 @@ OUT_DIR = Path(__file__).resolve().parent.parent / "src" / "geoseek" / "analyst"
 SOURCES = {
     "day": "earth_atmos_2048.jpg",
     "night": "earth_lights_2048.png",
-    "specular": "earth_specular_2048.jpg",
-    "clouds": "earth_clouds_1024.png",
 }
-HALVE = {"specular"}  # day and night both stay full 2048 res; clouds is native 1024; specular is a subtle blend only
-KEEP_ALPHA = {"clouds"}  # the cloud layer needs its alpha channel to render as a translucent overlay
 
 
 def main() -> None:
@@ -56,21 +52,15 @@ def main() -> None:
             print(f"fetching {fname} ...")
             urllib.request.urlretrieve(BASE_URL + fname, src_path)
         img = Image.open(src_path)
-        img = img.convert("RGBA") if name in KEEP_ALPHA else img.convert("RGB")
-        if name in HALVE:
-            img = img.resize((img.width // 2, img.height // 2), Image.LANCZOS)
-        ext = "png" if name in KEEP_ALPHA else "jpg"
-        out_path = OUT_DIR / f"{name}.{ext}"
-        if name in KEEP_ALPHA:
-            img.save(out_path, format="PNG", optimize=True)
-        else:
-            img.save(out_path, format="JPEG", quality=86, optimize=True)
+        img = img.convert("RGB")
+        out_path = OUT_DIR / f"{name}.jpg"
+        img.save(out_path, format="JPEG", quality=86, optimize=True)
         kb = round(out_path.stat().st_size / 1024, 1)
         print(f"  {name}: {img.width}x{img.height} -> {out_path.name} ({kb} KB)")
         entries.append({
             "name": f"earth_{name}", "source_url": BASE_URL + fname,
             "local_path": str(out_path.resolve()), "sha256": sha256_of(out_path),
-            "byte_size": out_path.stat().st_size, "resized_from": fname if name in HALVE else None,
+            "byte_size": out_path.stat().st_size, "resized_from": None,
         })
 
     total = sum(e["byte_size"] for e in entries)
@@ -81,8 +71,7 @@ def main() -> None:
     artifacts.append({
         "name": "earth_textures_vendor",
         "source_url": f"redistributed by three.js ({BASE_URL}) - originally NASA Visible Earth "
-                       "'Blue Marble Next Generation' (day) and 'Black Marble' (night lights) / "
-                       "ocean specular mask / MODIS cloud fraction composites",
+                       "'Blue Marble Next Generation' (day) and 'Black Marble' (night lights)",
         "license": "Public domain (NASA imagery, https://visibleearth.nasa.gov/collection/1484/blue-marble "
                     "and https://visibleearth.nasa.gov/collection/1579/city-lights) - "
                     "no restriction on reuse, attribution appreciated but not required",

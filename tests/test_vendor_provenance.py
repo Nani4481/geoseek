@@ -47,20 +47,20 @@ def test_update_manifest_pins_everything_idempotently_and_check_agrees():
     assert first and VP.check_manifest(manifest) == []
     assert VP.update_manifest(manifest) == []                                  # idempotent
     # a hash drift is reported by check and repaired (and logged) by update
-    entry = next(a for a in manifest["artifacts"] if a["name"] == "chartjs_vendor")
+    entry = next(a for a in manifest["artifacts"] if a["name"] == "threejs_vendor")
     entry["sha256"] = "0" * 64
-    assert any("chart.umd.js" in p for p in VP.check_manifest(manifest))
+    assert any("three.module.min.js" in p for p in VP.check_manifest(manifest))
     assert any("re-pinned" in c for c in VP.update_manifest(manifest))
     assert VP.check_manifest(manifest) == []
     # the classified URLs are attached to the entries
     by_name = {a["name"]: a for a in manifest["artifacts"]}
-    assert len(by_name["chartjs_vendor"]["external_urls"]) == 3
+    assert len(by_name["threejs_vendor"]["external_urls"]) == 3
     assert by_name["leaflet_leaflet_js_vendor"]["external_urls"][1]["kind"] == "other"
 
 
 def test_leaflet_artifact_names_do_not_collide():
     names = [s["name"] for k, s in VP.SOURCES.items() if k.startswith("leaflet/")]
-    assert len(names) == len(set(names)) == 5
+    assert len(names) == len(set(names)) == 3
     assert VP._leaflet_name("leaflet.js") != VP._leaflet_name("leaflet.css")
 
 

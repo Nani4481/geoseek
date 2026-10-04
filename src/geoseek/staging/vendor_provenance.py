@@ -54,13 +54,6 @@ def _attr(url: str, banner: str) -> VendorUrl:
 
 # path relative to VENDOR_ROOT -> every URL-looking string in the file, classified. (An empty tuple = no URLs.)
 VENDOR_URLS: dict[str, tuple[VendorUrl, ...]] = {
-    "chart.umd.js": (
-        _attr("https://www.chartjs.org", "`/*! Chart.js v4.4.4 ... */` licence banner."),
-        _attr("https://github.com/kurkle/color#readme", "`/*! @kurkle/color v0.3.2 ... */` banner of the bundled dependency."),
-        VendorUrl("sourceMappingURL=chart.umd.js.map", SOURCEMAP,
-                  "Relative reference to a .map file that is not shipped; only browser devtools would ever request it, "
-                  "and it is not an external URL (the URL scan does not flag it)."),
-    ),
     "leaflet/leaflet.css": (
         VendorUrl("https://bugs.chromium.org/p/chromium/issues/detail?id=600120", OTHER,
                   "CSS comment citing a browser bug next to a workaround (documentation only)."),
@@ -98,7 +91,6 @@ VENDOR_URLS: dict[str, tuple[VendorUrl, ...]] = {
 # Provenance for vendored files whose manifest entry may be missing (staged by scripts/stage_*.py, whose manifest
 # writes are not version-controlled). name / source_url / licence match what those scripts record.
 _LEAFLET_TGZ = "https://registry.npmjs.org/leaflet/-/leaflet-1.9.4.tgz"
-_CHART_TGZ = "https://registry.npmjs.org/chart.js/-/chart.js-4.4.4.tgz"
 
 
 def _leaflet_name(filename: str) -> str:
@@ -106,13 +98,12 @@ def _leaflet_name(filename: str) -> str:
 
 
 SOURCES: dict[str, dict] = {
-    "chart.umd.js": dict(name="chartjs_vendor", source_url=_CHART_TGZ, license="MIT (Chart.js)", pinned_version="4.4.4"),
     **{f"leaflet/{f}": dict(name=_leaflet_name(f), source_url=_LEAFLET_TGZ, license="BSD-2-Clause (Leaflet)",
                                    pinned_version="1.9.4")
        for f in ("leaflet.js", "leaflet.css")},
     **{f"leaflet/images/{f}": dict(name=_leaflet_name(f), source_url=_LEAFLET_TGZ, license="BSD-2-Clause (Leaflet)",
                                           pinned_version="1.9.4")
-       for f in ("marker-icon.png", "marker-icon-2x.png", "marker-shadow.png")},
+       for f in ("marker-icon.png",)},
     "three.module.min.js": dict(
         name="threejs_vendor", license="MIT - The MIT License", pinned_version="r160",
         source_url="https://raw.githubusercontent.com/mrdoob/three.js/r160/build/three.module.min.js"),
@@ -125,8 +116,7 @@ SOURCES: dict[str, dict] = {
         name=f"earth_{f.split('.')[0]}", pinned_version="r160",
         license="Public domain (NASA Visible Earth imagery) - re-encoded by scripts/stage_earth_textures.py",
         source_url=f"https://raw.githubusercontent.com/mrdoob/three.js/r160/examples/textures/planets/{up}")
-       for f, up in (("day.jpg", "earth_atmos_2048.jpg"), ("night.jpg", "earth_lights_2048.png"),
-                     ("specular.jpg", "earth_specular_2048.jpg"), ("clouds.png", "earth_clouds_1024.png"))},
+       for f, up in (("day.jpg", "earth_atmos_2048.jpg"), ("night.jpg", "earth_lights_2048.png"))},
 }
 
 
