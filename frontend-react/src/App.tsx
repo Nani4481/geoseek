@@ -4,6 +4,7 @@ import { Rail, TopBar } from '@/components/Shell';
 import { Loading } from '@/components/Widgets';
 import { useRoute } from '@/router';
 import { Dashboard } from '@/screens/Dashboard';
+import { NotFound } from '@/screens/NotFound';
 
 // Heavier / secondary screens are code-split; everything still ships in the local build.
 const Search = lazy(() => import('@/screens/Search').then((m) => ({ default: m.Search })));
@@ -24,7 +25,8 @@ const TITLES: Record<string, string> = {
 
 export function App() {
   const route = useRoute();
-  const name = TITLES[route.name] ? route.name : 'dashboard';
+  const known = Object.prototype.hasOwnProperty.call(TITLES, route.name);   // never fall back to another screen
+  const name = known ? route.name : '';
   const [intro, setIntro] = useState(shouldShowIntro);   // decided once, from where the analyst landed
 
   if (name === 'briefing') {
@@ -35,8 +37,9 @@ export function App() {
     {intro && <Intro onDone={() => setIntro(false)} />}
     <div className="app">
       <Rail active={name} />
-      <TopBar title={TITLES[name]} />
+      <TopBar title={known ? TITLES[name] : 'Page not found'} />
       <main className="main" id="main">
+        {!known && <NotFound route={route} />}
         <Suspense fallback={<Loading rows={5} />}>
           {name === 'dashboard' && <Dashboard />}
           {name === 'search' && <Search />}
