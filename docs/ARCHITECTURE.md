@@ -65,7 +65,7 @@ flowchart TB
     subgraph SERVE["Serve  (geoseek.search / analyst / discovery)"]
         SE[search.engine.SearchEngine<br/>prewarm + keepwarm]
         API[search.api  FastAPI]
-        UI[analyst/web  vanilla-JS SPA<br/>canvas map, no CDN]
+        UI[analyst/web_react  React + TS console (Vite build, committed)<br/>Leaflet maps, no CDN]
         DIS[discovery  KNN + HDBSCAN]
     end
 
@@ -234,7 +234,7 @@ text query ──► EmbeddingModel.encode_text ──► (512,) unit-norm
                                                   │   filters can't shrink the result below k)
                        MetadataRepository row lookup per hit ──► provenance projected on
                                                   │
-                                          top-k SearchResult[]  ──► FastAPI ──► SPA canvas map
+                                          top-k SearchResult[]  ──► FastAPI ──► console (Leaflet map)
 ```
 
 Image queries are identical with `encode_image`. "More like this" from a map
@@ -293,10 +293,18 @@ analyze:  queue_score = confidence^0.65 · significance^0.35   ──► rank
 trajectory + provenance chain + SAR), `/candidates/{id}/imagery` (PNG,
 2019/2021/2024 × rgb/overlay), `/candidates/{id}/decision` (POST → append-only
 `analyst_decisions`), `/audit`, `/export` (GeoJSON with full per-feature
-provenance), `/discovery/{clusters,similar}`. The frontend
-(`analyst/web/`, vanilla JS/CSS, an HTML5 `<canvas>` map in EPSG:4326 with a
-lon/lat graticule) is served by the same process — no npm build, no CDN, no web
-fonts.
+provenance), `/discovery/{clusters,similar}`. The frontend is the React +
+TypeScript console in `frontend-react/` (Vite build), served at `/app/` by the
+same process: Leaflet maps on a dark canvas with a lon/lat graticule and one
+same-origin base-map tile layer (`/ui/basemap/{z}/{x}/{y}`, rendered from imagery
+already in the archive), no CDN, self-hosted fonts. It **does** have a build step
+(`cd frontend-react && npm ci && npm run build`), but the output
+(`analyst/web_react/`) is committed and every file SHA-256-pinned, so running the
+system needs no Node; the Docker image has no Node stage and ships the committed
+bundle. The third-party files it bundles (three.js, OrbitControls, Leaflet, the
+Earth textures, the fonts) live in `analyst/vendor/`. The original vanilla-JS
+interface that used to be served here was deleted; see `docs/FRONTEND_REACT.md`
+§6.
 
 ---
 

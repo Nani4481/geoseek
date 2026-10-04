@@ -1,14 +1,15 @@
-# React console (`/react/`)
+# React console (`/app/`)
 
-A **parallel** analyst console built with Vite + React + TypeScript, styled as a dark-navy dashboard (icon rail, 3D globe
+The analyst console, built with Vite + React + TypeScript, styled as a dark-navy dashboard (icon rail, 3D globe
 hero with region pins, stat cards, alert feed, animated temporal evidence, before/after slider, change-details and confidence
 panels, threat rings, tactical dossier, embedding-space view, spectral evidence, raster header check). It is served by the
-same FastAPI process as the existing frontend and makes **zero external requests**. Every screen is a working feature: there
+same FastAPI process as the API and makes **zero external requests**. Every screen is a working feature: there
 is no mock-up, roadmap or "not implemented" chrome anywhere.
 
-* Existing frontend: `/app/` — **unchanged** (nothing under `src/geoseek/analyst/web/` is modified; it is only *read*,
-  see §6).
-* React console: `/react/` — source in `frontend-react/`, build output in `src/geoseek/analyst/web_react/`.
+* The console: `/app/` — **the only frontend**. Source in `frontend-react/`, build output in `src/geoseek/analyst/web_react/`
+  (committed).
+* `/react/` — the console's former path. It only redirects (308) to the same path under `/app/`, so old links and bookmarks keep
+  working. The original vanilla-JavaScript interface that used to be served at `/app/` has been deleted (§6).
 
 ## 1. Build and serve
 
@@ -18,7 +19,7 @@ is no mock-up, roadmap or "not implemented" chrome anywhere.
 | Runtime dependencies | `react` 19.3.0, `react-dom` 19.3.0 and `geotiff` 3.0.5 (MIT; used only to parse GeoTIFF *headers* for the Data screen) with its own eight small runtime dependencies, all bundled into the build — no router, state, chart, CSS or map library |
 | Build dependencies | `vite` 8.3.2, `@vitejs/plugin-react` 6.1.1, `typescript` 5.9.3, `@types/react` / `@types/react-dom` 19.3.0, `@types/leaflet` 1.9.22 |
 | Pinning | exact versions in `package.json` + `package-lock.json` (a test asserts exact pins, the two-package runtime set, and that the lockfile matches the pinned build) |
-| Reused, already-vendored libraries | three.js, OrbitControls, Leaflet 1.9.4, the Blue Marble textures and Inter / JetBrains Mono fonts — aliased straight from `analyst/web/vendor` and `analyst/web/fonts`, so the shipped bytes are the already-hash-pinned ones |
+| Reused, already-vendored libraries | three.js, OrbitControls, Leaflet 1.9.4, the Blue Marble day / night textures and Inter / JetBrains Mono fonts — aliased straight from `analyst/vendor` (the fonts are in `analyst/vendor/fonts`), so the shipped bytes are the already-hash-pinned ones |
 | Charts | hand-rolled SVG/CSS bars (no chart library, so nothing extra to audit) |
 
 ```bash
@@ -31,13 +32,41 @@ npm run dev                # Vite dev server on :5173, proxying the API to 127.0
 npm run verify:offline     # runtime network audit against a running backend (see §4)
 ```
 
-Serve: `uvicorn geoseek.search.api:app --host 127.0.0.1 --port 8000`, then open **`http://127.0.0.1:8000/react/`**.
-`GET /` also lists `"react_ui": "/react/"`.
+Serve: `uvicorn geoseek.search.api:app --host 127.0.0.1 --port 8000`, then open **`http://127.0.0.1:8000/app/`**.
+`GET /` lists `"ui": "/app/"`; `/react/` redirects there.
 
 **The build output is committed**, not built at deploy time. An air-gapped machine therefore needs Python only — no Node,
 no npm, no network — and the committed bytes are exactly what the tests pin. Rebuild only when `frontend-react/` changes,
 then re-pin (`npm run build:pinned`). `.gitattributes` marks `web_react/**` as `-text` so no checkout converts line endings
 and breaks the hashes; `node_modules/` is git- and docker-ignored.
+
+**The Dockerfile has no Node step.** It runs `COPY . .` and starts uvicorn; nothing in the image builds the frontend. The container
+therefore serves exactly the `web_react/` that is committed. A change to `frontend-react/` that is not followed by a rebuild
+(`npm run build:pinned`) **and the rebuilt `web_react/` plus `build-pins.json` committed in the same change** leaves the container
+serving a stale console. The tests catch half of this: a rebuilt bundle with stale pins (or vice versa) fails
+`tests/test_frontend_offline.py`; they do **not** compare the source with the bundle, so "edited the source, forgot to rebuild" is
+invisible to them. Rebuilding is deterministic (the same sources produce a bit-identical `web_react/`; re-running the build and
+`python -m geoseek.staging.react_build_pins` on a clean tree changes nothing), so `git status` after `npm run build:pinned` is a
+reliable "is the committed bundle current?" check.
+
+### Where it is served, and what happens without a build
+
+* **Base path.** Vite builds with the absolute base `/app/`: every emitted URL (the entry script, preloads, the stylesheet, fonts,
+  textures, lazy chunks, the favicon) is `/app/…`. An absolute base was chosen over a relative one because there is exactly one mount
+  and the offline test can then assert that every reference in `index.html` starts with `/app/`. Routing is hash-based
+  (`#/changes/<id>`), so the base affects asset URLs only; API calls (`/candidates`, `/ui/basemap/{z}/{x}/{y}`, …) are root-relative.
+* **The mount** (`geoseek.search.api._ConsoleApp`, mounted at `/app` unconditionally). It serves the committed React build and
+  **nothing else**. If `index.html` is not there it answers **503** with a page naming the missing directory and the build command
+  (`cd frontend-react && npm ci && npm run build`); the check is made on every request, so a build that disappears while the server
+  runs fails the same way, and the API keeps working without a build. A missing *file* in a present build is an ordinary 404, never
+  `index.html` (no single-page fallback). There is no catch-all route and no custom 404 handler. `tests/test_console_mount.py` asserts
+  all of this against the real app (§5).
+* **The retired path.** `/react` and `/react/…` answer 308 to `/app/…` (query string kept, target built from a fixed `/app/` prefix).
+  It never serves content itself and is not a mount.
+* **Unknown routes.** The hash router no longer substitutes the dashboard for a route it does not know: an unrecognised hash renders a
+  **Page not found** state that names the route, highlights no rail item and lists the real screens. Only an empty hash or `#/` is the
+  home screen. `#/brief` is an explicit alias of `#/briefing` (the rail label, the requirements document and the demo script all call it
+  Brief). The e2e suite asserts all three, because a silent fallback makes a mistyped link look like a working screen.
 
 ## 2. What the console does
 
@@ -196,15 +225,15 @@ Four independent layers, strongest first.
      `geoseek.staging.react_build_pins.ALLOWED_URLS`; protocol-relative strings, remote `@import` and remote
      `fetch`/XHR/`Image` targets are never allowed; binary assets may contain no `http(s)://`;
    * the bundled three.js / OrbitControls / Leaflet are proven to be the **same bytes as the provenance manifest's pins**
-     for the existing frontend, and every copied texture/font is byte-identical to its `analyst/web` source;
-   * the app **source** (`frontend-react/src`) contains no external URL at all and never creates a Leaflet tile layer.
+     (`analyst/vendor/`), and every copied texture/font is byte-identical to its `analyst/vendor` source;
+   * the app **source** (`frontend-react/src`) contains no external URL at all and creates exactly one Leaflet tile layer, the same-origin `/ui/basemap/{z}/{x}/{y}` one (no external tile service).
 
    **Mutation tests** (a guard that has never failed proves little). Each mutation was applied by hand, the suite run, and the
    tree restored; every one was caught:
 
    | Mutation | Caught by |
    |---|---|
-   | `https://…` string, a remote `fetch("https://…")` and `L.tileLayer("https://…")` added to a file under `frontend-react/src` | `test_react_app_source_contains_no_external_url_and_no_tile_layer` (reported all three, by file) |
+   | `https://…` string, a remote `fetch("https://…")` and `L.tileLayer("https://…")` added to a file under `frontend-react/src` | `test_react_app_source_contains_no_external_url_and_only_the_local_basemap_tile_layer` (reported all three, by file) |
    | `fetch("https://evil…")` appended to a built chunk | `test_react_file_is_hash_pinned`, `test_react_text_asset_has_no_unclassified_external_url` |
    | a stray extra file left in the build directory | `test_react_pinned_file_set_equals_build_output` (and its own hash-pin test) |
    | thumbnail 404 fix reverted | 3 of the 6 tests in `test_tile_thumbnail_missing.py` |
@@ -223,29 +252,34 @@ Four independent layers, strongest first.
 3. **Runtime request log** — `frontend-react/tools/verify-offline.mjs` drives headless Chrome over the DevTools protocol (no
    npm dependency), loads the console from the running backend, visits every route, and records every request. Result on
    the final build: **0 external requests** (about 300 requests across a full interaction run, 80–95 for a plain visit of every
-   route), 0 CSP blocks.
+   route), 0 CSP blocks. Measured when the original interface was retired: **16 routes** (every screen, deep links to a candidate, the Brief
+   alias and an unknown route) → 196 requests, **0 external**, 0 CSP blocks, 0 page problems; the full e2e run → 2,495 requests, 0 external.
 4. **The indicator is derived, not decorative.** The top-bar pill is computed from Resource Timing (every loaded resource
    must be same-origin), `securitypolicyviolation` events, and `GET /health`. Green = `OFFLINE · 0 EXTERNAL REQUESTS`;
    an external request or CSP block turns it red with a count; an unreachable backend turns it amber. The host's own
    network-interface state is shown in the tooltip only and never changes the colour. The IST clock uses the browser's
    built-in `Intl` time-zone data — no network.
 
-Offline map: there are no tiles, so Leaflet draws a dark canvas with an adaptive lat/lon graticule, region boxes, points and
-polygons; candidate imagery is served by the backend. The Earth globe uses the vendored textures.
+Offline map: Leaflet draws on a dark canvas with an adaptive lat/lon graticule, region boxes, points and polygons, plus **one** tile
+layer, the same-origin base map `/ui/basemap/{z}/{x}/{y}`, which this server renders from imagery already in the archive
+(`src/geoseek/analyst/basemap.py`). There is no external tile service and no coastline or boundary vector layer;
+`tests/test_frontend_offline.py` allows exactly that one tile layer and nothing else. Candidate imagery is served by the backend. The
+Earth globe uses the vendored day / night textures.
 
 ## 5. Testing
 
 | Suite | What it covers |
 |---|---|
 | `tests/test_frontend_offline.py` (extended) | the React rules in §4 layer 2, alongside the existing vendor rules |
-| `tests/test_react_console.py` | `/react/` is served and `/app/` is unchanged; timeline roles and "N of M" logic (persistent / transient / recent / none); footprints from catalog geometry; latency probe uses engine-measured times and the cache; metric values derive from their sources, and a missing source yields "unavailable", never a number |
+| `tests/test_console_mount.py` | **`/app/` serves the console and cannot serve anything else**: a missing build directory, a directory without `index.html`, an empty directory, `index.html` being a directory and a build removed while the server runs each give a 503 naming the directory and the build command (never a bare 404, never other content), and recover when the build returns; the mount exists even if the build is absent at import time; exactly one route can answer a path under `/app/` and a guard test shows a shadowing catch-all would be detected; no catch-all route, no custom 404 handler, no single-page fallback; the old interface directory is gone; `/react/` only redirects and leads to the 503 when the build is absent. Mutation-checked (§6) |
+| `tests/test_react_console.py` | the `/app/` mount serves the committed build byte for byte, the `/react/` redirect (path, query, off-site steering), path traversal; timeline roles and "N of M" logic (persistent / transient / recent / none); footprints from catalog geometry; latency probe uses engine-measured times and the cache; metric values derive from their sources, and a missing source yields "unavailable", never a number |
 | `tests/test_tile_thumbnail_missing.py` | a catalogued tile whose band rasters are not staged is a **404 with a reason**, an unknown tile stays 404, a staged tile still renders a JPEG, and a present-but-corrupt raster is *not* disguised as 404 (it stays a 500). Mutation-checked: 3 of its 6 tests fail with the fix reverted |
 | `tests/test_threat_rings.py` | ring geometry against an independent `pyproj.Geod` (distances, ring membership, zone containment, exclusion, truncation, cumulative totals, detections, watch areas, HTTP validation) |
 | `tests/test_dossier.py` | sensor provenance comes from the catalog; sun elevation / off-nadir appear **only** when catalogued (booleans and text are never mistaken for angles) |
 | `tests/test_projection.py` | the projection artifact: honest sampling (deterministic, both counts reported, rows stay aligned), exact lookups, staleness, unavailable-state |
 | `tests/test_spectral_evidence.py` | query → index relevance; colours land exactly on the legend stops; PNG pixels equal the index values at 10 m with clouds transparent; statistics equal the descriptor; unusable / unstaged tiles; **statistics equal the stored `tile_spectral` rows of real catalogued tiles** |
 | `tests/test_react_lib_selftest.py` | runs `src/lib` under Node: timelapse geometry; **UTM vs pyproj to < 1 mm** (600 random points + landmarks) and round-trip; MGRS squares vs the catalog's own Sentinel-2 tile names; **GeoTIFF header parse vs rasterio** over UTM N/S, WGS 84, Web Mercator, rotated, non-square, un-georeferenced, un-invertible CRS, tagged and garbage files, plus a real 160 MB staged band |
-| `frontend-react/tools/e2e-console.mjs` | 42 steps in headless Chrome with **real mouse and keyboard input** (assertions poll for the expected UI state rather than sleeping): operational stat cards equal the API and no model metric is on the dashboard; **no tier / roadmap chrome on any route**; Settings metrics equal the API; **timeline animation** (every sampled frame: playhead monotonic, nodes lit iff passed, bracket drawn progressively, layer opacities equal the cross-fade function, only catalog dates, pause freezes, scrub lands on the right date, reduced-motion steps without blending); **dossier** (MGRS equals the catalog's tile, UTM, chips and dates, gate / audit row counts, sensor block equals the API, no placeholder wording, print stylesheet, a real PDF from `Page.printToPDF`); **threat rings** (right-click via real events; chips, rows and distances equal `/ui/threat-rings`; centre not self-listed; radii validated / applied / cleared; detection map); **vector space** (20,000 of N points with caption, colour by cluster, search hits highlighted, click pans the map to that tile's footprint); **spectral evidence** (relevant index per query, stats equal the API, overlay pixels all on the legend ramp, toggles, opacity, 404 for unstaged); **Data** (known-ground-truth GeoTIFFs: drop and file-chooser, valid / no-CRS / junk, nothing-ingested note, no progress element, a real 160 MB band, no decoder fetched); text search, more-like-this, region box, map clicks; queue filter; slider; confirm → audit row → reopen → reject; exports; detection boxes; discovery; fingerprints; briefing; scope check; offline pill |
+| `frontend-react/tools/e2e-console.mjs` | **98 steps** (measured on the final build) in headless Chrome with **real mouse and keyboard input** (assertions poll for the expected UI state rather than sleeping): operational stat cards equal the API and no model metric is on the dashboard; **no tier / roadmap chrome on any route**; Settings metrics equal the API; **timeline animation** (every sampled frame: playhead monotonic, nodes lit iff passed, bracket drawn progressively, layer opacities equal the cross-fade function, only catalog dates, pause freezes, scrub lands on the right date, reduced-motion steps without blending); **dossier** (MGRS equals the catalog's tile, UTM, chips and dates, gate / audit row counts, sensor block equals the API, no placeholder wording, print stylesheet, a real PDF from `Page.printToPDF`); **threat rings** (right-click via real events; chips, rows and distances equal `/ui/threat-rings`; centre not self-listed; radii validated / applied / cleared; detection map); **vector space** (20,000 of N points with caption, colour by cluster, search hits highlighted, click pans the map to that tile's footprint); **spectral evidence** (relevant index per query, stats equal the API, overlay pixels all on the legend ramp, toggles, opacity, 404 for unstaged); **Data** (known-ground-truth GeoTIFFs: drop and file-chooser, valid / no-CRS / junk, nothing-ingested note, no progress element, a real 160 MB band, no decoder fetched); text search, more-like-this, region box, map clicks; queue filter; slider; confirm → audit row → reopen → reject; exports; detection boxes; discovery; fingerprints; briefing; scope check; **routes** (an unrecognised route renders the not-found state naming it and never the dashboard, `''` and `#/` are the dashboard, `#/brief` and `#/briefing` both render Briefing); offline pill |
 
 Confirm / reject / reopen append **permanent** audit rows, so the e2e script refuses to write unless `--allow-writes` is
 given and must be pointed at a **scratch** backend:
@@ -253,17 +287,80 @@ given and must be pointed at a **scratch** backend:
 ```bash
 cp data/index/tiles.sqlite /tmp/scratch.sqlite
 DATABASE_URL=sqlite:////tmp/scratch.sqlite uvicorn geoseek.search.api:app --port 8001
-node frontend-react/tools/e2e-console.mjs --base http://127.0.0.1:8001/react/ --allow-writes
+node frontend-react/tools/e2e-console.mjs --base http://127.0.0.1:8001/app/ --allow-writes
 ```
 
 (`POST /export` also writes a file under `data/change_model/exports/` — that is the existing endpoint's behaviour.)
 
-## 6. Existing frontend untouched
+## 6. The original interface is retired
 
-`git diff --stat -- src/geoseek/analyst/web/` and `git status --short src/geoseek/analyst/web/` are empty. The only edits to
-existing files are: `src/geoseek/search/api.py` (a `/react` static mount, the `/ui/*` read-only routes, and a
-`react_ui` key on `GET /`), `src/geoseek/search/engine.py` (the thumbnail 404 fix, §7), the extended
-`tests/test_frontend_offline.py`, and `.gitignore` / `.gitattributes` / `.dockerignore`.
+The original hand-written vanilla-JavaScript interface (`src/geoseek/analyst/web/`: `index.html`, 17 CSS and 26 JS files) has been
+deleted; the console above is the only frontend. What changed, in order:
+
+| Commit | What |
+|---|---|
+| `d7389b1` | The vendored third-party files moved out of the old interface's directory: `analyst/web/vendor/**` and `analyst/web/fonts/**` → `analyst/vendor/**` (fonts in `analyst/vendor/fonts/`). All 21 files are exact renames, SHA-256 identical before and after (and git-blob identical, and still equal to their original manifest pins); a rebuild from the new location reproduced every output file bit for bit. |
+| `752da80` | Unrecognised hash routes render a not-found state; `#/brief` is an alias of `#/briefing`. |
+| `1aef299` | Built for the `/app/` base, mounted unconditionally at `/app/`, `/react/` redirects, tools and tests updated. |
+| `1124bf4` | The old interface's pages, styles and scripts deleted (44 files), with `scripts/build_basemap.py` and `scripts/build_mosaic.py`, which only generated assets for it. |
+| `c57494f` | `tests/test_console_mount.py`: the no-fallback proof (§5). |
+| `e411b7b` | The vendored files the console does not use were removed (see below). |
+
+**Vendored files removed because nothing loads them.** `chart.umd.js` (only the old `index.html` loaded it; the console has no chart
+library), `earth/clouds.png`, `earth/specular.jpg`, Leaflet's `marker-icon-2x.png` and `marker-shadow.png` (every marker is a
+`divIcon`; a full e2e run requested none of them) and the two Cinzel fonts (no stylesheet references them; the repository holds no source
+for them at all, only a licence file, which was removed too). Their `VENDOR_URLS` / `SOURCES` entries, `scripts/stage_chartjs.py` and the
+staging of the unused textures and images went with them.
+
+**What does not hold any more, and what replaced it.** "Vanilla JS, no framework, no build step" described the deleted interface. The
+console has a build step (Vite, TypeScript), whose output is committed and byte-pinned (see §1 and the Dockerfile note there). The
+charting and raster-parsing libraries are therefore: **no chart library at all** (hand-rolled SVG/CSS), and **geotiff.js, bundled from
+npm** (`geotiff` 3.0.5, pinned in `package-lock.json`, minified into the build and hash-pinned with it), not vendored files.
+
+### Test-count reconciliation
+
+The suite went **776 → 777 → 732 → 750 → 738** passed (3 skipped throughout, 0 failed). The 776 figure is the baseline before this work
+(an earlier brief quoted 774). Read alone, 776 → 738 looks like 38 tests of lost coverage. It is not: **59 test cases disappeared, 21
+were added, and no behaviour lost its coverage.**
+
+| Step | Count | Change | Why |
+|---|---|---|---|
+| baseline | 776 | | |
+| mount moved to `/app/` (`1aef299`) | 777 | **+1** | 2 tests removed, 3 added: `test_react_console_is_served_at_react_and_the_existing_ui_is_unchanged` and `test_react_assets_never_leave_the_react_directory` were replaced by `test_react_console_is_served_at_app` (now also byte-compares the served asset), `test_the_retired_react_path_redirects_to_app_keeping_the_rest_of_the_path` and `test_app_assets_never_leave_the_build_directory` (the traversal check, ported to `/app/`). |
+| old interface deleted (`1124bf4`) | 732 | **−45** | **44 cases** of the parametrized `test_no_external_urls_in_text_asset` disappeared **because the 44 files they scanned were deleted** (49 → 5; the 5 vendored text files are still scanned). **1 test removed**: `test_tokens_css_is_clean`, which checked the deleted interface's design tokens (the console's tokens are covered by the React source scan and the build scan). The "does the scan list contain anything" guard was kept and re-pointed at the vendor root. |
+| no-fallback tests (`c57494f`) | 750 | **+18** | `tests/test_console_mount.py`. |
+| unused vendored files removed (`e411b7b`) | 738 | **−12** | Parametrized cases for the 7 deleted files: 1 text-asset scan (`chart.umd.js`), 6 binary-asset scans, 5 manifest-pin checks (`chart.umd.js`, `clouds.png`, `specular.jpg`, the two marker images; the Cinzel fonts are not manifest-pinned). |
+
+Totals: removed 2 + 44 + 1 + 12 = **59**; added 3 + 18 = **21**; 59 − 21 = **38** = 776 − 738. Of the 59, **56 are parametrized instances
+over files that no longer exist** (nothing is left to scan), **2 were replaced by tests that assert the same thing at `/app/`**, and
+**1 checked a file that no longer exists**. What is still enforced on what remains: every remaining vendored text file (4) is URL-scanned,
+every remaining vendored binary (10) is byte-scanned, the 7 manifest-pinned vendored files are hash-pinned, all 36 emitted files of the
+React build are hash-pinned and URL-classified (unchanged), and the CSP, source scan, toolchain lock and base-path checks are unchanged.
+
+### Mutation checks (run at the end of this work)
+
+Each mutation was applied, the guarding tests run, and the tree restored byte-exact (the tree was verified clean after every one):
+a byte appended to a built chunk; an external URL injected into a built chunk; an unpinned file added to the build; the CSP removed
+from `index.html`; `index.html` pointing at `/react/`; a second (external) Leaflet tile layer and an external URL in the app source; a
+changed `package-lock.json`; an added runtime dependency; a byte appended to vendored `leaflet.js`, to a bundled font and an external URL
+to `OrbitControls.js`; `.gitattributes` no longer protecting the vendor bytes; a tampered pin; and, for the mount: the 503 changed to a
+404, the missing-build check removed, the mount made conditional on the directory, `/react/` serving content, a catch-all registered
+before the mount, a custom 404 handler, a single-page fallback, the retired `react_ui` key restored, and the old directory recreated.
+**23 of 23 were caught** by the tests named for them.
+
+### Known gaps
+
+* **Font provenance.** The seven web fonts the console ships (Inter ×4, JetBrains Mono ×3, in `analyst/vendor/fonts/`) are **not in the
+  provenance manifest**. `scripts/stage_fonts.py` is written to record them, but the manifest in this repository holds no entry for any
+  font, so there is no recorded source URL or licence line tied to their hashes. They are pinned only through the React build pins
+  (`build-pins.json` records each copied font's SHA-256 and its `vendor_source`), which proves the shipped bytes cannot change unnoticed
+  but not where they came from. The source and licence stated in `stage_fonts.py` (Inter v4.1, JetBrains Mono v2.304, SIL OFL 1.1) were
+  **not** re-verified against these bytes. No manifest entries were generated to hide this: that needs a fresh fetch and a comparison
+  against the upstream release.
+* **Source-versus-bundle freshness** is not tested (see the Dockerfile note in §1).
+* **Maxar thumbnails** (`/tile/<id>/thumbnail` for `103001…` tiles) answer 404 "not staged on this machine" on this machine; the e2e run
+  logs those as page problems. It is a data condition, not a routing one.
+* `docs/licenses/IBM-Plex-OFL.txt` has no corresponding font in the repository (not touched here).
 
 ## 7. Findings worth knowing about
 

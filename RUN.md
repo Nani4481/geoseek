@@ -80,11 +80,16 @@ INFO:     Application startup complete.
 INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
 ```
 
-Open the **analyst UI** in a browser:
+Open the **analyst console** in a browser:
 
 ```
 http://127.0.0.1:8000/app/
 ```
+
+The console is a React build that is **committed to the repository** (`src/geoseek/analyst/web_react/`), so nothing here needs Node
+or npm. `/react/` (its former address) redirects to `/app/`. If that directory is ever missing, `/app/` answers **503** with a page that
+names it and the command that rebuilds it (`cd frontend-react && npm ci && npm run build`, which needs Node); the API keeps working
+meanwhile. A Docker image ships the committed build as-is (the Dockerfile has no Node step).
 
 Other useful URLs: API docs `http://127.0.0.1:8000/docs`, service index
 `http://127.0.0.1:8000/`.
@@ -141,8 +146,8 @@ Open:
 http://127.0.0.1:8000/search/text?q=a river with sandbars&k=5
 ```
 
-or use the **Search** view in the analyst UI at `http://127.0.0.1:8000/app/` —
-type the query, results render on the canvas map with thumbnails.
+or use the **Search** view in the analyst console at `http://127.0.0.1:8000/app/#/search` —
+type the query, results render on the map with thumbnails.
 
 ---
 
@@ -252,31 +257,62 @@ to a throwaway copy of the catalog, so `data/index` is untouched.
 python scripts\verify_offline_perf.py
 ```
 
-Expected output:
+Expected output (an example from one run on the development laptop, trimmed; latencies vary by machine and this is a pass/fail
+check, not a benchmark, so the power source was not recorded):
 
 ```
-network: HARD-DISABLED (8.8.8.8 probe raised as expected)
-app boot: ~2.9 s   (RemoteCLIP + FAISS + SQLite + rasters, all local)
+app booted offline in 6.3s (RemoteCLIP + FAISS + catalog + change report all from local files)
+COLD start (first interaction; encoders + thumbnail path pre-warmed at startup, thumbnail LRU still cold):
+  GET /search/text  (1st call)                   26.6 ms
+...
+functional checks (every view actually works offline):
+  [PASS] health / stats
+  [PASS] overview summary (counters + featured, offline)
+  [PASS] search returns hits
+  [PASS] queue lists candidates + footprints
+  [PASS] detail has evidence + suppression trace + provenance
+  [PASS] imagery renders PNG
+  [PASS] decision written to append-only audit
+  [PASS] export carries provenance
+  [PASS] discovery KNN + clusters
+  [PASS] console page served (root element + module script + entry bundle)
 
-view            p95
-------------    ------
-search           16 ms
-review queue     48 ms
-candidate detail 155 ms
-imagery (cold)   117 ms
-imagery (warm)     2 ms
-decision         169 ms
-audit            18 ms
-export (1104)    313 ms
-
-ALL VIEWS < 1 s WITH NETWORK DOWN  ->  PASS
-no socket leaks detected
+LATENCY SUMMARY (p95):
+  ok   GET /presentation/summary              38.6 ms
+  ok   GET /health                            18.8 ms
+  ok   GET /stats                             22.9 ms
+  ok   GET /search/text                       28.9 ms
+  ok   GET /tile/{id}/thumbnail (warm)         1.4 ms
+  ok   POST /search/image                     36.8 ms
+  ok   GET /candidates (queue, 400)           60.0 ms
+  ok   GET /candidates (filtered)             17.7 ms
+  ok   GET /candidates/{id} (detail)          31.5 ms
+  ok   GET .../imagery rgb (cold)             55.6 ms
+  ok   GET .../imagery rgb (warm/LRU)          0.8 ms
+  ok   GET .../imagery overlay (cold)         64.9 ms
+  ok   GET .../imagery rgb x2 (cold)         137.8 ms
+  ok   POST /candidates/{id}/decision         23.9 ms
+  ok   GET /audit                             34.4 ms
+  ok   POST /export (filtered ~30)            47.5 ms
+  ok   POST /export (all 1104)               212.1 ms
+  ok   GET /discovery/clusters                86.6 ms
+  ok   GET /candidates/{id}/similar          381.2 ms
+  ok   GET /discovery/similar (lon,lat)      382.6 ms
+no process made (or attempted) a non-loopback network call
+functional checks: ALL PASS
+every interactive path is well under the 1 s budget
 ```
 
-To demo the **UI** fully offline: disable your network adapter (or pull the
+The last functional check is the **console page**: `GET /app/` must return 200 with the root mount element (`<div id="root"></div>`)
+and the module `<script>` of the console's own entry bundle (`/app/assets/index-….js`), and that bundle must itself be served as
+JavaScript. A different page at `/app/` would fail all three.
+
+To demo the **console** fully offline: disable your network adapter (or pull the
 cable / turn off Wi-Fi), then run step 2 and open `http://127.0.0.1:8000/app/` —
-the canvas map, thumbnails, imagery and change queue all work with zero
-outbound requests (no CDN, no web fonts, no map tiles).
+the map, thumbnails, imagery and change queue all work with zero outbound
+requests (no CDN, no web fonts, no external map tiles: the base map is rendered by
+this server from imagery already in the archive). A browser-level check of every
+route is `node frontend-react/tools/verify-offline.mjs --base http://127.0.0.1:8000/app/`.
 
 ---
 

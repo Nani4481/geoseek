@@ -1147,17 +1147,22 @@ Licence: `ultralytics` and the weights are AGPL-3.0 (optional extra, isolated be
 
 ## 16. Offline guarantee — what is claimed, and how it is checked
 
-**Claim: zero external network requests at runtime.** It is *not* "zero external URL strings in shipped assets":
-vendored third-party libraries legitimately contain attribution banners, XML namespace identifiers, browser-bug
-citations and diagnostic text. A reader who greps `vendor/` will find them; none is ever fetched.
+**What is being audited.** The analyst interface is a React 19 + TypeScript single-page console built with Vite. **It has a build
+step** (`cd frontend-react && npm ci && npm run build`) and is served at `/app/` by the same FastAPI process as the API. It replaced an
+earlier hand-written vanilla-JavaScript interface, which has been deleted. The built output is **committed**
+(`src/geoseek/analyst/web_react/`), so running the system needs no Node, and every emitted file is byte-pinned by SHA-256
+(`frontend-react/build-pins.json`). The Docker image has no Node stage and ships the committed bundle. The third-party files the
+build bundles live in `src/geoseek/analyst/vendor/`. Details: `docs/FRONTEND_REACT.md`.
 
-**What is in the vendored assets** (`src/geoseek/analyst/web/vendor/`; found by the offline guard, classified one by one,
-12 flagged occurrences = 8 distinct URLs, plus 2 relative `sourceMappingURL` comments and one regex-source fragment):
+**Claim: zero external network requests at runtime.** It is *not* "zero external URL strings in shipped assets":
+vendored third-party libraries (and the bundle built from them) legitimately contain attribution banners, XML namespace identifiers,
+browser-bug citations and diagnostic text. A reader who greps `vendor/` or the built bundle will find them; none is ever fetched.
+
+**What is in the vendored assets** (`src/geoseek/analyst/vendor/`; found by the offline guard, classified one by one,
+10 flagged occurrences = 6 distinct URLs, plus 1 relative `sourceMappingURL` comment and one regex-source fragment):
 
 | file | URL string | class |
 |---|---|---|
-| `chart.umd.js` | `https://www.chartjs.org`; `https://github.com/kurkle/color#readme` | attribution comment (licence banners) |
-| `chart.umd.js` | `sourceMappingURL=chart.umd.js.map` | sourcemap comment — relative, `.map` not shipped, devtools-only |
 | `leaflet.css` | `bugs.chromium.org/p/chromium/issues/detail?id=600120`; `bugzilla.mozilla.org/show_bug.cgi?id=888319` | other — comments citing browser bugs |
 | `leaflet.js` | `https://leafletjs.com` (header) | attribution comment |
 | `leaflet.js` | `https://leafletjs.com` (inside a string) | other — `<a href>` in the default attribution-control HTML; never rendered, the app sets `attributionControl: false` |
@@ -1167,24 +1172,45 @@ citations and diagnostic text. A reader who greps `vendor/` will find them; none
 | `three.module.min.js` | `https://discourse.threejs.org/t/updates-to-lighting-in-three-js-r155/53733` (×2) | other — text inside a `console.warn` |
 | `three.module.min.js` | `https?://` (regex source, ×2) | other — URL-detection regex text, not a URL |
 
-**Live runtime fetches: none.** This was established by tracing network *sinks*, not by grepping for `http`:
-no non-vendored file contains an `http(s)` string; Leaflet is constructed with `attributionControl: false` and used only
-through `L.imageOverlay(<same-origin API URL>)` (there is no `L.tileLayer`, i.e. no tile-server fetch); every three.js
-texture is loaded via `new URL(name, "../vendor/earth/")`; the generic loaders inside the libraries (`fetch(`, `.src =`)
-only ever receive URLs the app passes them. This is a static argument plus the guard below; the end-to-end check that
-backs it at runtime is the network-disabled UI run described in `RUN.md`.
+**What is in the built bundle** (`src/geoseek/analyst/web_react/`): nine distinct inert URL strings (ten file-level occurrences), each
+classified in `geoseek.staging.react_build_pins.ALLOWED_URLS` and enumerated per file in `build-pins.json`: five W3C XML-namespace
+identifiers, a React error-documentation string, a three.js console-warning string, a geotiff.js error-message string and Leaflet's
+attribution `href`. None is dereferenced.
 
-**How it is kept true.** `tests/test_frontend_offline.py` scans every text file under the web root, requires each vendored
-file's URL strings to be enumerated in the provenance manifest, and (since Phase 10) requires **every** vendored file —
-URL-bearing or not — to be pinned by SHA256 (`OrbitControls.js` previously passed a hash check it was never subjected to).
-The allowlist content is committed in `geoseek.staging.vendor_provenance` and regenerated offline with
+**Live runtime fetches: none.** This was established by tracing network *sinks*, not by grepping for `http`, and then measured. Static:
+the console's own source (`frontend-react/src`) contains no external URL at all (scanned with no allowlist); the page's
+Content-Security-Policy is `default-src 'self'` with `connect-src 'self'`, so the browser itself refuses any other origin; Leaflet is
+constructed with `attributionControl: false`. The console has **exactly one Leaflet tile layer and it is same-origin**:
+`/ui/basemap/{z}/{x}/{y}`, rendered by this server (`src/geoseek/analyst/basemap.py`) from imagery already in the archive. It is not a
+tile service, and the test fails if a second tile layer or any external template appears. Candidate imagery is drawn as same-origin PNGs,
+and the three.js textures are bundled same-origin assets (`/app/assets/day-*.jpg`, `night-*.jpg`). The generic loaders inside the
+libraries (`fetch(`, `.src =`) only ever receive URLs the app passes them. Measured: headless Chrome over the DevTools protocol
+(`frontend-react/tools/verify-offline.mjs`) visited 16 routes (every screen, deep links to a candidate, the Brief alias and an unknown
+route) and logged 196 requests, **0 external**, 0 CSP blocks; the 98-step e2e run made 2,495 requests, **0 external**; and
+`scripts/verify_offline_perf.py` runs the whole API with non-loopback sockets hard-disabled in process (see `RUN.md`). Figures are from
+the run that retired the original interface and vary with the run.
+
+**How it is kept true.** `tests/test_frontend_offline.py` scans every text file under `analyst/vendor/`, requires each vendored file's
+URL strings to be enumerated in the provenance manifest, and (since Phase 10) requires **every** vendored file other than the fonts —
+URL-bearing or not — to be pinned by SHA256 (`OrbitControls.js` previously passed a hash check it was never subjected to). For the
+React build it byte-pins every emitted file, classifies every URL string, checks the CSP, scans the app source, locks the toolchain and
+requires `index.html` to reference only `/app/…`. `tests/test_console_mount.py` guards what `/app/` can serve. The allowlist content for
+the vendored files is committed in `geoseek.staging.vendor_provenance` and regenerated offline with
 `python -m geoseek.staging.vendor_provenance`, because the manifest itself is git-ignored.
 
 **A portability trap found on the way.** With `core.autocrlf=true` (the Windows default) a checkout rewrites the vendored
 JavaScript with CRLF line endings: `three.module.min.js` hashed `8acd07f8…` on disk against `3e690ac7…` for the committed
 (upstream) bytes. A hash allowlist recorded from such a working tree fails on every LF checkout (Linux CI, a fresh clone,
-a Docker build). `.gitattributes` now marks `src/geoseek/analyst/web/vendor/** -text`, so vendored bytes are identical on every
-platform and the pinned hashes are the upstream/blob hashes.
+a Docker build). `.gitattributes` now marks `src/geoseek/analyst/vendor/** -text` (the directory was `analyst/web/vendor/` when this was found; it
+was moved when the original interface was retired, byte-identically), so vendored bytes are identical on every platform and the pinned
+hashes are the upstream/blob hashes.
+
+**Known gap — font provenance.** The seven web fonts the console ships (Inter ×4, JetBrains Mono ×3) are **not in the provenance
+manifest**: `scripts/stage_fonts.py` is written to record them, but the manifest holds no entry for any font, so there is no recorded
+source URL or licence line tied to their hashes. They are pinned only through the React build pins, which proves the shipped bytes cannot
+change unnoticed but not where they came from. The source and licence the script states (Inter v4.1, JetBrains Mono v2.304, SIL OFL 1.1)
+have not been re-verified against these bytes, and no manifest entries were generated to hide that. Two further fonts (Cinzel), with no
+recorded source at all, were unused by every interface and were removed.
 
 ---
 
