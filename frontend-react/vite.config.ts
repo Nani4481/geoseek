@@ -10,7 +10,9 @@ const repo = path.resolve(here, '..');
 const VENDOR = path.resolve(repo, 'src/geoseek/analyst/vendor');
 
 export default defineConfig({
-  base: '/react/',
+  // The console is served by the backend at /app/ (see geoseek.search.api). Absolute, so every emitted URL (script, preload,
+  // stylesheet, fonts, textures, lazy chunks) is /app/assets/... whatever path the page is opened at.
+  base: '/app/',
   plugins: [react()],
   resolve: {
     alias: {

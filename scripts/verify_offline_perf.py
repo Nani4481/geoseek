@@ -16,6 +16,7 @@ does not touch data/index.
 
 from __future__ import annotations
 
+import re
 import shutil
 import socket
 import statistics
@@ -249,8 +250,14 @@ def functional_checks():
     sim = client.get(f"/candidates/{CID}/similar", params={"k": 5}).json()
     cl = client.get("/discovery/clusters").json()
     checks.append(("discovery KNN + clusters", len(sim["results"]) >= 1 and cl["available"]))
+    # The console page is the React build: it must carry its root mount element and the module script of ITS entry bundle
+    # (under /app/assets/), and that script must really be served as JavaScript. Another page would lack all three.
     ui = client.get("/app/")
-    checks.append(("frontend bundle served", ui.status_code == 200 and "<canvas" in ui.text))
+    entry = re.search(r'<script type="module"[^>]*\ssrc="(/app/assets/index-[\w-]+\.js)"', ui.text)
+    js = client.get(entry.group(1)) if entry else None
+    checks.append(("console page served (root element + module script + entry bundle)",
+                   ui.status_code == 200 and '<div id="root"></div>' in ui.text and entry is not None
+                   and js.status_code == 200 and "javascript" in js.headers.get("content-type", "")))
 
     allok = True
     for name, ok in checks:

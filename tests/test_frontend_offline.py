@@ -417,7 +417,7 @@ def test_react_index_html_references_only_local_assets():
     refs = re.findall(r"""(?:src|href)=["']([^"']+)["']""", html)
     assert refs, "index.html references nothing?"
     for r in refs:
-        assert r.startswith("/react/") or r.startswith("#"), f"index.html references a non-local asset: {r}"
+        assert r.startswith("/app/") or r.startswith("#"), f"index.html references a non-local asset: {r}"
 
 
 def test_react_app_source_contains_no_external_url_and_only_the_local_basemap_tile_layer():

@@ -11,14 +11,16 @@ Run:
 from __future__ import annotations
 
 import base64
+import html
 import io
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
+from urllib.parse import quote
 
 import numpy as np
-from fastapi import Body, FastAPI, HTTPException, Query
-from fastapi.responses import FileResponse, Response
+from fastapi import Body, FastAPI, HTTPException, Query, Request
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -28,8 +30,8 @@ _engine: SearchEngine | None = None
 _analyst = None            # geoseek.analyst.service.AnalystService (built at startup)
 _analyst_error: str | None = None
 
-_WEB_DIR = Path(__file__).resolve().parents[1] / "analyst" / "web"
-_REACT_DIR = Path(__file__).resolve().parents[1] / "analyst" / "web_react"
+_REACT_DIR = Path(__file__).resolve().parents[1] / "analyst" / "web_react"      # the built console (frontend-react/ -> npm run build)
+_REACT_BUILD_CMD = "cd frontend-react && npm ci && npm run build"
 
 
 @asynccontextmanager
@@ -713,20 +715,54 @@ def ui_detection_points(observation_id: str):
         raise HTTPException(status_code=404, detail=f"no detections for observation {observation_id!r}")
 
 
-# the offline single-page frontend - served by this same process, no CDN.
-if _WEB_DIR.is_dir():
-    app.mount("/app", StaticFiles(directory=str(_WEB_DIR), html=True), name="analyst-web")
+class _ConsoleApp:
+    """The analyst console, mounted at ``/app``. It serves the React build and NOTHING else.
+
+    If the build is not there it answers 503 naming the directory and the command that produces it, so a missing build is
+    a visible failure (the API keeps working, so the backend stays usable before a build exists) and can never be
+    mistaken for a working page or replaced by some other interface. The check is made per request, so a build that
+    disappears while the server is running fails the same way."""
+
+    def __init__(self, directory: Path):
+        self.directory = directory
+        self._static = StaticFiles(directory=str(directory), html=True, check_dir=False)
+
+    def _unavailable(self) -> Response:
+        where = html.escape(str(self.directory))
+        cmd = html.escape(_REACT_BUILD_CMD)
+        body = ("<!doctype html><meta charset=\"utf-8\"><title>GeoSeek console not built</title>"
+                "<h1>GeoSeek console is not built</h1>"
+                f"<p>No build output was found at <code>{where}</code> (<code>index.html</code> is missing), "
+                "so there is nothing to serve at <code>/app/</code>.</p>"
+                f"<p>Build it with: <code>{cmd}</code></p>"
+                "<p>The API is unaffected: see <code>/docs</code>.</p>")
+        return HTMLResponse(body, status_code=503)
+
+    async def __call__(self, scope, receive, send):
+        if not (self.directory / "index.html").is_file():
+            await self._unavailable()(scope, receive, send)
+            return
+        await self._static(scope, receive, send)
 
 
-# the parallel React console (frontend-react/ -> `npm run build` -> analyst/web_react/). Same process, same offline
-# rule; the existing /app mount above is untouched and keeps serving.
-if _REACT_DIR.is_dir():
-    app.mount("/react", StaticFiles(directory=str(_REACT_DIR), html=True), name="analyst-web-react")
+# The offline single-page console: the one frontend, served by this same process (no CDN). Mounted unconditionally.
+app.mount("/app", _ConsoleApp(_REACT_DIR), name="console")
+
+
+@app.api_route("/react", methods=["GET", "HEAD"], include_in_schema=False)
+@app.api_route("/react/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
+def _react_moved(request: Request, path: str = ""):
+    """The console used to be served at /react/. Old links and bookmarks (including the hash route and any asset path)
+    keep working: permanent redirect to the same path under /app/."""
+    target = "/app/" + quote(path, safe="/")
+    if request.url.query:
+        target += "?" + request.url.query
+    return RedirectResponse(target, status_code=308)
 
 
 @app.get("/")
 def _root():
-    return {"service": "geoseek analyst interface", "ui": "/app/", "react_ui": "/react/", "docs": "/docs",
+    return {"service": "geoseek analyst interface", "ui": "/app/", "docs": "/docs",
             "endpoints": ["/search/text", "/search/image", "/candidates", "/candidates/{id}",
                           "/candidates/{id}/imagery", "/candidates/{id}/decision", "/audit",
                           "/export", "/health", "/stats", "/presentation/summary", "/regions",

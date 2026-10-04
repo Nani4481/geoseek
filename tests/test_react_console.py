@@ -1,4 +1,4 @@
-"""Backend support for the React console: the /react/ mount, and the read-only /ui/* projections.
+"""Backend support for the React console: the /app/ mount (and the /react/ redirect), and the read-only /ui/* projections.
 
 Everything runs against small fakes (no production catalog needed): what is asserted is that figures are DERIVED from
 the sources they claim (checkpoint model card, detector eval JSON, catalog repository, trajectory) and never invented.
@@ -26,27 +26,47 @@ def _client():
     return TestClient(app)          # no `with`: the lifespan (model + index load) is deliberately not started
 
 
-def test_react_console_is_served_at_react_and_the_existing_ui_is_unchanged():
-    from geoseek.search.api import _REACT_DIR, _WEB_DIR
+def test_react_console_is_served_at_app():
+    from geoseek.search.api import _REACT_DIR
 
     assert _REACT_DIR.is_dir() and (_REACT_DIR / "index.html").is_file(), "run `npm run build` in frontend-react/"
     c = _client()
-    r = c.get("/react/")
+    r = c.get("/app/")
     assert r.status_code == 200 and "text/html" in r.headers["content-type"] and "GeoSeek Console" in r.text
+    assert 'src="/app/assets/' in r.text, "the page must reference its bundle under the /app/ base"
     asset = next(p for p in (_REACT_DIR / "assets").glob("index-*.js"))
-    assert c.get(f"/react/assets/{asset.name}").status_code == 200
-    # the pre-existing frontend still serves, from the same mount as before, and its directory is not the React one
-    assert _WEB_DIR != _REACT_DIR
-    old = c.get("/app/")
-    assert old.status_code == 200 and "text/html" in old.headers["content-type"]
+    served = c.get(f"/app/assets/{asset.name}")
+    assert served.status_code == 200 and "javascript" in served.headers["content-type"]
+    assert served.content == asset.read_bytes()                      # the committed build, byte for byte
+    assert c.get("/app/favicon.svg").status_code == 200
     body = c.get("/").json()
-    assert body["ui"] == "/app/" and body["react_ui"] == "/react/"
+    assert body["ui"] == "/app/" and "react_ui" not in body
 
 
-def test_react_assets_never_leave_the_react_directory():
+def test_the_retired_react_path_redirects_to_app_keeping_the_rest_of_the_path():
+    from geoseek.search.api import _REACT_DIR
+
     c = _client()
-    assert c.get("/react/../analyst/service.py").status_code in (400, 404)
-    assert c.get("/react/%2e%2e/%2e%2e/config.py").status_code in (400, 404)
+    asset = next(p for p in (_REACT_DIR / "assets").glob("index-*.js"))
+    for old, new in [("/react", "/app/"), ("/react/", "/app/"),
+                     ("/react/assets/x.js?v=1", "/app/assets/x.js?v=1"), ("/react/some%20dir/a", "/app/some%20dir/a")]:
+        r = c.get(old, follow_redirects=False)
+        assert r.status_code == 308 and r.headers["location"] == new, (old, r.status_code, r.headers.get("location"))
+    assert c.head("/react/", follow_redirects=False).status_code == 308
+    # an old bookmark's asset URL still resolves: through the redirect, to the same file
+    followed = c.get(f"/react/assets/{asset.name}", follow_redirects=True)
+    assert followed.status_code == 200 and followed.url.path == f"/app/assets/{asset.name}"
+    # the redirect cannot be steered off-site or out of /app/
+    for evil in ("/react//evil.example.com/x", "/react/%2f%2fevil.example.com"):
+        loc = c.get(evil, follow_redirects=False).headers["location"]
+        assert loc.startswith("/app/") and "://" not in loc
+
+
+def test_app_assets_never_leave_the_build_directory():
+    c = _client()
+    assert c.get("/app/../analyst/service.py").status_code in (400, 404)
+    assert c.get("/app/%2e%2e/%2e%2e/config.py").status_code in (400, 404)
+    assert c.get("/react/%2e%2e/%2e%2e/config.py", follow_redirects=True).status_code in (400, 404)
 
 
 # ------------------------------------------------------------------------- timeline ----------------------------------

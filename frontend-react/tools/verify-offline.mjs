@@ -3,7 +3,7 @@
 // left the page's own origin or a CSP block was raised. This is the runtime counterpart of the static URL scan in
 // tests/test_frontend_offline.py.
 //
-//   node tools/verify-offline.mjs [--base http://127.0.0.1:8000/react/] [--routes a,b/c] [--shots DIR]
+//   node tools/verify-offline.mjs [--base http://127.0.0.1:8000/app/] [--routes a,b/c] [--shots DIR]
 //                                 [--width 1600] [--height 1000] [--settle 2500] [--out report.json]
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -13,7 +13,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) =>
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
   return acc;
 }, []));
-const BASE = args.base || 'http://127.0.0.1:8000/react/';
+const BASE = args.base || 'http://127.0.0.1:8000/app/';
 const ROUTES = (args.routes || '').split(',').filter(Boolean);
 const SETTLE = Number(args.settle || 2500);
 const origin = new URL(BASE).origin;

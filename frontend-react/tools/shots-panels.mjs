@@ -1,7 +1,7 @@
 // Panel screenshots for the layout / basemap pass. Real headless Chrome, real backend; one PNG per panel (cropped to the
 // element's box) plus one per screen. Read-only: it never presses Confirm / Reject.
 //
-//   node tools/shots-panels.mjs --base http://127.0.0.1:8001/react/ --out <dir>
+//   node tools/shots-panels.mjs --base http://127.0.0.1:8001/app/ --out <dir>
 import path from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { launch, sleep } from './cdp.mjs';
@@ -10,7 +10,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) =>
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
   return acc;
 }, []));
-const BASE = args.base || 'http://127.0.0.1:8001/react/';
+const BASE = args.base || 'http://127.0.0.1:8001/app/';
 const OUT = args.out || 'shots';
 const W = Number(args.width || 1600), H = Number(args.height || 2600);
 mkdirSync(OUT, { recursive: true });

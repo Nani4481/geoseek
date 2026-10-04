@@ -2,7 +2,7 @@
   "name": "geoseek-react",
   "private": true,
   "version": "0.1.0",
-  "description": "GeoSeek React demo frontend (parallel to src/geoseek/analyst/web). Built output is served offline at /react/.",
+  "description": "GeoSeek analyst console. Built output (src/geoseek/analyst/web_react/) is committed and served offline at /app/.",
   "type": "module",
   "scripts": {
     "dev": "vite",

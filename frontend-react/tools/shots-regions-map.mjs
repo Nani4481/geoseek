@@ -1,6 +1,6 @@
 // Before/after screenshots of the Dashboard "Findings by region" panel and the Search "Map · spatial filter" panel.
 // Real headless Chrome against a running backend; read-only (never presses Confirm / Reject).
-//   node tools/shots-regions-map.mjs --base http://127.0.0.1:8001/react/ --out <dir> --tag before|after
+//   node tools/shots-regions-map.mjs --base http://127.0.0.1:8001/app/ --out <dir> --tag before|after
 import path from 'node:path';
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { launch, sleep } from './cdp.mjs';
@@ -9,7 +9,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) =>
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
   return acc;
 }, []));
-const BASE = args.base || 'http://127.0.0.1:8001/react/';
+const BASE = args.base || 'http://127.0.0.1:8001/app/';
 const OUT = args.out || 'shots';
 const TAG = args.tag || 'shot';
 const QUERIES = (args.queries || 'an open water reservoir or pond|airport runway and parked aircraft').split('|');

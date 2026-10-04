@@ -1,7 +1,7 @@
 // Screenshots of the intro, the animated rail logo, the Data screen with a real raster dropped on it, and both Temporal modes.
 // Real headless Chrome, real backend, read-only. Needs the fixtures from `python tests/raster_fixtures.py <dir>`.
 //
-//   node tools/shots-temporal.mjs --base http://127.0.0.1:8001/react/ --out <dir> --fixtures <dir>
+//   node tools/shots-temporal.mjs --base http://127.0.0.1:8001/app/ --out <dir> --fixtures <dir>
 import path from 'node:path';
 import { launch, sleep } from './cdp.mjs';
 
@@ -9,7 +9,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) =>
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
   return acc;
 }, []));
-const BASE = args.base || 'http://127.0.0.1:8001/react/';
+const BASE = args.base || 'http://127.0.0.1:8001/app/';
 const OUT = args.out || 'shots';
 const FX = args.fixtures;
 const b = await launch({ width: 1500, height: 1000 });

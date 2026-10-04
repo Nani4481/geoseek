@@ -1,6 +1,6 @@
 // Before/after screenshots of the Discovery and Data screens (and the top bar). Real headless Chrome, real backend, read-only.
 //
-//   node tools/shots-ui4.mjs --base http://127.0.0.1:8001/react/ --out <dir> [--select <cluster id>]
+//   node tools/shots-ui4.mjs --base http://127.0.0.1:8001/app/ --out <dir> [--select <cluster id>]
 import path from 'node:path';
 import { writeFileSync } from 'node:fs';
 import { launch, sleep } from './cdp.mjs';
@@ -9,7 +9,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) =>
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
   return acc;
 }, []));
-const BASE = args.base || 'http://127.0.0.1:8001/react/';
+const BASE = args.base || 'http://127.0.0.1:8001/app/';
 const OUT = args.out || 'shots';
 const b = await launch({ width: 1600, height: 1900 });
 try {

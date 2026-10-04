@@ -1,5 +1,5 @@
 // Before/after screenshots: the Dashboard candidate workbench (Why-this-was-flagged control) and the Search map.
-// Read-only (never presses Confirm / Reject).   node tools/shots-why-map.mjs --base http://127.0.0.1:8001/react/ --out <dir> --tag before|after
+// Read-only (never presses Confirm / Reject).   node tools/shots-why-map.mjs --base http://127.0.0.1:8001/app/ --out <dir> --tag before|after
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { launch, sleep } from './cdp.mjs';
@@ -8,7 +8,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) =>
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
   return acc;
 }, []));
-const BASE = args.base || 'http://127.0.0.1:8001/react/';
+const BASE = args.base || 'http://127.0.0.1:8001/app/';
 const OUT = args.out || 'shots';
 const TAG = args.tag || 'shot';
 const QUERIES = (args.queries || 'an open water reservoir or pond|airport runway and parked aircraft').split('|');

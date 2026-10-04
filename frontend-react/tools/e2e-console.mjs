@@ -5,7 +5,7 @@
 // !! (DATABASE_URL=sqlite:///<copy of tiles.sqlite>), never at the production catalog. The script refuses to run the
 // !! decision step unless --allow-writes is passed.
 //
-//   node tools/e2e-console.mjs --base http://127.0.0.1:8001/react/ --allow-writes [--shots DIR]
+//   node tools/e2e-console.mjs --base http://127.0.0.1:8001/app/ --allow-writes [--shots DIR]
 import path from 'node:path';
 import { externalRequests, launch, sleep } from './cdp.mjs';
 import * as geo from '../src/lib/geo.ts';
@@ -16,7 +16,7 @@ const args = Object.fromEntries(process.argv.slice(2).reduce((acc, a, i, all) =>
   if (a.startsWith('--')) acc.push([a.slice(2), all[i + 1] && !all[i + 1].startsWith('--') ? all[i + 1] : 'true']);
   return acc;
 }, []));
-const BASE = args.base || 'http://127.0.0.1:8001/react/';
+const BASE = args.base || 'http://127.0.0.1:8001/app/';
 const WRITES = args['allow-writes'] === 'true';
 const SHOTS = args.shots || '';
 const origin = new URL(BASE).origin;
@@ -2047,7 +2047,7 @@ try {
 
   await step('chrome: no tier badges, roadmap entry, dashed frames, hatching or rail legend on any screen', async () => {
     const bad = [];
-    for (const r of ['dashboard', 'search', 'changes', 'pipeline', 'detect', 'discovery', 'fingerprints', 'settings', 'roadmap']) {
+    for (const r of ['dashboard', 'search', 'changes', 'pipeline', 'detect', 'discovery', 'fingerprints', 'settings']) {
       await go(r); await sleep(1000);
       const info = await b.evaluate(`(() => ({
         badges: document.querySelectorAll('.tier-badge, [data-tier], .tier-dot, .roadmap-note, .legend').length,
@@ -2061,8 +2061,45 @@ try {
       if (info.text) bad.push(`${r}: tier/roadmap wording`);
     }
     ok(bad.length === 0, bad.join('; '));
-    ok((await b.evaluate('location.hash')) === '#/roadmap' ? (await count('.panel')) > 0 : true, 'unknown route renders a screen');
-    return '9 routes clean; /roadmap no longer exists (falls back to the dashboard)';
+    return '8 routes clean';
+  });
+
+  await step('routes: an unrecognised route shows an explicit not-found state naming it - never the dashboard; #/brief is the Briefing alias', async () => {
+    // What identifies the dashboard: its title in the top bar and its workbench. Neither may appear for an unknown route.
+    const DASHBOARD = `(() => ({ title: document.body.innerText.includes('Situation dashboard'), workbench: !!document.querySelector('.dash-triple') }))()`;
+    const probes = ['nonexistent', 'nonexistent/abc', 'dashbord', 'roadmap', '__proto__', 'constructor'];   // unknown, sub-path, a typo of a real route, a retired route, prototype keys
+    for (const r of probes) {
+      await go(r);
+      await b.waitFor(`!!document.querySelector('[data-testid=route-not-found]')`, 5000, `not-found for #/${r}`);
+      const shown = await text('[data-testid=route-not-found-name]');
+      ok(shown === `#/${r}`, `the state must name the route it did not recognise: expected "#/${r}", got "${shown}"`);
+      const d = await b.evaluate(DASHBOARD);
+      ok(!d.title && !d.workbench, `#/${r} rendered the dashboard (${JSON.stringify(d)})`);
+      ok((await count('.rail a[aria-current=page]')) === 0, `#/${r}: a rail item is marked as the current page`);
+      ok((await text('.topbar .sub')) === 'Page not found', `#/${r}: top bar says "${await text('.topbar .sub')}"`);
+    }
+    await shot('not-found');
+    // the state is a way out, not a dead end: a real click on a listed screen navigates there
+    await go('nonexistent');
+    await b.waitFor(`!!document.querySelector('[data-testid=route-not-found]')`, 5000, 'not-found again');
+    const links = await b.evaluate(`[...document.querySelectorAll('[data-testid=route-not-found] a')].map(a => a.getAttribute('href'))`);
+    ok(links.length >= 10 && links.includes('#/changes') && links.includes('#/briefing'), `screen list: ${links.join(' ')}`);
+    await b.click('[data-testid=route-not-found] a[href="#/changes"]');
+    await b.waitFor(`location.hash === '#/changes' && !document.querySelector('[data-testid=route-not-found]')`, 5000, 'link leaves the not-found state');
+    // the home screen is the one route that may be empty: '' and '#/' are the dashboard, and are NOT not-found
+    for (const h of ['', '#/']) {
+      await b.evaluate(`location.hash = ${JSON.stringify(h)}`); await sleep(500);
+      const d = await b.evaluate(DASHBOARD);
+      ok(d.title && !(await count('[data-testid=route-not-found]')), `hash ${JSON.stringify(h)} must be the home (dashboard) screen: ${JSON.stringify(d)}`);
+    }
+    // the alias: #/brief renders the Briefing screen, exactly as #/briefing does
+    for (const r of ['brief', 'briefing']) {
+      await go(r);
+      await b.waitFor(`!!document.querySelector('[aria-label="Briefing mode"]')`, 8000, `Briefing for #/${r}`);
+      ok(!(await count('[data-testid=route-not-found]')), `#/${r} must not be not-found`);
+    }
+    await go('dashboard');
+    return `${probes.length} unknown routes -> not-found naming each; '' and '#/' -> dashboard; #/brief and #/briefing -> Briefing`;
   });
 
   await step('settings: System / Model performance is API-driven and holds the metrics removed from the dashboard', async () => {
