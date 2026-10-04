@@ -97,7 +97,17 @@ export interface Timeline {
 }
 
 export interface SensorInfo { collection_id: string; sensor: string; platform: string; native_gsd_m: number; n_scenes: number }
-export interface RegionInfo { name: string; bbox: BBox; n_observations: number; candidates: number; center: LonLat }
+/** One sensor's holdings in a region, read from the catalog. `n_coregistered` counts observations that carry a co-registration record. */
+export interface RegionSensor {
+  collection_id: string; platform: string | null; sensor: string | null; n_observations: number; n_acquisitions: number;
+  first_date: string; last_date: string; n_tiles: number; n_coregistered: number;
+}
+/** Catalog figures for a region, plus whether the change pipeline's own observation list touches it. `sensors[0]` has the deepest history. */
+export interface RegionCatalog { analysed: boolean; n_tiles: number; first_date: string; last_date: string; sensors: RegionSensor[] }
+export interface RegionInfo {
+  name: string; bbox: BBox; n_observations: number; candidates: number; center: LonLat;
+  by_type: Record<string, number>; catalog: RegionCatalog | null;
+}
 
 export interface ChangeModelMetrics {
   available: boolean; name?: string; operating_threshold?: number;

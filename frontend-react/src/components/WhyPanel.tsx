@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { CandidateExplain, ExplainTerm, TraceStage } from '@/api/types';
 import { GATE_LABEL, bandOf, fmtPct, isNum } from '@/fmt';
 import { href } from '@/router';
 import { ErrorNote, Loading } from './Widgets';
 import { Panel } from './Panel';
+import { SpectralEvidence } from './SpectralEvidence';
 
 const sgn = (x: number | null | undefined, d = 2) => (isNum(x) ? `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(d)}` : '—');
 const pts = (x: number | null | undefined) => (!isNum(x) || Math.abs(x) < 0.05 ? 'no reduction' : `${sgn(x, 1)} pts`);
@@ -148,6 +149,37 @@ function WhyBody({ ex, raw, setRaw, allTests, setAllTests, onShowPixels, pixelsO
       )}
       <div className="faint" style={{ fontSize: 10.5 }}>{ex.scope}</div>
     </div>
+  );
+}
+
+/** Moves the reader to the explanation and puts focus on it. Reports whether the target existed, so a caller can never fail silently. */
+export function scrollToWhy(): boolean {
+  const t = document.getElementById('why-section');
+  if (!t) return false;
+  t.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  t.focus({ preventScroll: true });
+  return true;
+}
+
+/**
+ * The full explanation for one candidate: the evidence breakdown, the pipeline trace and (on request) the index maps behind it.
+ * One component for every screen that offers "Why this was flagged", so the control and its target cannot drift apart.
+ */
+export function ExplanationSection({ candidateId, ex, error }: { candidateId: string; ex: CandidateExplain | null; error?: string | null }) {
+  const [pixels, setPixels] = useState(false);
+  useEffect(() => { setPixels(false); }, [candidateId]);
+  return (
+    <section className="col" id="why-section" tabIndex={-1} aria-label="Candidate explanation" style={{ marginTop: 14 }}>
+      <div className="why-grid">
+        <WhyPanel ex={ex} error={error} pixelsOpen={pixels} onShowPixels={() => setPixels((p) => !p)} />
+        <PipelineTracePanel ex={ex} error={error} />
+      </div>
+      {pixels && ex?.overlay && (
+        <SpectralEvidence tileId={ex.overlay.tile_id} query={null} onClose={() => setPixels(false)}
+          focus={ex.overlay.focus_indices} footprint={ex.overlay.geometry}
+          title={`Index maps behind the explanation · ${ex.overlay.acquired_at ?? ex.overlay.tile_id}`} note={ex.overlay.note} />
+      )}
+    </section>
   );
 }
 

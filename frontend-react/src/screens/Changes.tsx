@@ -3,8 +3,7 @@ import { api } from '@/api/client';
 import type { BBox } from '@/api/types';
 import { ComparePanel, ConfidencePanel, DecisionPanel, DetailsPanel, LocationPanel, TemporalPanel, useCandidate, useDatePair } from '@/components/CandidatePanels';
 import { Panel } from '@/components/Panel';
-import { SpectralEvidence } from '@/components/SpectralEvidence';
-import { PipelineTracePanel, WhyPanel } from '@/components/WhyPanel';
+import { ExplanationSection, scrollToWhy } from '@/components/WhyPanel';
 import { ErrorNote, Loading } from '@/components/Widgets';
 import { DASH, bandOf, downloadJSON, fmtHa, fmtInt, fmtPct, regionLabel, typeColor } from '@/fmt';
 import { useApi } from '@/hooks/useApi';
@@ -29,7 +28,6 @@ export function Changes({ id }: { id: string | null }) {
   const [region, setRegion] = useState(opened?.region ?? '');
   const [offset, setOffset] = useState(0);
   const [exportMsg, setExportMsg] = useState<string | null>(null);
-  const [pixels, setPixels] = useState(false);
 
   const regions = useApi((s) => api.regions(s), []);
   const bbox: BBox | null = useMemo(() => regions.data?.regions.find((r) => r.name === region)?.bbox ?? null, [regions.data, region]);
@@ -44,7 +42,6 @@ export function Changes({ id }: { id: string | null }) {
 
   const bundle = useCandidate(active);
   const pair = useDatePair(bundle.timeline);
-  useEffect(() => { setPixels(false); }, [active]);
 
   const doExport = async () => {
     setExportMsg(null);
@@ -149,7 +146,7 @@ export function Changes({ id }: { id: string | null }) {
             <TemporalPanel tl={bundle.timeline} pair={pair} error={bundle.error} />
             <div className="wb-grid">
               <ComparePanel id={active} pair={pair} tl={bundle.timeline} />
-              <ConfidencePanel d={bundle.detail} error={bundle.error} />
+              <ConfidencePanel d={bundle.detail} error={bundle.error} onWhy={scrollToWhy} />
               <DetailsPanel d={bundle.detail} error={bundle.error} />
               <DecisionPanel d={bundle.detail} tl={bundle.timeline} before={pair.before} after={pair.active} onChanged={() => { bundle.reload(); list.reload(); }} />
             </div>
@@ -158,19 +155,7 @@ export function Changes({ id }: { id: string | null }) {
         )}
       </div>
     </div>
-    {active && (
-      <section className="col" id="why-section" aria-label="Candidate explanation" style={{ marginTop: 14 }}>
-        <div className="why-grid">
-          <WhyPanel ex={bundle.explain} error={bundle.explainError} pixelsOpen={pixels} onShowPixels={() => setPixels((p) => !p)} />
-          <PipelineTracePanel ex={bundle.explain} error={bundle.explainError} />
-        </div>
-        {pixels && bundle.explain?.overlay && (
-          <SpectralEvidence tileId={bundle.explain.overlay.tile_id} query={null} onClose={() => setPixels(false)}
-            focus={bundle.explain.overlay.focus_indices} footprint={bundle.explain.overlay.geometry}
-            title={`Index maps behind the explanation · ${bundle.explain.overlay.acquired_at ?? bundle.explain.overlay.tile_id}`} note={bundle.explain.overlay.note} />
-        )}
-      </section>
-    )}
+    {active && <ExplanationSection candidateId={active} ex={bundle.explain} error={bundle.explainError} />}
     </>
   );
 }

@@ -34,6 +34,8 @@ export function Search() {
   const [focus, setFocus] = useState<PickedTile | null>(null);
   const [hover, setHover] = useState<string | null>(null);   // tile id hovered on a card or on its map pin
   const [outside, setOutside] = useState<number[]>([]);      // result numbers left out of the map frame (far from the rest)
+  const [frames, setFrames] = useState<{ main: BBox; all: BBox } | null>(null);   // the dominant group's frame, and the frame of every result
+  const [framedAll, setFramedAll] = useState(false);
 
   const suggestions = useMemo(() => {
     const out = new Set<string>();
@@ -48,7 +50,9 @@ export function Search() {
       const r = done(await fn());
       setRes(r); setHover(null);
       const f = fitPoints(r.hits);                               // frame the results on EVERY search, not just the first
+      const all = fitPoints(r.hits, { outlierKm: Infinity });    // ...and keep the frame of ALL results one click away
       setOutside(f.outside.map((i) => i + 1));
+      setFrames(f.bbox && all.bbox ? { main: f.bbox, all: all.bbox } : null); setFramedAll(false);
       if (f.bbox) setFit(f.bbox);
     } catch (e) { setRes(null); setErr(e instanceof Error ? e.message : String(e)); } finally { setBusy(false); }
   };
@@ -66,6 +70,10 @@ export function Search() {
     run(() => api.similarAt(lon, lat, Math.min(k, 50)),
       (r) => ({ mode: 'point', query: null, title: `similar to the map point ${fmtLonLat([lon, lat])}`, latency: r.latency_ms, hits: r.results.map((h) => ({ tile_id: h.tile_id, score: h.score, lon: h.centroid_lonlat[0], lat: h.centroid_lonlat[1], acq_date: h.acq_date, cluster: h.cluster })) }));
 
+  const archiveBox = useMemo<BBox | null>(() => {            // every catalogued region, from the catalog's own boxes
+    const rs = regions.data?.regions ?? [];
+    return rs.length ? [Math.min(...rs.map((r) => r.bbox[0])), Math.min(...rs.map((r) => r.bbox[1])), Math.max(...rs.map((r) => r.bbox[2])), Math.max(...rs.map((r) => r.bbox[3]))] : null;
+  }, [regions.data]);
   const regionBoxes = useMemo(() => (regions.data?.regions ?? []).map((r) => ({ name: r.name, bbox: r.bbox, label: regionLabel(r.name) })), [regions.data]);
   const points: MapPoint[] = useMemo(() => {
     const out: MapPoint[] = (res?.hits ?? []).map((h, i) => ({ id: h.tile_id, lon: h.lon, lat: h.lat, pin: { text: String(i + 1) }, label: `#${i + 1} · ${h.acq_date} · similarity ${h.score.toFixed(3)} · click for more like this` }));
@@ -154,16 +162,31 @@ export function Search() {
               title="Drag a rectangle on the map to restrict the search to it">{draw ? '✎ Drawing… (Esc)' : '▭ Draw box'}</button>
           </>
         )}>
-        <GeoMap ariaLabel="Search map" regions={regionBoxes} points={points} bbox={bbox} fit={fit} drawMode={draw} height={540} basemap={{}}
+        <GeoMap ariaLabel="Search map" regions={regionBoxes} regionLabels clusterPins cartography catalogRegions={regionBoxes.length || undefined} points={points} bbox={bbox} fit={fit} drawMode={draw} height={540} basemap={{}}
           hoverId={hover} onHover={setHover} onCancelDraw={() => setDraw(false)}
           onBBox={(b) => { setBbox(b); setDraw(false); }}
           onMapClick={(lon, lat) => moreLikePoint(lon, lat)} onPointClick={(id) => moreLikeTile(id)} />
         {outside.length > 0 && (
           <div className="warnbox" style={{ margin: '8px 12px 0' }} data-testid="map-outside">
-            {outside.length === 1 ? `Result #${outside[0]} lies` : `Results ${outside.map((n) => '#' + n).join(', ')} lie`} far from the others and outside this map view; the cards below still show {outside.length === 1 ? 'it' : 'them'}.
+            {framedAll
+              ? <>The map now frames all {res?.hits.length} results, including {outside.length === 1 ? `#${outside[0]}` : outside.map((n) => '#' + n).join(', ')} far from the rest.</>
+              : <>{outside.length === 1 ? `Result #${outside[0]} lies` : `Results ${outside.map((n) => '#' + n).join(', ')} lie`} far from the others and outside this map view; the cards below still show {outside.length === 1 ? 'it' : 'them'}.</>}
+            {frames && (
+              <button className="btn sm" style={{ marginLeft: 8 }} data-testid="map-frame-toggle"
+                onClick={() => { setFit([...(framedAll ? frames.main : frames.all)] as BBox); setFramedAll(!framedAll); }}>
+                {framedAll ? 'Back to the main group' : `Zoom out to all ${res?.hits.length} results`}
+              </button>
+            )}
           </div>
         )}
-        <div className="faint" style={{ padding: '7px 12px', fontSize: 11 }}>Numbered pins match the result cards (hover either to see the other). Click the map → find places that look like that point · click a pin → more like that tile · “Draw box” → restrict the search area.</div>
+        {regionBoxes.length > 0 && (
+          <div className="gm-regions" data-testid="map-regions" aria-label="Catalogued regions">
+            <span className="dim">{regionBoxes.length} catalogued regions · click one to zoom to it:</span>
+            {regionBoxes.map((r) => <button key={r.name} className="chip" onClick={() => setFit([...r.bbox] as BBox)} title={`${r.name} · ${r.bbox.map((v) => v.toFixed(2)).join(', ')}`}>{r.label}</button>)}
+            {archiveBox && <button className="btn sm" onClick={() => setFit([...archiveBox] as BBox)} title="Fit every catalogued region">Show all regions</button>}
+          </div>
+        )}
+        <div className="faint" style={{ padding: '7px 12px', fontSize: 11 }}>Outlined boxes are the archive’s catalogued regions; imagery exists only inside them. Numbered pins match the result cards (hover either to see the other); a badge with a count groups results that overlap at this zoom — click it to zoom in. Click the map → find places that look like that point · click a pin → more like that tile · “Draw box” → restrict the search area.</div>
       </Panel>
         <VectorSpace hits={hitIds} selected={focus?.tile_id ?? null} onPick={pickTile} />
       </div>

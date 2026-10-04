@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { api } from '@/api/client';
-import type { Candidate, ConsoleMetrics, LatencyProbe, Notification } from '@/api/types';
+import type { Candidate, ConsoleMetrics, LatencyProbe, Notification, RegionInfo } from '@/api/types';
 import { ComparePanel, ConfidencePanel, DetailsPanel, TemporalPanel, useCandidate, useDatePair } from '@/components/CandidatePanels';
+import { ExplanationSection, scrollToWhy } from '@/components/WhyPanel';
 import { Globe, type Focus, type Pin } from '@/components/Globe';
 import { Panel } from '@/components/Panel';
 import { ErrorNote, Loading, StatCard } from '@/components/Widgets';
@@ -12,7 +13,7 @@ import { useApi, type ApiState } from '@/hooks/useApi';
 
 function StatRow({ m, lat }: { m: ApiState<ConsoleMetrics>; lat: ApiState<LatencyProbe> }) {
   const d = m.data;
-  const analysed = d?.findings_by_region.filter((r) => r.candidates > 0).length;
+  const analysed = d?.findings_by_region.filter(isAnalysed).length;
   return (
     <div className="stats" aria-label="Operational figures">
       <StatCard label="Tiles indexed" loading={m.loading} error={m.error} value={fmtInt(d?.counters.tiles_indexed)}
@@ -34,33 +35,115 @@ function StatRow({ m, lat }: { m: ApiState<ConsoleMetrics>; lat: ApiState<Latenc
   );
 }
 
+/** A region counts as analysed when the change pipeline's own observation list touches it (catalog), not merely when it has findings. */
+const isAnalysed = (r: RegionInfo) => (r.catalog ? r.catalog.analysed : r.candidates > 0);
+const monthsOf = (a: string, b: string) => (Date.parse(b) - Date.parse(a)) / 86_400_000 / 30.4375;
+const spanText = (a: string, b: string) => { const m = monthsOf(a, b); return m >= 18 ? `${(m / 12).toFixed(1)} years` : `${m.toFixed(1)} months`; };
+const sensorName = (platform: string | null) => (platform ?? 'unknown').replace(' Open Data Program', '');
+const plural = (n: number, w: string) => `${fmtInt(n)} ${w}${n === 1 ? '' : 's'}`;
+
+/** The figures every region has, straight from the catalog: tiles, observations, acquisition dates, sensor. */
+function CatalogFacts({ r }: { r: RegionInfo }) {
+  const c = r.catalog;
+  if (!c) return <span className="faint">catalog figures unavailable</span>;
+  const p = c.sensors[0];
+  return (
+    <>
+      <span data-field="tiles" title="tiles in the catalog"><b>{fmtInt(c.n_tiles)}</b> tiles</span>
+      <span data-field="observations" title="catalogued observations (one per scene per date)">{plural(r.n_observations, 'observation')}</span>
+      <span data-field="acquisitions" title={`distinct acquisition dates of ${sensorName(p.platform)}`}>{plural(p.n_acquisitions, 'acquisition')}</span>
+      <span data-field="dates" className="mono" title="first and last acquisition of that sensor"><i data-first>{p.first_date}</i>{p.n_acquisitions > 1 ? <> → <i data-last>{p.last_date}</i></> : null}</span>
+      <span data-field="sensor" title={c.sensors.map((x) => `${x.platform} ${x.sensor}: ${x.n_acquisitions} acquisitions`).join(' · ')}>{c.sensors.map((x) => sensorName(x.platform)).join(' + ')}</span>
+    </>
+  );
+}
+
+/** One sentence, computed from the catalog rows above, saying why change analysis has run where it has and not elsewhere. */
+function whyLine(analysed: RegionInfo[], rest: RegionInfo[]): string | null {
+  const a = analysed.filter((r) => r.catalog), o = rest.filter((r) => r.catalog);
+  if (a.length === 0 || o.length === 0) return null;
+  const have = a.map((r) => {
+    const p = r.catalog!.sensors[0];
+    return `${regionLabel(r.name)} has ${plural(p.n_acquisitions, `${sensorName(p.platform)} acquisition`)} (${p.first_date} → ${p.last_date}, ${spanText(p.first_date, p.last_date)}), ${p.n_coregistered} of ${p.n_observations} with a co-registration record`;
+  }).join('; ');
+  const ps = o.map((r) => r.catalog!.sensors[0]);
+  const acq = ps.map((p) => p.n_acquisitions), days = ps.map((p) => Math.round((Date.parse(p.last_date) - Date.parse(p.first_date)) / 86_400_000));
+  const rng = (v: number[]) => (Math.min(...v) === Math.max(...v) ? `${Math.min(...v)}` : `${Math.min(...v)}–${Math.max(...v)}`);
+  return `The change pipeline compares acquisitions pixel by pixel, so it needs a multi-date stack co-registered onto one grid. ${have}. The other ${o.length} regions hold ${rng(acq)} acquisitions each, spanning ${rng(days)} days, with ${ps.reduce((n, p) => n + p.n_coregistered, 0)} of ${ps.reduce((n, p) => n + p.n_observations, 0)} observations carrying a co-registration record.`;
+}
+
+function RegionsPanel({ m }: { m: ApiState<ConsoleMetrics> }) {
+  const { label } = useStore();
+  const d = m.data;
+  const regions = useMemo(() => d?.findings_by_region ?? [], [d]);
+  const done = useMemo(() => regions.filter(isAnalysed).sort((x, y) => y.candidates - x.candidates), [regions]);
+  const rest = useMemo(() => regions.filter((r) => !isAnalysed(r)).sort((x, y) => (y.catalog?.n_tiles ?? 0) - (x.catalog?.n_tiles ?? 0) || x.name.localeCompare(y.name)), [regions]);
+  const maxC = Math.max(1, ...done.map((r) => r.candidates));
+  const why = whyLine(done, rest);
+  return (
+    <Panel title="Findings by region" stack>
+      {m.error ? <ErrorNote error={m.error} onRetry={m.reload} /> : !d ? <Loading rows={6} /> : (
+        <div className="regpanel" data-testid="regions-panel">
+          <section aria-label="Change analysis complete" data-group="analysed">
+            <h4 className="reg-h">Change analysis complete <span className="chip green">{done.length}</span></h4>
+            {done.map((r) => (
+              <div key={r.name} className="reg-done" data-region={r.name}>
+                <div className="brow">
+                  <span title={r.name}>{regionLabel(r.name)}</span>
+                  <div className="bar"><i style={{ width: `${(r.candidates / maxC) * 100}%`, background: 'var(--amber)' }} /></div>
+                  <span className="mono" style={{ textAlign: 'right' }}><b data-field="candidates">{fmtInt(r.candidates)}</b> <span className="faint">candidates</span></span>
+                </div>
+                <div className="reg-types">
+                  {Object.entries(r.by_type).sort((x, y) => y[1] - x[1]).map(([t, n]) => (
+                    <span key={t} className="chip" data-type={t} style={{ color: typeColor(t), borderColor: typeColor(t) }}>{label(t)} <b data-field="type-count">{fmtInt(n)}</b></span>
+                  ))}
+                </div>
+                <div className="reg-facts"><CatalogFacts r={r} /></div>
+              </div>
+            ))}
+            {done.length === 0 && <div className="faint" style={{ fontSize: 11.5 }}>The change pipeline has not been run on any region.</div>}
+          </section>
+          <section aria-label="Indexed and searchable, change analysis not yet run" data-group="not-analysed">
+            <h4 className="reg-h">Indexed and searchable · change analysis not yet run <span className="chip">{rest.length}</span></h4>
+            <div className="reg-grid" role="table">
+              <div className="reg-row head" role="row"><span>Region</span><span className="num">Tiles</span><span className="num">Obs.</span><span className="num">Acq.</span><span>Acquired</span><span>Sensor</span></div>
+              {rest.map((r) => {
+                const c = r.catalog, p = c?.sensors[0];
+                return (
+                  <div key={r.name} className="reg-row" role="row" data-region={r.name}>
+                    <span title={r.name}>{regionLabel(r.name)}</span>
+                    {c && p ? (
+                      <>
+                        <span className="num mono" data-field="tiles">{fmtInt(c.n_tiles)}</span>
+                        <span className="num mono" data-field="observations">{fmtInt(r.n_observations)}</span>
+                        <span className="num mono" data-field="acquisitions" title={`distinct acquisition dates of ${sensorName(p.platform)}`}>{fmtInt(p.n_acquisitions)}</span>
+                        <span className="mono dim" data-field="dates"><i data-first>{p.first_date}</i>{p.n_acquisitions > 1 ? <> → <i data-last>{p.last_date}</i></> : null}</span>
+                        <span data-field="sensor" title={c.sensors.map((x) => `${x.platform} ${x.sensor}: ${x.n_acquisitions} acquisitions`).join(' · ')}>{c.sensors.map((x) => sensorName(x.platform)).join(' + ')}</span>
+                      </>
+                    ) : <span className="faint" style={{ gridColumn: '2 / -1' }}>catalog figures unavailable</span>}
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+          {why && <div className="reg-why" data-testid="regions-why">{why}</div>}
+          <div className="faint" style={{ fontSize: 10.5 }} data-testid="regions-caption">
+            Change pipeline run on: {d.change_pipeline_aoi ?? DASH}. A region with no finding count has not been analysed: that is “not run”, not “nothing found”.
+          </div>
+        </div>
+      )}
+    </Panel>
+  );
+}
+
 function Breakdown({ m }: { m: ApiState<ConsoleMetrics> }) {
   const { label } = useStore();
   const d = m.data;
-  const regions = useMemo(() => [...(d?.findings_by_region ?? [])].sort((a, b) => b.candidates - a.candidates || a.name.localeCompare(b.name)), [d]);
   const types = useMemo(() => Object.entries(d?.findings_by_type ?? {}).sort((a, b) => b[1] - a[1]), [d]);
-  const maxR = Math.max(1, ...regions.map((r) => r.candidates));
   const total = types.reduce((s, [, n]) => s + n, 0) || 1;
   return (
     <div className="dash-pair">
-      <Panel title="Findings by region" stack>
-        {m.error ? <ErrorNote error={m.error} onRetry={m.reload} /> : !d ? <Loading rows={6} /> : (
-          <>
-            <div className="even-rows">
-              {regions.map((r) => (
-                <div key={r.name} className="brow" style={{ opacity: r.candidates ? 1 : 0.55 }}>
-                  <span title={r.name}>{regionLabel(r.name)}</span>
-                  <div className="bar"><i style={{ width: `${(r.candidates / maxR) * 100}%`, background: 'var(--amber)' }} /></div>
-                  <span className="mono" style={{ textAlign: 'right' }}>{fmtInt(r.candidates)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="faint" style={{ fontSize: 10.5, marginTop: 8 }}>
-              Change pipeline run on: {d.change_pipeline_aoi ?? DASH}. Regions showing 0 have not been analysed for change.
-            </div>
-          </>
-        )}
-      </Panel>
+      <RegionsPanel m={m} />
       <Panel title="Findings by change type" stack>
         {m.error ? <ErrorNote error={m.error} onRetry={m.reload} /> : !d ? <Loading rows={6} /> : (
           <>
@@ -116,7 +199,9 @@ export function Dashboard() {
   const pair = useDatePair(bundle.timeline);
   const [focus, setFocus] = useState<Focus | null>(null);
   const [pinInfo, setPinInfo] = useState<string | null>(null);
+  const [whyOpen, setWhyOpen] = useState(false);   // the explanation is collapsed here (the Changes screen always shows it)
 
+  useEffect(() => { if (whyOpen) requestAnimationFrame(() => scrollToWhy()); }, [whyOpen]);
   useEffect(() => { if (!selectedId && top.data?.candidates[0]) select(top.data.candidates[0].candidate_id); }, [top.data, selectedId, select]);
 
   const alerts = useMemo(() => buildAlerts(top.data?.candidates ?? [], notes.data?.notifications ?? [], label), [top.data, notes.data, label]);
@@ -199,8 +284,9 @@ export function Dashboard() {
       <div className="dash-triple">
         {selectedId ? <ComparePanel id={selectedId} pair={pair} tl={bundle.timeline} /> : <Panel title="Before / after"><Loading rows={4} /></Panel>}
         <DetailsPanel d={bundle.detail} error={bundle.error} />
-        <ConfidencePanel d={bundle.detail} error={bundle.error} />
+        <ConfidencePanel d={bundle.detail} error={bundle.error} whyOpen={whyOpen} onWhy={() => setWhyOpen((o) => !o)} />
       </div>
+      {whyOpen && selectedId && <ExplanationSection candidateId={selectedId} ex={bundle.explain} error={bundle.explainError} />}
     </div>
   );
 }

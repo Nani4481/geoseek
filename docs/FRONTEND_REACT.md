@@ -160,7 +160,7 @@ endpoint fails, and (for the figures with a measurement behind them) carries its
 | Embedding-space counts | points drawn / points in the projection / run time / power source | `/ui/projection` (the artifact's own metadata) |
 | Spectral statistics and legends | index statistics, class fractions, colour stops | `/ui/tiles/{id}/spectral` (computed from the staged bands) |
 | Raster header fields | everything on the Data card | parsed from the dropped file in the browser |
-| Findings by region / by change type | candidates per region (point-in-box) and per change type, as bar lists on the Dashboard | `/ui/metrics` → `findings_by_region`, `findings_by_type` |
+| Findings by region / by change type | Dashboard. **By region** is two labelled groups: *Change analysis complete* (candidate count, its per-type breakdown, its catalog figures) and *Indexed and searchable · change analysis not yet run* (tiles, observations, acquisitions, date range, sensor; **no finding count, no zero**). A one-line explanation is computed from the same rows. By change type is a bar list | `/ui/metrics` → `findings_by_region[].{candidates, by_type, catalog}`, `findings_by_type` |
 | Every confidence / persistence / area figure | per candidate | `/candidates`, `/candidates/{id}`, `/ui/candidates/{id}/timeline` |
 
 The AP50 figures were checked against `docs/EVALUATION_REPORT.md` §15 (0.8454 and 0.8536) and against the stored eval JSON.
@@ -348,6 +348,35 @@ linking; polygons can be `selected` (stronger stroke, centre mark, permanent tag
 thousands of cluster cells on a canvas layer. The only tile layer in the source is the same-origin `/ui/basemap` one
 (`tests/test_frontend_offline.py` enforces exactly that).
 
+**Findings by region: not-run is not zero.** Only Ayodhya has been through the change pipeline, so eleven rows of "0" read as "nothing found" when the
+truth is "not run". `/ui/metrics` now returns, for every region, `by_type` (its candidates split by class) and a `catalog` block read from the
+catalog: tiles (`MetadataRepository.count_tiles_by_observation`, a non-abstract seam method with a SQL override), observations, and per sensor the
+acquisition dates, first / last date and how many observations carry a co-registration record. `catalog.analysed` is true when the pipeline's own
+observation list (`report["observations"]`) touches the region, not merely when it has findings. The panel shows no finding count for a region that
+was not analysed. The explanation line is generated from those fields; it reports measured facts and does **not** claim a lack of temporal depth,
+because several un-analysed regions have as many or more acquisitions than Ayodhya's five. What differs in the catalog is that Ayodhya's
+acquisitions span years and all carry a co-registration record, while the others span at most a few months and carry none.
+`tools/e2e-console.mjs` asserts every displayed figure against `/ui/metrics`, cross-checks observations against `/regions`, candidates against
+`/candidates?bbox=`, and the region tile sum against `counters.tiles_indexed`.
+
+**Search map cartography** (`cartography` prop). No boundary or coastline data is used. A graticule is drawn over the imagery from the current view, its
+step refining with zoom, with degree labels down the right edge and along the top; a metric scale bar (Leaflet's own control, verified against Web
+Mercator metres per pixel in the e2e); and a north indicator. A national or state boundary is deliberately not drawn: depiction of India's
+boundary is legally regulated and open datasets differ from the official one, so it needs a named source and explicit approval first.
+
+**Search map legibility.** The archive is about a dozen small areas, so most of any wide view is genuinely unstaged and dark. The Search map
+makes that coverage readable instead of leaving it to look like a failed load (opt-in props, so other screens are unchanged):
+`regionLabels` outlines every catalogued region from `/regions` (the catalog's own boxes, no hard-coded bounds), prints its name where it
+fits (greedy, largest first, never over another name, a pin, or the frame edge; a name moved off its footprint gets a thin leader line) and adds a fixed-size marker for footprints under 14 px;
+`clusterPins` groups overlapping result pins (closer than one pin width on screen, recomputed at every zoom, no external library) into a count
+badge whose tooltip lists the card numbers (`#3, #7, …`) and whose click zooms in, while single pins keep their card number;
+`catalogRegions` puts the region count in the caption ("imagery exists only inside them, so dark means outside the archive, not a failed
+load"). Under the map a chip per region zooms to that region's box, and "Show all regions" fits their union. Results more than 2,500 km from
+the medoid of the others (the Los Angeles Maxar hits next to India results) stay out of the default frame, as before, but the warning now
+carries a **Zoom out to all N results / Back to the main group** control; the map's minimum zoom is 1 so all results can fit a narrow panel.
+No landmass or coastline layer is drawn: that would be new vector data and needs bundling, a provenance entry and approval first.
+
+
 ## Explainability and false-alarm suppression
 
 Two features on top of the existing change pipeline. **No model changes and no new claims**: both are read-only views of what the
@@ -357,7 +386,11 @@ pipeline already stored, in `src/geoseek/analyst/explain.py`, behind `GET /ui/ca
 
 The pieces already existed but were scattered (rule, spectral deltas, gates, confidence lines, SAR, terrain, the spectral overlay) and
 read as debug output. They are now one panel, with the older panels reduced to what they own (the Confidence panel keeps the ring, band
-and SAR status; Change details keeps the facts and the rule; both link down to the explanation).
+and SAR status; Change details keeps the facts and the rule). **One control**, *Why this was flagged*, in the Confidence panel opens it:
+on Changes it brings the always-visible row into view and moves focus there; on the Dashboard, which has no such row, the same
+`ExplanationSection` component expands inline below the workbench (the control reports `aria-expanded`; a second click collapses it). It
+used to be two identically labelled buttons that called `getElementById('why-section')?.scrollIntoView()`, which on the Dashboard found
+nothing and failed silently.
 
 - **Lead sentence**, generated server-side from the rule that fired and the stored anomalies, e.g. *"Built-up index rose sharply (+0.38 vs.
   season) while vegetation fell (−0.09 vs. season) — consistent with new construction. Present on 4 of 5 acquisition dates since

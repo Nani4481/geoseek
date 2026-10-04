@@ -177,8 +177,6 @@ export function ComparePanel({ id, pair, tl }: { id: string; pair: ReturnType<ty
   );
 }
 
-const jumpToWhy = () => document.getElementById('why-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
 export function DetailsPanel({ d, error }: { d: CandidateDetail | null; error?: string | null }) {
   const { label } = useStore();
   return (
@@ -199,14 +197,14 @@ export function DetailsPanel({ d, error }: { d: CandidateDetail | null; error?: 
             <dt>Model probability</dt><dd>{fmtPct(d.mean_model_prob)}</dd>
             <dt>Queue score</dt><dd>{isNum(d.queue_score) ? d.queue_score.toFixed(3) : DASH}</dd>
           </dl>
-          <div className="faint" style={{ fontSize: 11 }}>Spectral evidence, terrain and the typing thresholds: <button className="btn sm" onClick={jumpToWhy}>Why this was flagged ↓</button></div>
         </div>
       )}
     </Panel>
   );
 }
 
-export function ConfidencePanel({ d, error }: { d: CandidateDetail | null; error?: string | null }) {
+/** `onWhy` opens / moves to the full explanation. `whyOpen` is given only where the explanation can be collapsed (the Dashboard). */
+export function ConfidencePanel({ d, error, onWhy, whyOpen }: { d: CandidateDetail | null; error?: string | null; onWhy: () => void; whyOpen?: boolean }) {
   const band = bandOf(d?.confidence);
   const sarOk = !!(d && (d.sar as { available?: boolean }).available);
   return (
@@ -221,7 +219,12 @@ export function ConfidencePanel({ d, error }: { d: CandidateDetail | null; error
               <div className="dim" style={{ fontSize: 11 }}>combined down-weight {isNum(d.suppression?.combined_downweight) ? d.suppression.combined_downweight.toFixed(2) : DASH}</div>
             </div>
           </div>
-          <div className="faint" style={{ fontSize: 11 }}>What each piece of evidence contributed, the gate trace and the raw numbers: <button className="btn sm" onClick={jumpToWhy}>Why this was flagged ↓</button></div>
+          <div className="faint" style={{ fontSize: 11 }}>
+            <button className={`btn sm ${whyOpen ? 'on' : ''}`} onClick={onWhy} aria-controls="why-section" aria-expanded={whyOpen} data-testid="why-open">
+              Why this was flagged {whyOpen ? '↑' : '↓'}
+            </button>{' '}
+            Evidence contributions, spectral tests against the typing thresholds, terrain, the gate trace and the raw numbers.
+          </div>
           <div>
             <div className="dim" style={{ fontSize: 10, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 4 }}>SAR corroboration</div>
             {sarOk ? (

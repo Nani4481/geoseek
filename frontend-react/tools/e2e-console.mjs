@@ -147,17 +147,20 @@ try {
 
   await step('dashboard: findings by region / by change type equal the API', async () => {
     const m = await api('/ui/metrics');
-    await b.waitFor(`document.querySelectorAll('.brow').length >= ${m.findings_by_region.length}`, 10000, 'breakdown rows');
-    const rows = await b.evaluate(`[...document.querySelectorAll('.dash-pair .panel')].map(p => [...p.querySelectorAll('.brow')].map(r => r.innerText.replace(/\s+/g, ' ').trim()))`);
-    ok(rows.length === 2, 'two breakdown panels');
+    await b.waitFor(`document.querySelectorAll('[data-testid=regions-panel] [data-region]').length === ${m.findings_by_region.length}`, 10000, 'one row per region');
+    const rows = await b.evaluate(`({
+      regions: [...document.querySelectorAll('[data-testid=regions-panel] [data-region]')].map(r => ({ name: r.dataset.region, candidates: r.querySelector('[data-field=candidates]')?.innerText ?? null, text: r.innerText.replace(/\\s+/g, ' ').trim() })),
+      types: [...document.querySelectorAll('.dash-pair .panel')].pop() ? [...[...document.querySelectorAll('.dash-pair .panel')].pop().querySelectorAll('.brow')].map(r => r.innerText.replace(/\\s+/g, ' ').trim()) : [] })`);
     const total = m.findings_by_region.reduce((s, r) => s + r.candidates, 0);
-    ok(rows[0].length === m.findings_by_region.length, `region rows ${rows[0].length}`);
-    ok(rows[0][0].endsWith(String(Math.max(...m.findings_by_region.map((r) => r.candidates)))), `top region row: ${rows[0][0]}`);
+    ok(rows.regions.length === m.findings_by_region.length, `region rows ${rows.regions.length}`);
+    const withCount = rows.regions.filter((r) => r.candidates !== null);
+    ok(withCount.length === m.findings_by_region.filter((r) => r.catalog.analysed).length, 'only analysed regions show a finding count');
+    ok(withCount[0].candidates.replace(/\D/g, '') === String(Math.max(...m.findings_by_region.map((r) => r.candidates))), `top region row: ${withCount[0].text}`);
     ok(total === m.counters.change_candidates, `regions sum ${total} vs candidates ${m.counters.change_candidates}`);
     const typeTotal = Object.values(m.findings_by_type).reduce((a, c) => a + c, 0);
-    ok(rows[1].length === Object.keys(m.findings_by_type).length && typeTotal === m.counters.change_candidates, 'type rows / total');
-    ok(rows[1].some((r) => r.includes(String(Math.max(...Object.values(m.findings_by_type))))), 'top type count shown');
-    return `${rows[0][0]} | ${rows[1][0]}`;
+    ok(rows.types.length === Object.keys(m.findings_by_type).length && typeTotal === m.counters.change_candidates, 'type rows / total');
+    ok(rows.types.some((r) => r.includes(String(Math.max(...Object.values(m.findings_by_type))))), 'top type count shown');
+    return `${withCount[0].text.slice(0, 40)} | ${rows.types[0]}`;
   });
 
   await step('dashboard: alert feed -> selects candidate, timeline N of M matches API', async () => {
@@ -883,6 +886,7 @@ try {
   await step('vector space: clicking a point pans the map to that tile', async () => {
     // click exactly on a drawn point; the expected result is the point nearest to the click on screen (front-most on a tie)
     const pick = await b.evaluate(`(() => {
+      document.querySelector('.vec-stage').scrollIntoView({ block: 'center' });      // the stage can sit below the fold; the click is a raw screen point
       const v = document.querySelector('.vec-stage').__vec, r = document.querySelector('.vec-stage canvas').getBoundingClientRect();
       const P = []; for (let i = 0; i < v.count; i++) P.push(v.project(i));
       const cx = (r.left + r.right) / 2, cy = (r.top + r.bottom) / 2;
@@ -1669,8 +1673,15 @@ try {
     const msg = await checkBasemap('search map', scope, 'sentinel-2');
     const cards = await b.evaluate(`[...document.querySelectorAll('.rcard')].map((c) => ({ tile: c.dataset.tile, n: +c.dataset.n }))`);
     const pins = await b.evaluate(`[...document.querySelectorAll('${scope} .gm-pin[data-pin]')].map((p) => ({ tile: p.dataset.pin, text: p.innerText }))`);
-    ok(pins.length === cards.length, `pins ${pins.length} vs cards ${cards.length}`);
-    for (const c of cards) ok(pins.find((p) => p.tile === c.tile)?.text === String(c.n), `pin for card #${c.n} is not numbered ${c.n}`);
+    // overlapping pins are grouped into one count badge that lists the member tiles and their card numbers
+    const clusters = await b.evaluate(`[...document.querySelectorAll('${scope} .gm-pin.cluster')].map((p) => ({ ids: p.dataset.cluster.split(' '), nums: p.dataset.numbers.split(' '), count: +p.dataset.count, text: p.innerText }))`);
+    ok(clusters.every((k) => k.count === k.ids.length && k.text === String(k.count) && k.ids.length >= 2), 'a cluster badge does not show its member count');
+    ok(pins.length + clusters.reduce((n, k) => n + k.count, 0) === cards.length, `pins ${pins.length} + clustered ${clusters.reduce((n, k) => n + k.count, 0)} vs cards ${cards.length}`);
+    for (const c of cards) {
+      const one = pins.find((p) => p.tile === c.tile);
+      const grp = clusters.find((k) => k.ids.includes(c.tile));
+      ok(one ? one.text === String(c.n) && !grp : grp && grp.nums[grp.ids.indexOf(c.tile)] === String(c.n), `card #${c.n} is not shown as pin #${c.n} or inside a cluster that lists #${c.n}`);
+    }
     // fit on every search: every hit not reported as "outside" is inside the map view
     const st = await mapState(scope);
     const hits = await b.evaluate(`(() => { const m = document.querySelector('${scope} .leaflet-container').__leaflet; return [...document.querySelectorAll('${scope} .gm-pin[data-pin]')].length; })()`);
@@ -1684,7 +1695,7 @@ try {
     await b.evaluate(`document.querySelector('.rcard[data-n="1"]').scrollIntoView({ block: 'center' })`);
     const cr = await rect('.rcard[data-n="1"] img, .rcard[data-n="1"] .thumb-img');
     await hoverAt(center(cr).x, center(cr).y);
-    await b.waitFor(`document.querySelectorAll('${scope} .gm-pin.hl').length === 1 && document.querySelector('${scope} .gm-pin.hl').dataset.pin === ${JSON.stringify(first.tile)}`, 4000, 'card hover highlights its pin');
+    await b.waitFor(`document.querySelectorAll('${scope} .gm-pin.hl').length === 1 && (() => { const h = document.querySelector('${scope} .gm-pin.hl'); return h.dataset.pin === ${JSON.stringify(first.tile)} || (h.dataset.cluster || '').split(' ').includes(${JSON.stringify(first.tile)}); })()`, 4000, 'card hover highlights its pin (or the cluster holding it)');
     // pin -> card (a real pointer over a pin that is topmost at its own centre)
     await hoverAt(5, 5);
     await b.evaluate(`document.querySelector('${scope} .leaflet-container').scrollIntoView({ block: 'center' })`);
@@ -2077,6 +2088,223 @@ try {
     }
     ok(bad.length === 0, bad.join('; '));
     return '9 routes clean';
+  });
+
+
+  // ---------------------------------------------------------------- "Why this was flagged": ONE control per screen, and it must reveal the explanation
+  await step('why: the single "Why this was flagged" control reveals the explanation on the Dashboard and on Changes (content visible, not just a button)', async () => {
+    const inView = (sel) => `(() => { const e = document.querySelector(${JSON.stringify(sel)}); const m = document.querySelector('main.main'); if (!e || !m) return false; const r = e.getBoundingClientRect(), v = m.getBoundingClientRect(); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden' && r.top < v.bottom - 40 && r.bottom > v.top + 40; })()`;
+    const whyButtons = `[...document.querySelectorAll('button')].filter((x) => x.innerText.startsWith('Why this was flagged')).length`;
+    const resetScroll = `(() => { document.querySelector('main.main').scrollTop = 0; return true; })()`;
+    // ---- Dashboard: the explanation is collapsed until the control is used
+    await go('dashboard');
+    await b.waitFor(`!!document.querySelector('[data-testid=why-open]')`, 30000, 'the control on the dashboard');
+    await sleep(800);
+    ok((await b.evaluate(whyButtons)) === 1, 'there must be exactly one "Why this was flagged" control on the dashboard');
+    ok(!(await b.evaluate(`!!document.getElementById('why-section')`)), 'the explanation should start collapsed on the dashboard');
+    ok((await b.evaluate(`document.querySelector('[data-testid=why-open]').getAttribute('aria-expanded')`)) === 'false', 'control should report aria-expanded=false');
+    const dashId = await b.evaluate(`document.querySelector('.sel-head b.mono').innerText`);
+    const exD = await api(`/ui/candidates/${dashId}/explain`);
+    await b.evaluate(resetScroll);
+    await b.click('[data-testid=why-open]');
+    await b.waitFor(inView('[data-testid="why-lead"]'), 8000, 'dashboard: the lead sentence is on screen after the click');
+    await b.waitFor(inView('[data-testid="trace-list"]'), 8000, 'dashboard: the gate trace is on screen after the click');
+    ok((await text('[data-testid="why-lead"]')).trim() === exD.lead.headline, 'dashboard: the revealed sentence differs from /ui/candidates/{id}/explain');
+    ok((await b.evaluate(`document.querySelectorAll('.ev-row[data-term]').length`)) === exD.evidence.terms.length, 'dashboard: evidence rows differ from the API');
+    ok((await b.evaluate(`document.querySelector('[data-testid=why-open]').getAttribute('aria-expanded')`)) === 'true', 'control should report aria-expanded=true once open');
+    ok((await b.evaluate(`document.activeElement && document.activeElement.id`)) === 'why-section', 'focus should move to the explanation');
+    await shot('why-dashboard-open');
+    await b.click('[data-testid=why-open]');
+    await b.waitFor(`!document.getElementById('why-section') && document.querySelector('[data-testid=why-open]').getAttribute('aria-expanded') === 'false'`, 4000, 'dashboard: a second click collapses it');
+    // ---- Changes: the explanation is always mounted below the workbench; the control must bring it into view
+    await go(`changes/${dashId}`);
+    await b.waitFor(`!!document.querySelector('[data-testid=why-open]') && !!document.querySelector('[data-testid="why-lead"]')`, 30000, 'the control and the explanation on changes');
+    await sleep(800);
+    ok((await b.evaluate(whyButtons)) === 1, 'there must be exactly one "Why this was flagged" control on changes');
+    await b.evaluate(resetScroll);
+    await sleep(300);
+    ok(!(await b.evaluate(inView('[data-testid="why-lead"]'))), 'precondition: the explanation starts below the fold on changes');
+    await b.click('[data-testid=why-open]');
+    await b.waitFor(inView('[data-testid="why-lead"]'), 8000, 'changes: the lead sentence is on screen after the click');
+    ok((await text('[data-testid="why-lead"]')).trim() === exD.lead.headline, 'changes: the sentence differs from the API');
+    ok((await b.evaluate(`document.activeElement && document.activeElement.id`)) === 'why-section', 'changes: focus should move to the explanation');
+    await shot('why-changes-scrolled');
+    return `one control per screen; both reveal "${exD.lead.headline.slice(0, 50)}…" (${exD.evidence.terms.length} evidence rows, ${exD.trace.length} gate stages)`;
+  });
+
+  // ---------------------------------------------------------------- search map legibility
+  await step('maps: search map outlines every catalogued region from the API, names them, lists them, and the caption states the count', async () => {
+    const scope = 'section[aria-label="Map · spatial filter"]';
+    await go('search');
+    await b.waitFor(`!!document.querySelector('${scope} .geomap [data-testid=map-caption]')`, 30000, 'search map');
+    await b.waitFor(captionSettled(scope), 15000, 'caption');
+    await sleep(600);
+    const regs = (await api('/regions')).regions;
+    const outl = await b.evaluate(`(() => { const m = document.querySelector('${scope} .leaflet-container').__leaflet; const o = []; m.eachLayer((l) => { if (l.getBounds && l.options && l.options.weight === 1.8 && l.options.interactive) { const x = l.getBounds(); o.push([x.getWest(), x.getSouth(), x.getEast(), x.getNorth()]); } }); return o; })()`);
+    ok(outl.length === regs.length, `${outl.length} outlines for ${regs.length} catalogued regions`);
+    for (const r of regs) ok(outl.some((x) => x.every((v, i) => Math.abs(v - r.bbox[i]) < 1e-6)), `no outline equal to the catalog box of ${r.name}`);
+    const lbl = await b.evaluate(`(() => { const g = document.querySelector('${scope} .geomap'); return { count: +g.dataset.regionCount, named: +g.dataset.regionLabels, names: [...g.querySelectorAll('.gm-reglbl')].map((e) => e.dataset.region) }; })()`);
+    ok(lbl.count === regs.length, `data-region-count ${lbl.count} vs ${regs.length}`);
+    ok(lbl.named >= 3 && lbl.names.length === lbl.named, `${lbl.names.length} names drawn, ${lbl.named} reported`);
+    ok(lbl.names.every((n) => regs.some((r) => r.name === n)), 'a drawn name is not a catalogued region');
+    ok(new Set(lbl.names).size === lbl.names.length, 'a region name is drawn twice');
+    const chips = await b.evaluate(`[...document.querySelectorAll('[data-testid=map-regions] .chip')].map((c) => c.innerText)`);
+    ok(chips.length === regs.length, `${chips.length} region chips for ${regs.length} regions`);
+    const cap = await text(`${scope} [data-testid=map-caption]`);
+    ok(cap.includes(`${regs.length} catalogued regions`) && /outside the archive, not a failed load/.test(cap), `caption does not state the count / meaning of the dark: "${cap}"`);
+    ok(/one representative acquisition per granule/.test(cap) && /unstaged areas shown dark/.test(cap), 'the caption lost the imagery-selection statement');
+    // a region chip frames that region, from the catalog box
+    const k = regs.find((r) => r.name === 'kutch');
+    await b.evaluate(`[...document.querySelectorAll('[data-testid=map-regions] .chip')].find((c) => c.innerText === 'Kutch').click()`);
+    await sleep(700);
+    const bd = await b.evaluate(`(() => { const x = document.querySelector('${scope} .leaflet-container').__leaflet.getBounds(); return [x.getWest(), x.getSouth(), x.getEast(), x.getNorth()]; })()`);
+    ok(bd[0] <= k.bbox[0] && bd[1] <= k.bbox[1] && bd[2] >= k.bbox[2] && bd[3] >= k.bbox[3], `the Kutch chip did not frame its box: view ${bd.map((v) => v.toFixed(2))} vs ${k.bbox}`);
+    await shot('search-map-regions');
+    return `${outl.length} outlines = catalog boxes; ${lbl.named} names drawn, ${chips.length} chips; caption states ${regs.length} regions`;
+  });
+
+  await step('maps: a result far from the rest is left out of the default frame, named, and one click zooms out to all results (and back)', async () => {
+    const scope = 'section[aria-label="Map · spatial filter"]';
+    const Q = 'airport runway and parked aircraft';
+    await go('search');
+    await b.type('input[aria-label="Search query"]', Q);
+    await b.click('button[type=submit]');
+    await b.waitFor(`document.querySelectorAll('.rcard').length > 0`, 60000, 'results');
+    await b.waitFor(`!!document.querySelector('[data-testid=map-frame-toggle]')`, 8000, 'the zoom-out control');
+    const hits = (await api(`/search/text?q=${encodeURIComponent(Q)}&k=20`)).results;
+    const far = hits.filter((r) => r.lon < -100);
+    ok(far.length > 0 && far.length < hits.length, `fixture: expected the Los Angeles hits among India results (${far.length}/${hits.length})`);
+    const view = () => b.evaluate(`(() => { const x = document.querySelector('${scope} .leaflet-container').__leaflet.getBounds(); return [x.getWest(), x.getSouth(), x.getEast(), x.getNorth()]; })()`);
+    const inside = (v, r) => r.lon >= v[0] && r.lon <= v[2] && r.lat >= v[1] && r.lat <= v[3];
+    await sleep(800);
+    let v = await view();
+    ok(far.every((r) => !inside(v, r)), 'the default frame still includes the far-off hits (it is framing an ocean)');
+    ok(hits.filter((r) => r.lon >= -100).every((r) => inside(v, r)), 'the default frame misses a result of the main group');
+    const warn = await text('[data-testid=map-outside]');
+    ok(far.every((r) => warn.includes('#' + (hits.indexOf(r) + 1))) && /Zoom out to all 20 results/.test(warn), `warning "${warn}"`);
+    await b.click('[data-testid=map-frame-toggle]');
+    await sleep(900);
+    v = await view();
+    ok(hits.every((r) => inside(v, r)), `after "Zoom out to all results" a hit is still outside the view ${v.map((x) => x.toFixed(1))}`);
+    ok(/Back to the main group/.test(await text('[data-testid=map-frame-toggle]')), 'the control did not offer the way back');
+    await shot('search-map-all-results');
+    await b.click('[data-testid=map-frame-toggle]');
+    await sleep(900);
+    v = await view();
+    ok(far.every((r) => !inside(v, r)) && /Zoom out to all 20 results/.test(await text('[data-testid=map-frame-toggle]')), 'the way back did not restore the main-group frame');
+    return `${far.length} Los Angeles hit(s) left out of the default frame; one click frames all ${hits.length}, one click returns`;
+  });
+
+
+  // ---------------------------------------------------------------- Dashboard "Findings by region": measured figures only
+  await step('dashboard: findings by region - two labelled groups, no zero counts, and EVERY displayed figure equals /ui/metrics (cross-checked against /regions and the tile total)', async () => {
+    await go('dashboard');
+    await b.waitFor(`!!document.querySelector('[data-testid=regions-panel]') && document.querySelectorAll('[data-testid=regions-panel] [data-region]').length >= 2`, 30000, 'regions panel');
+    await sleep(500);
+    const m = await api('/ui/metrics');
+    const regs = (await api('/regions')).regions;
+    const num = (t) => Number(String(t).replace(/[^\d]/g, ''));
+    const R = m.findings_by_region;
+    ok(R.length === regs.length && R.every((r) => r.catalog), 'every region must carry catalog figures from the API');
+    const dom = await b.evaluate(`(() => {
+      const out = { heads: [], analysed: [], rest: [] };
+      for (const g of document.querySelectorAll('[data-testid=regions-panel] section[data-group]')) {
+        out.heads.push(g.querySelector('.reg-h').innerText.replace(/\\s+/g, ' ').trim());
+        const key = g.dataset.group === 'analysed' ? 'analysed' : 'rest';
+        for (const row of g.querySelectorAll('[data-region]')) {
+          const f = (n) => row.querySelector('[data-field=' + n + ']')?.innerText ?? null;
+          out[key].push({ region: row.dataset.region, candidates: f('candidates'), tiles: f('tiles'), obs: f('observations'), acq: f('acquisitions'), sensor: f('sensor'),
+            first: row.querySelector('[data-first]')?.innerText ?? null, last: row.querySelector('[data-last]')?.innerText ?? null,
+            types: [...row.querySelectorAll('[data-type]')].map((c) => [c.dataset.type, c.querySelector('[data-field=type-count]').innerText]), text: row.innerText.replace(/\\s+/g, ' ') });
+        }
+      }
+      out.why = document.querySelector('[data-testid=regions-why]')?.innerText ?? null;
+      out.caption = document.querySelector('[data-testid=regions-caption]')?.innerText ?? '';
+      out.statSub = [...document.querySelectorAll('.stats')].map((x) => x.innerText).join(' ');
+      return out;
+    })()`);
+    ok(/^CHANGE ANALYSIS COMPLETE\s*\d+$/i.test(dom.heads[0].replace(/\s+/g, ' ')) || /change analysis complete/i.test(dom.heads[0]), `first group header: ${dom.heads[0]}`);
+    ok(/indexed and searchable · change analysis not yet run/i.test(dom.heads[1]), `second group header: ${dom.heads[1]}`);
+    // membership: the groups are exactly the API's analysed / not-analysed split, every region once
+    const wantA = R.filter((r) => r.catalog.analysed).map((r) => r.name).sort(), wantB = R.filter((r) => !r.catalog.analysed).map((r) => r.name).sort();
+    ok(JSON.stringify(dom.analysed.map((x) => x.region).sort()) === JSON.stringify(wantA), `analysed group ${dom.analysed.map((x) => x.region)} vs API ${wantA}`);
+    ok(JSON.stringify(dom.rest.map((x) => x.region).sort()) === JSON.stringify(wantB), `not-run group ${dom.rest.map((x) => x.region)} vs API ${wantB}`);
+    ok(dom.analysed.length + dom.rest.length === regs.length, 'a region is missing or listed twice');
+    // no zeros: a region that was never analysed shows NO finding count at all
+    for (const x of dom.rest) ok(x.candidates === null && !/candidate/i.test(x.text), `un-analysed region ${x.region} shows a finding count: "${x.text}"`);
+    ok(!dom.rest.some((x) => /(^| )0 (candidates|findings)/.test(x.text)), 'a zero finding count is displayed');
+    // every displayed number equals the API's
+    const fmtDate = (d) => d;
+    for (const x of [...dom.analysed, ...dom.rest]) {
+      const r = R.find((q) => q.name === x.region), c = r.catalog, p = c.sensors[0];
+      ok(num(x.tiles) === c.n_tiles, `${x.region}: tiles shown ${x.tiles} vs API ${c.n_tiles}`);
+      ok(num(x.obs) === r.n_observations, `${x.region}: observations shown ${x.obs} vs API ${r.n_observations}`);
+      ok(num(x.acq) === p.n_acquisitions, `${x.region}: acquisitions shown ${x.acq} vs API ${p.n_acquisitions}`);
+      ok(x.first === fmtDate(p.first_date) && (p.n_acquisitions > 1 ? x.last === p.last_date : x.last === null), `${x.region}: dates ${x.first} → ${x.last} vs API ${p.first_date} → ${p.last_date}`);
+      ok(c.sensors.every((sn) => x.sensor.includes((sn.platform || 'unknown').replace(' Open Data Program', ''))), `${x.region}: sensor "${x.sensor}"`);
+      // independent sources: /regions agrees on the observation count, and the catalog's date range brackets the stack's
+      ok(regs.find((q) => q.name === x.region).n_observations === r.n_observations, `${x.region}: /regions disagrees on observations`);
+      ok(c.first_date <= p.first_date && c.last_date >= p.last_date, `${x.region}: overall range does not bracket the sensor range`);
+    }
+    for (const x of dom.analysed) {
+      const r = R.find((q) => q.name === x.region);
+      ok(num(x.candidates) === r.candidates, `${x.region}: candidates shown ${x.candidates} vs API ${r.candidates}`);
+      ok(JSON.stringify(x.types.map((t) => [t[0], num(t[1])]).sort()) === JSON.stringify(Object.entries(r.by_type).sort()), `${x.region}: breakdown ${JSON.stringify(x.types)} vs API ${JSON.stringify(r.by_type)}`);
+      ok(x.types.reduce((n, t) => n + num(t[1]), 0) === r.candidates, `${x.region}: the breakdown does not add up to its candidates`);
+      ok(r.candidates === (await api(`/candidates?limit=1&bbox=${r.bbox.join(',')}`)).total, `${x.region}: candidates differ from the /candidates bbox query`);
+    }
+    // the totals agree with the independent counters
+    ok(R.reduce((n, r) => n + r.catalog.n_tiles, 0) === m.counters.tiles_indexed, `region tiles ${R.reduce((n, r) => n + r.catalog.n_tiles, 0)} vs tiles_indexed ${m.counters.tiles_indexed}`);
+    ok(R.reduce((n, r) => n + r.candidates, 0) <= m.counters.change_candidates, 'region candidates exceed the candidate total');
+    ok(m.counters.regions === regs.length, 'region counter vs /regions');
+    // the "why" line: every number in it is recomputed here from the same catalog fields
+    const A = R.filter((r) => r.catalog.analysed), O = R.filter((r) => !r.catalog.analysed);
+    ok(dom.why, 'the explanation line is missing');
+    for (const r of A) {
+      const p = r.catalog.sensors[0];
+      ok(dom.why.includes(`has ${p.n_acquisitions} ${(p.platform || '').replace(' Open Data Program', '')} acquisition${p.n_acquisitions === 1 ? '' : 's'} (${p.first_date} → ${p.last_date}`) && dom.why.includes(`${p.n_coregistered} of ${p.n_observations} with a co-registration record`), `why line misstates ${r.name}: ${dom.why}`);
+    }
+    const ps = O.map((r) => r.catalog.sensors[0]), rng = (v) => (Math.min(...v) === Math.max(...v) ? `${Math.min(...v)}` : `${Math.min(...v)}–${Math.max(...v)}`);
+    const days = ps.map((p) => Math.round((Date.parse(p.last_date) - Date.parse(p.first_date)) / 86400000));
+    ok(dom.why.includes(`The other ${O.length} regions hold ${rng(ps.map((p) => p.n_acquisitions))} acquisitions each, spanning ${rng(days)} days, with ${ps.reduce((n, p) => n + p.n_coregistered, 0)} of ${ps.reduce((n, p) => n + p.n_observations, 0)} observations carrying a co-registration record`), `why line numbers differ from the API: ${dom.why}`);
+    // the caption still names the AOI and MGRS square, from the API
+    ok(m.change_pipeline_aoi && dom.caption.includes(m.change_pipeline_aoi) && /MGRS/.test(dom.caption), `caption: ${dom.caption}`);
+    ok(new RegExp(`${A.length}\\s*analysed for change`, 'i').test(dom.statSub.replace(/\s+/g, ' ')), 'the Regions stat card disagrees with the analysed count');
+    await shot('dashboard-regions');
+    return `${A.length} analysed (${A.map((r) => r.candidates).join('/')} candidates) + ${O.length} not run; ${R.length * 5} displayed figures match the API; tiles total ${m.counters.tiles_indexed}`;
+  });
+
+  // ---------------------------------------------------------------- Search map furniture
+  await step('maps: search map carries a degree graticule with labels, a scale bar and a north indicator, all consistent with the view', async () => {
+    const scope = 'section[aria-label="Map · spatial filter"]';
+    await go('search');
+    await b.waitFor(`!!document.querySelector('${scope} .gm-deg') && !!document.querySelector('${scope} .leaflet-control-scale-line')`, 30000, 'graticule labels and scale bar');
+    await sleep(700);
+    const st = await b.evaluate(`(() => {
+      const g = document.querySelector('${scope} .geomap'), m = g.querySelector('.leaflet-container').__leaflet, bd = m.getBounds(), c = m.getCenter();
+      const sc = g.querySelector('.leaflet-control-scale-line');
+      return { bounds: [bd.getWest(), bd.getSouth(), bd.getEast(), bd.getNorth()], lat: c.lat, z: m.getZoom(), step: +g.dataset.graticuleStep, nLabels: +g.dataset.graticuleLabels,
+        lats: [...g.querySelectorAll('.gm-deg.lat')].map((e) => e.innerText), lons: [...g.querySelectorAll('.gm-deg.lon')].map((e) => e.innerText),
+        scaleText: sc.innerText, scalePx: parseFloat(sc.style.width), north: g.querySelector('.gm-north')?.getAttribute('aria-label') || null,
+        arrow: !!g.querySelector('.gm-north-arrow'), lines: 0 };
+    })()`);
+    ok(st.north === 'North is up' && st.arrow, 'no north indicator');
+    ok(st.nLabels > 0 && st.lats.length > 0 && st.lons.length > 0, `degree labels: ${st.lats.length} lat, ${st.lons.length} lon`);
+    const val = (t) => (Number(t.replace(/°.*/, '')) * (/[SW]$/.test(t) ? -1 : 1));
+    for (const t of st.lats) ok(/^\d+(\.\d+)?°[NS]$/.test(t) && val(t) >= st.bounds[1] - 1e-6 && val(t) <= st.bounds[3] + 1e-6 && Math.abs(Math.round(val(t) / st.step) * st.step - val(t)) < 1e-6, `latitude label "${t}" is outside the view or off the ${st.step}° grid`);
+    for (const t of st.lons) ok(/^\d+(\.\d+)?°[EW]$/.test(t) && val(t) >= st.bounds[0] - 1e-6 && val(t) <= st.bounds[2] + 1e-6 && Math.abs(Math.round(val(t) / st.step) * st.step - val(t)) < 1e-6, `longitude label "${t}" is outside the view or off the ${st.step}° grid`);
+    // the scale bar is physically right: the length it prints equals its pixel width x metres per pixel at the view centre (Web Mercator)
+    const mm = /^(\d+(?:\.\d+)?)\s*(km|m)$/.exec(st.scaleText.trim());
+    ok(mm, `scale text "${st.scaleText}"`);
+    const metres = Number(mm[1]) * (mm[2] === 'km' ? 1000 : 1), mpp = (40075016.686 * Math.cos((st.lat * Math.PI) / 180)) / (256 * Math.pow(2, st.z));
+    ok(Math.abs(st.scalePx * mpp - metres) / metres < 0.03, `scale bar ${st.scalePx}px x ${mpp.toFixed(1)} m/px = ${(st.scalePx * mpp).toFixed(0)} m, but it prints ${st.scaleText}`);
+    // it follows the view: zoom in one level and the graticule step and scale text both change
+    await b.evaluate(`document.querySelector('${scope} .leaflet-container').__leaflet.setView([27, 82], 8, { animate: false })`);
+    await sleep(900);
+    const st2 = await b.evaluate(`(() => { const g = document.querySelector('${scope} .geomap'); return { step: +g.dataset.graticuleStep, scale: g.querySelector('.leaflet-control-scale-line').innerText, lats: [...g.querySelectorAll('.gm-deg.lat')].map((e) => e.innerText) }; })()`);
+    ok(st2.step < st.step && st2.scale !== st.scaleText && st2.lats.length > 0, `at z8 the graticule did not refine: ${JSON.stringify(st2)}`);
+    await shot('search-map-cartography');
+    return `grid ${st.step}° with ${st.lats.length}+${st.lons.length} labels; scale "${st.scaleText}" verified against Web Mercator; north indicator; refines to ${st2.step}° at z8`;
   });
 
   await step('offline: indicator reflects reality and zero external requests were made', async () => {
