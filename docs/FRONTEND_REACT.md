@@ -299,12 +299,12 @@ deleted; the console above is the only frontend. What changed, in order:
 
 | Commit | What |
 |---|---|
-| `d7389b1` | The vendored third-party files moved out of the old interface's directory: `analyst/web/vendor/**` and `analyst/web/fonts/**` → `analyst/vendor/**` (fonts in `analyst/vendor/fonts/`). All 21 files are exact renames, SHA-256 identical before and after (and git-blob identical, and still equal to their original manifest pins); a rebuild from the new location reproduced every output file bit for bit. |
-| `752da80` | Unrecognised hash routes render a not-found state; `#/brief` is an alias of `#/briefing`. |
-| `1aef299` | Built for the `/app/` base, mounted unconditionally at `/app/`, `/react/` redirects, tools and tests updated. |
-| `1124bf4` | The old interface's pages, styles and scripts deleted (44 files), with `scripts/build_basemap.py` and `scripts/build_mosaic.py`, which only generated assets for it. |
-| `c57494f` | `tests/test_console_mount.py`: the no-fallback proof (§5). |
-| `e411b7b` | The vendored files the console does not use were removed (see below). |
+| `5c9af18` | The vendored third-party files moved out of the old interface's directory: `analyst/web/vendor/**` and `analyst/web/fonts/**` → `analyst/vendor/**` (fonts in `analyst/vendor/fonts/`). All 21 files are exact renames, SHA-256 identical before and after (and git-blob identical, and still equal to their original manifest pins); a rebuild from the new location reproduced every output file bit for bit. |
+| `0901cd6` | Unrecognised hash routes render a not-found state; `#/brief` is an alias of `#/briefing`. |
+| `cd4138b` | Built for the `/app/` base, mounted unconditionally at `/app/`, `/react/` redirects, tools and tests updated. |
+| `c3f183c` | The old interface's pages, styles and scripts deleted (44 files), with `scripts/build_basemap.py` and `scripts/build_mosaic.py`, which only generated assets for it. |
+| `d5aa47a` | `tests/test_console_mount.py`: the no-fallback proof (§5). |
+| `b6dce75` | The vendored files the console does not use were removed (see below). |
 
 **Vendored files removed because nothing loads them.** `chart.umd.js` (only the old `index.html` loaded it; the console has no chart
 library), `earth/clouds.png`, `earth/specular.jpg`, Leaflet's `marker-icon-2x.png` and `marker-shadow.png` (every marker is a
@@ -326,10 +326,10 @@ were added, and no behaviour lost its coverage.**
 | Step | Count | Change | Why |
 |---|---|---|---|
 | baseline | 776 | | |
-| mount moved to `/app/` (`1aef299`) | 777 | **+1** | 2 tests removed, 3 added: `test_react_console_is_served_at_react_and_the_existing_ui_is_unchanged` and `test_react_assets_never_leave_the_react_directory` were replaced by `test_react_console_is_served_at_app` (now also byte-compares the served asset), `test_the_retired_react_path_redirects_to_app_keeping_the_rest_of_the_path` and `test_app_assets_never_leave_the_build_directory` (the traversal check, ported to `/app/`). |
-| old interface deleted (`1124bf4`) | 732 | **−45** | **44 cases** of the parametrized `test_no_external_urls_in_text_asset` disappeared **because the 44 files they scanned were deleted** (49 → 5; the 5 vendored text files are still scanned). **1 test removed**: `test_tokens_css_is_clean`, which checked the deleted interface's design tokens (the console's tokens are covered by the React source scan and the build scan). The "does the scan list contain anything" guard was kept and re-pointed at the vendor root. |
-| no-fallback tests (`c57494f`) | 750 | **+18** | `tests/test_console_mount.py`. |
-| unused vendored files removed (`e411b7b`) | 738 | **−12** | Parametrized cases for the 7 deleted files: 1 text-asset scan (`chart.umd.js`), 6 binary-asset scans, 5 manifest-pin checks (`chart.umd.js`, `clouds.png`, `specular.jpg`, the two marker images; the Cinzel fonts are not manifest-pinned). |
+| mount moved to `/app/` (`cd4138b`) | 777 | **+1** | 2 tests removed, 3 added: `test_react_console_is_served_at_react_and_the_existing_ui_is_unchanged` and `test_react_assets_never_leave_the_react_directory` were replaced by `test_react_console_is_served_at_app` (now also byte-compares the served asset), `test_the_retired_react_path_redirects_to_app_keeping_the_rest_of_the_path` and `test_app_assets_never_leave_the_build_directory` (the traversal check, ported to `/app/`). |
+| old interface deleted (`c3f183c`) | 732 | **−45** | **44 cases** of the parametrized `test_no_external_urls_in_text_asset` disappeared **because the 44 files they scanned were deleted** (49 → 5; the 5 vendored text files are still scanned). **1 test removed**: `test_tokens_css_is_clean`, which checked the deleted interface's design tokens (the console's tokens are covered by the React source scan and the build scan). The "does the scan list contain anything" guard was kept and re-pointed at the vendor root. |
+| no-fallback tests (`d5aa47a`) | 750 | **+18** | `tests/test_console_mount.py`. |
+| unused vendored files removed (`b6dce75`) | 738 | **−12** | Parametrized cases for the 7 deleted files: 1 text-asset scan (`chart.umd.js`), 6 binary-asset scans, 5 manifest-pin checks (`chart.umd.js`, `clouds.png`, `specular.jpg`, the two marker images; the Cinzel fonts are not manifest-pinned). |
 
 Totals: removed 2 + 44 + 1 + 12 = **59**; added 3 + 18 = **21**; 59 − 21 = **38** = 776 − 738. Of the 59, **56 are parametrized instances
 over files that no longer exist** (nothing is left to scan), **2 were replaced by tests that assert the same thing at `/app/`**, and
