@@ -104,7 +104,7 @@ render.
 | **total** | **0.46 MB** | **0.62 MB** (budget: ~1.5MB) |
 
 Manifest (`data/provenance_manifest.json`, `earth_textures_vendor` entry)
-re-generated with fresh SHA256s for the changed files, source URL (three.js
+rebuilt with fresh SHA256s for the changed files, source URL (three.js
 `r160` redistribution of NASA Visible Earth Blue Marble / Black Marble) and
 public-domain licence unchanged. `scripts/stage_earth_textures.py`'s own
 docstring and `HALVE` set updated to match.
